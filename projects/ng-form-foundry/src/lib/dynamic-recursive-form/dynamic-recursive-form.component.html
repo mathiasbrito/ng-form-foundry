@@ -1,0 +1,143 @@
+@if (!root) {
+  <ng-template #formRender>
+    <div class="form-content" [formGroup]="formGroup">
+      <div class="leafs-container">
+        <div class="fields">
+          @for (childItem of nodeGroupChildrenList; track $index) {
+            @let child = childItem.value;
+            @if (child.kind == 'leaf') {
+              <nff-leaf-renderer
+                [leaf_]=child
+                [control]=asFormControl(formGroup.get(child.name))
+                [removable]=false
+                [editable]=editable
+                [initialValue]="formGroup.get(child.name)?.value"
+              />
+            }
+          }
+          @for (childItem of nodeGroupChildrenList; track $index) {
+            @let child = childItem.value;
+            @if (child.kind == 'leafList') {
+              <nff-leaf-list-renderer
+                [leaf_]="child"
+                [editable]=editable
+                [formArray]="asFormArray(formGroup.get(child.name))"
+                [initialValue]="formGroup.get(child.name)?.value"
+              />
+            }
+          }
+        </div>
+      </div>
+      @for (childItem of nodeGroupChildrenList; track $index) {
+        @let child = childItem.value;
+        @if (child.kind == 'nodeGroup') {
+          <nff-dynamic-recursive-form
+            [schema]="child"
+            [formGroup]="asFormGroup(formGroup.get(child.name))"
+            [initialValue]="formGroup.get(child.name)?.value"
+          />
+        }
+      }
+
+      @for (childItem of nodeGroupChildrenList; track $index) {
+        @let child = childItem.value;
+        @if (child.kind == 'nodeGroupList') {
+          <nff-node-group-list-renderer
+            [nodeGroupList]="child"
+            [formArray]="asFormArray(formGroup.get(child.name))"
+            [initialValue]="formGroup.get(child.name)?.value"
+          />
+        }
+      }
+    </div>
+  </ng-template>
+  <mat-card appearance="outlined" [class]="{'top-level-config-card': noTitle}">
+    <mat-card-header class="mat-expansion-toggle-indicator-before">
+      <div>
+        <button matIconButton class="small-icon-button" (click)="editable = !editable">
+          <mat-icon>edit</mat-icon>
+        </button>
+        @if (editable && removable) {
+          <button matIconButton  class="small-icon-button" (click)="emitRemoveEvent(); $event.stopPropagation()">
+            <mat-icon>delete</mat-icon>
+          </button>
+        }
+      </div>
+      @if (!noTitle) {
+        <mat-card-title class="config-form-subsection-card">
+          {{ schema ? (schema.label ?? schema.name) : '' }}
+        </mat-card-title>
+      }
+    </mat-card-header>
+    <mat-card-content>
+      <ng-container *ngTemplateOutlet="formRender"></ng-container>
+    </mat-card-content>
+  </mat-card>
+} @else {
+  <div class="form-content" [formGroup]="formGroup">
+    <div class="leafs-container">
+      <div class="fields">
+        @for (childItem of nodeGroupChildrenList; track $index) {
+          @let child = childItem.value;
+          @if (child.kind == 'leaf') {
+            <nff-leaf-renderer
+              [leaf_]=child
+              [control]=asFormControl(formGroup.get(child.name))
+              [removable]=false
+              [editable]=editable
+              [initialValue]="formGroup.get(child.name)?.value"
+            />
+          }
+        }
+        @for (childItem of nodeGroupChildrenList; track $index) {
+          @let child = childItem.value;
+          @if (child.kind == 'leafList') {
+            <nff-leaf-list-renderer
+              [leaf_]="child"
+              [editable]=editable
+              [formArray]="asFormArray(formGroup.get(child.name))"
+              [initialValue]="formGroup.get(child.name)?.value"
+            />
+          }
+        }
+      </div>
+    </div>
+    <mat-accordion multi>
+      @for (childItem of nodeGroupChildrenList; track $index) {
+        @let child = childItem.value;
+        @if (child.kind == 'nodeGroup') {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                {{ child.label != null ? child.label : child.name }}
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+            <nff-dynamic-recursive-form
+              [schema]="child"
+              [formGroup]="asFormGroup(formGroup.get(child.name))"
+              [initialValue]="formGroup.get(child.name)?.value"
+              [noTitle]="true"
+            />
+          </mat-expansion-panel>
+        }
+      }
+      @for (childItem of nodeGroupChildrenList; track $index) {
+        @let child = childItem.value;
+        @if (child.kind == 'nodeGroupList') {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                {{ child.label != null ? child.label : child.name }}
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+            <nff-node-group-list-renderer
+              [nodeGroupList]="child"
+              [formArray]="asFormArray(formGroup.get(child.name))"
+              [initialValue]="formGroup.get(child.name)?.value"
+            />
+          </mat-expansion-panel>
+        }
+      }
+    </mat-accordion>
+  </div>
+}

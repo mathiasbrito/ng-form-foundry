@@ -1,0 +1,45 @@
+@use '@angular/material' as mat;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+}
+
+.fields {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.actions {
+  position: relative;
+  right: 24px;
+  bottom: 8px;
+  z-index: 100;
+  display: flex;
+  flex-direction: row;    /* stack buttons vertically */
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.add-button {
+  background-color: var(--mat-sys-primary-container);
+  @include mat.elevation(1);
+}
+
+.remove-button {
+  background-color: var(--mat-sys-error-container);
+  @include mat.elevation(1);
+}
+
+.title {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+}
+

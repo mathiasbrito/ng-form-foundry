@@ -1,0 +1,26 @@
+@if(formArray && leaf_) {
+  <div class="fields">
+    @for (control of formArray.controls; track $index) {
+      <nff-anon-leaf-renderer
+        [AnonLeaf]="leaf_" [control]="control"
+        [removable]="minItems == null || formArray.length > minItems"
+        [index]="$index"
+        [editable]="editable"
+        [label]="leaf_.label ?? leaf_.name"
+        (remove)="removeItem($index)"
+      />
+      <div class="actions">
+      @if (formArray.length > minItems) {
+        <button class="remove-button small-icon-button" matIconButton (click)="removeItem($index)">
+          <mat-icon matPrefix>delete</mat-icon>
+        </button>
+      }
+      @if($last) {
+        @if (editable) {
+          <button class="add-button small-icon-button" matIconButton (click)="addItem()"><mat-icon matPrefix>add</mat-icon></button>
+        }
+      }
+      </div>
+    }
+  </div>
+}

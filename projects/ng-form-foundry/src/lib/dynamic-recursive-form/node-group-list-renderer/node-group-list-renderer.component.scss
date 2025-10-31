@@ -1,0 +1,21 @@
+:host {
+  position: relative;
+}
+
+.fields {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.title {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-button {
+  background-color: var(--mat-sys-primary-container);
+}

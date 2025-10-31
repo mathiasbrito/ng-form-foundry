@@ -1,0 +1,241 @@
+/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+
+/* css variable for warning container */
+:root {
+  --sys-warning-container: orange;
+  --sys-on-warning-container: #353434;
+}
+
+html {
+  height: 100%;
+  color-scheme: light dark;
+  @include mat.theme((
+    color: mat.$violet-palette,
+    typography: Roboto,
+    density: 0
+  ));
+}
+
+body {
+  height: 100%;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+body.dark-mode {
+  color-scheme: dark;
+}
+
+h1 {
+  font-weight: 400;
+  @media screen and (max-width: 550px) {
+    font-size: 1.5rem;
+  }
+}
+h2 {
+  font-weight: 300;
+  @media screen and (max-width: 550px) {
+    font-size: 1.5rem;
+  }
+}
+h3 {
+  font-weight: 300;
+  @media screen and (max-width: 550px) {
+    font-size: 1.5rem;
+  }
+}
+
+.section-sidenav-container{
+  height: 100%;
+}
+
+.section-sidenav.mat-drawer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 150px;
+  width: 250px;
+  border-radius: 0;
+  padding: 24px;
+
+  color: var(--mat-sys-on-surface-variant);
+  background-color: var(--mat-sys-surface-container);
+}
+
+.section-sidenav-content.mat-drawer-content {
+  padding: 24px 64px;
+  background-color: var(--mat-sys-background);
+  color: var(--mat-sys-on-background);
+
+  @media screen and (max-width: 728px) {
+    padding: 4px 16px
+  }
+}
+
+
+.mat-sidenav-menu-items {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+
+.mat-sidenav-menu-items a {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+  width: 100%;
+}
+
+.screen-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60%;
+  gap: 16px;
+}
+
+.logo-error-pages {
+  height: 80px;
+}
+
+.notification-banner {
+  position: absolute;
+  top: 80px;
+  right: 0;
+  width: 100%;
+  background-color: transparent;
+  border-radius: 8px;
+  .mdc-snackbar__label {
+    padding: 0;
+  }
+
+  .mat-mdc-snackbar-surface {
+    padding: 0;
+  }
+}
+
+.notification-banner-ignore-toolbar {
+  position: absolute;
+  top: 16px;
+  right: 0;
+}
+
+.title-with-button {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24
+}
+
+.basic-config-form {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 8px
+}
+
+.bottom-space-fix {
+  height: 160px;
+}
+
+mat-card-title.config-form-subsection-card {
+  font-size: 14px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  color: var(--mat-sys-on-primary-container);
+}
+
+mat-card.top-level-config-card {
+  width: 100%;
+  padding: 16px;
+  border: 0;
+}
+
+.delete-icon-button {
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  opacity: 0.2;
+  align-self: flex-start;
+}
+
+.delete-icon-button:hover {
+  opacity: 1;
+  animation: glow-up 0.5s;
+}
+
+.add-icon-button {
+  background-color: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  opacity: 0.2;
+  align-self: flex-start;
+
+}
+
+.add-icon-button:hover {
+  opacity: 1;
+  animation: glow-up 0.5s;
+}
+
+.small-icon-button {
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+
+  & > *[role=img] {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .mat-mdc-button-touch-target {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+// ANIMATIONS
+
+@keyframes glow-up {
+  0% {
+    opacity: 0.1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes glow-down {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.1;
+  }
+}
+
+

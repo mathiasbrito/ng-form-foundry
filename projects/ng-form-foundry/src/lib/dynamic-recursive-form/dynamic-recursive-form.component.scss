@@ -1,0 +1,79 @@
+@use '@angular/material' as mat;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  @include mat.expansion-overrides((
+  ));
+  width: 100%;
+  margin: 8px 0;
+}
+
+.fields {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mat-expansion-panel-content {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
+
+.mat-expansion-panel-content:hover {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
+.form-content {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+}
+
+.leafs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+mat-panel-description {
+  display: flex;
+  flex-direction: row;
+}
+
+.node-groups-container {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+}
+
+.section-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+mat-card {
+  padding: 0;
+}
+
+mat-card-content {
+  box-sizing: border-box;
+  padding: 16px;
+}
+
+mat-card-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+}
