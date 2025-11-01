@@ -1,6 +1,6 @@
 import { Component, EventEmitter, forwardRef, inject, Input, OnInit, Output } from '@angular/core';
 import { NodeGroupList } from '../../types/dynamic-recursive.types';
-import { FormArray, FormGroup } from '@angular/forms';
+import { FormArray, FormControl, FormGroup } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form.component';

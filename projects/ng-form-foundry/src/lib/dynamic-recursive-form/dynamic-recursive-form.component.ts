@@ -14,6 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { NgTemplateOutlet } from '@angular/common';
+import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
 
 @Component({
   imports: [
@@ -41,12 +42,12 @@ export class DynamicRecursiveFormComponent implements OnInit {
   @Input() removable: boolean = false;
   @Output() remove = new EventEmitter();
   @Input() noBorder!: boolean;
-  @Input() noTitle!: boolean;
+  @Input() title!: string;
   editable = false;
   root: boolean = false;
 
   ngOnInit() {
-    this.root = this.schema?.root ? this.schema.root : false;
+    this.root = this.schema.root ?? false;
     if (this.initialValue) {
       this.formGroup.patchValue(this.initialValue);
       console.log(this.formGroup.value);
@@ -54,26 +55,18 @@ export class DynamicRecursiveFormComponent implements OnInit {
   }
 
   get nodeGroupChildrenList(): Array<{ key: string; value: NodeType }> {
-    const children = this.schema && this.schema.children != null ? this.schema.children : {};
+    const children = this.schema.children ?? {};
     return Object.entries(children).map(([key, value]) => ({
       key,
       value: value as NodeType,
     }));
   }
 
-  asFormControl(control: any) {
-    return control as FormControl;
-  }
-
-  asFormArray(control: any) {
-    return control as FormArray;
-  }
-
-  asFormGroup(control: any) {
-    return control as FormGroup;
-  }
-
   emitRemoveEvent() {
     this.remove.emit();
   }
+
+  protected readonly asFormGroup = asFormGroup;
+  protected readonly asFormArray = asFormArray;
+  protected readonly asFormControl = asFormControl;
 }

@@ -400,7 +400,7 @@ export const GnbSchema: NodeGroup = {
       name: 'tracking_area_code',
       label: 'Tracking Area Code',
     },
-    plmn_list: { kind: 'nodeGroupList', name: 'plmn_list', type: PLMNSchema },
+    plmn_list: { kind: 'nodeGroupList', name: 'plmn_list', label: "PLMN", type: PLMNSchema },
     nr_cellid: { kind: 'leaf', type: 'number', name: 'nr_cellid' },
     pdsch_AntennaPorts_XP: {
       kind: 'leaf',
@@ -708,7 +708,6 @@ export const DUConfigSchema: NodeGroup = {
   kind: 'nodeGroup',
   name: 'du_config',
   label: 'DU Configuration',
-  root: true,
   children: {
     Active_gNBs: {
       kind: 'leafList',
@@ -725,25 +724,25 @@ export const DUConfigSchema: NodeGroup = {
     gNBs: {
       kind: 'nodeGroupList',
       name: 'gNBs',
-      label: 'gNBs List',
+      label: 'gNBs',
       type: GnbSchema,
     },
     MACRLCs: {
       kind: 'nodeGroupList',
       name: 'MACRLCs',
-      label: 'MACRLCs List',
+      label: 'MACRLCs',
       type: MACRLCSchema,
     },
     L1s: {
       kind: 'nodeGroupList',
       name: 'L1s',
-      label: 'L1s List',
+      label: 'L1s',
       type: L1Schema,
     },
     RUs: {
       kind: 'nodeGroupList',
       name: 'RUs',
-      label: 'RUs List',
+      label: 'RUs',
       type: RUSchema,
     },
     fhi_72: Fhi72Schema,
