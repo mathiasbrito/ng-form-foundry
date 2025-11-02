@@ -41,7 +41,6 @@ export class DynamicRecursiveFormComponent implements OnInit {
   @Input() index: number | null = null;
   @Input() removable: boolean = false;
   @Output() remove = new EventEmitter();
-  @Input() noBorder!: boolean;
   @Input() title!: string;
   editable = false;
   root: boolean = false;

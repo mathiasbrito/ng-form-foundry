@@ -51,6 +51,10 @@
       }
     </div>
   </ng-template>
+  @if (schema.appearance?.flatten) {
+    <ng-container *ngTemplateOutlet="formRender"></ng-container>
+  }
+  @else {
   <mat-card appearance="outlined">
     <mat-card-header>
       <div>
@@ -71,6 +75,7 @@
       <ng-container *ngTemplateOutlet="formRender"></ng-container>
     </mat-card-content>
   </mat-card>
+  }
 } @else {
   <div class="form-content" [formGroup]="formGroup">
     <div class="leafs-container">
@@ -131,7 +136,7 @@
               [schema]="child"
               [formGroup]="asFormGroup(formGroup.get(child.name))"
               [initialValue]="formGroup.get(child.name)?.value"
-              title="General Settings"
+              [title]="child.name ?? 'General Settings'"
             />
           </mat-expansion-panel>
         }

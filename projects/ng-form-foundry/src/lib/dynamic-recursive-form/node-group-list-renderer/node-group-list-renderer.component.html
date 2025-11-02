@@ -11,7 +11,7 @@
       />
       @if($last) {
         @if (editable) {
-          <button class="add-button" matButton (click)="addItem()"><mat-icon matPrefix>add</mat-icon>add {{nodeGroupList.label ?? nodeGroupList.name}}</button>
+          <button matIconButton class="small-icon-button" (click)="addItem()"><mat-icon>add</mat-icon></button>
         }
       }
     }

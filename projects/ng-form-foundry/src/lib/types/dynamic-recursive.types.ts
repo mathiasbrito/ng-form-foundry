@@ -41,6 +41,10 @@ export type LeafEnum = LeafBase & {
   enum: LeafRuntimeType<'enum'>[];
 };
 
+export type Appearance = {
+  flatten: boolean;
+}
+
 export type Leaf = LeafString | LeafNumber | LeafBoolean | LeafEnum;
 
 export type LeafList<TKind extends Leaf['type'] = Leaf['type']> = {
@@ -68,6 +72,7 @@ export type NodeGroup = {
   root?: boolean;
   description?: string;
   children: Record<string, NodeType>;
+  appearance?: Appearance;
 };
 
 export type NodeType = Leaf | LeafList | NodeGroup | NodeGroupList;

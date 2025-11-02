@@ -1,21 +1,19 @@
 import { Component, EventEmitter, forwardRef, inject, Input, OnInit, Output } from '@angular/core';
 import { NodeGroupList } from '../../types/dynamic-recursive.types';
-import { FormArray, FormControl, FormGroup } from '@angular/forms';
-import { MatButton } from '@angular/material/button';
+import { FormArray, FormGroup } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form.component';
 import { buildFormFromSchema } from '../../core/dynamic-recursive-forms-builder';
 import { MatDialog } from '@angular/material/dialog';
-import { MatPrefix } from '@angular/material/input';
 
 @Component({
   selector: 'nff-node-group-list-renderer',
   standalone: true,
   imports: [
-    MatIconModule,
     forwardRef(() => DynamicRecursiveFormComponent),
-    MatPrefix,
-    MatButton,
+    MatButtonModule,
+    MatIconModule,
   ],
   templateUrl: './node-group-list-renderer.component.html',
   styleUrl: './node-group-list-renderer.component.scss',
