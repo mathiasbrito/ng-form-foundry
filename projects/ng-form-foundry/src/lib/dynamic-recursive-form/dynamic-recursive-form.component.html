@@ -30,11 +30,20 @@
       </div>
       @for (childItem of nodeGroupChildrenList; track $index) {
         @let child = childItem.value;
-        @if (child.kind == 'nodeGroup') {
+        @if (child.kind == 'nodeGroup' && child.appearance?.flatten) {
           <nff-dynamic-recursive-form
             [schema]="child"
             [formGroup]="asFormGroup(formGroup.get(child.name))"
             [initialValue]="formGroup.get(child.name)?.value"
+            [editable]="editable"
+          />
+        }
+        @else if (child.kind == 'nodeGroup'){
+          <nff-dynamic-recursive-form
+            [schema]="child"
+            [formGroup]="asFormGroup(formGroup.get(child.name))"
+            [initialValue]="formGroup.get(child.name)?.value"
+            [editable]="editable"
           />
         }
       }
@@ -46,13 +55,21 @@
             [nodeGroupList]="child"
             [formArray]="asFormArray(formGroup.get(child.name))"
             [initialValue]="formGroup.get(child.name)?.value"
+            [editable]="editable"
           />
         }
       }
     </div>
   </ng-template>
   @if (schema.appearance?.flatten) {
+    <div class="flattened-form">
     <ng-container *ngTemplateOutlet="formRender"></ng-container>
+    @if (removable) {
+      <button matIconButton  class="small-icon-button edit-icon" [class]="{ 'edit-icon': !editable}" (click)="emitRemoveEvent(); $event.stopPropagation()">
+        <mat-icon>delete</mat-icon>
+      </button>
+    }
+    </div>
   }
   @else {
   <mat-card appearance="outlined">
@@ -119,6 +136,7 @@
               [nodeGroupList]="child"
               [formArray]="asFormArray(formGroup.get(child.name))"
               [initialValue]="formGroup.get(child.name)?.value"
+              [editable]="editable"
             />
           </mat-expansion-panel>
         }
@@ -137,6 +155,7 @@
               [formGroup]="asFormGroup(formGroup.get(child.name))"
               [initialValue]="formGroup.get(child.name)?.value"
               [title]="child.name ?? 'General Settings'"
+              [editable]="editable"
             />
           </mat-expansion-panel>
         }

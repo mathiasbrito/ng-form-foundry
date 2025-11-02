@@ -7,11 +7,16 @@ import { simpleForm } from './examples/simple';
   selector: 'app-root',
   imports: [DynamicRecursiveFormComponent],
   template: `
-        <nff-dynamic-recursive-form
-            [schema]="simpleForm"
-            [formGroup]="formGroup"
-        ></nff-dynamic-recursive-form>
-      `,
+    <nff-dynamic-recursive-form
+      [schema]="simpleForm"
+      [formGroup]="formGroup"
+    ></nff-dynamic-recursive-form>
+    <nff-dynamic-recursive-form
+      [schema]="DUConfigSchema"
+      [formGroup]="duFormGroup"
+      [initialValue]="sampleValue"
+    ></nff-dynamic-recursive-form>
+  `,
   styleUrl: './app.scss'
 })
 export class App implements OnInit {
@@ -19,6 +24,7 @@ export class App implements OnInit {
   protected readonly title = signal('demo');
   protected readonly DUConfigSchema = DUConfigSchema;
   formGroup = buildFormFromSchema(simpleForm, null);
+  duFormGroup = buildFormFromSchema(DUConfigSchema, sampleValue);
   protected readonly sampleValue = sampleValue;
 
   ngOnInit(): void {

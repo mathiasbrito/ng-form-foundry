@@ -63,6 +63,7 @@ mat-panel-description {
 
 mat-card {
   padding: 0;
+  width: 100%;
 }
 
 mat-card-content {
@@ -86,6 +87,12 @@ mat-card-header {
 .edit-icon:hover {
   opacity: 1;
   animation: icon-transition 0.5s;
+}
+
+.flattened-form {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
 }
 
 @keyframes icon-hovered {

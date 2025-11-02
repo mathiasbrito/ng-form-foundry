@@ -6,13 +6,12 @@
         [formGroup]="asFormGroup(group)"
         [title]="`${nodeGroupList.type.label ?? nodeGroupList.type.name} ${'#' + ($index + 1)}`"
         [index]="$index"
-        [removable]=true
+        [removable]="formArray.length > minItems && formArray.length < maxItems"
         (remove)="removeItem($index)"
+        [editable]="editable"
       />
-      @if($last) {
-        @if (editable) {
-          <button matIconButton class="small-icon-button" (click)="addItem()"><mat-icon>add</mat-icon></button>
-        }
+      @if($last && formArray.length < maxItems) {
+          <button matIconButton class="small-icon-button" matTooltip=" + Add new {{ nodeGroupList.type.label ?? nodeGroupList.type.name  }}" (click)="addItem()"><mat-icon>add</mat-icon></button>
       }
     }
   </div>

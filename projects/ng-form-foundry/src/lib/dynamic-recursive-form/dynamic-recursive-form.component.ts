@@ -42,7 +42,7 @@ export class DynamicRecursiveFormComponent implements OnInit {
   @Input() removable: boolean = false;
   @Output() remove = new EventEmitter();
   @Input() title!: string;
-  editable = false;
+  @Input() editable = false;
   root: boolean = false;
 
   ngOnInit() {

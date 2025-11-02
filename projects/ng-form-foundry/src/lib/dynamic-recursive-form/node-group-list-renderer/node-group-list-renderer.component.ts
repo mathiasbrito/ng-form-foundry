@@ -1,11 +1,23 @@
-import { Component, EventEmitter, forwardRef, inject, Input, OnInit, Output } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectorRef,
+  Component,
+  EventEmitter,
+  forwardRef,
+  inject,
+  Input,
+  OnInit,
+  Output,
+  QueryList,
+  ViewChildren
+} from '@angular/core';
 import { NodeGroupList } from '../../types/dynamic-recursive.types';
 import { FormArray, FormGroup } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form.component';
 import { buildFormFromSchema } from '../../core/dynamic-recursive-forms-builder';
-import { MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'nff-node-group-list-renderer',
@@ -14,24 +26,33 @@ import { MatDialog } from '@angular/material/dialog';
     forwardRef(() => DynamicRecursiveFormComponent),
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
   ],
   templateUrl: './node-group-list-renderer.component.html',
   styleUrl: './node-group-list-renderer.component.scss',
 })
-export class NodeGroupListRendererComponent implements OnInit {
+export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
   @Input() nodeGroupList!: NodeGroupList;
   @Input() initialValue!: number[] | string[] | boolean[];
   @Input() formArray = new FormArray<any>([]);
   @Input() editable: boolean = true;
   @Input() minItems: number = 1;
+  @Input() maxItems: number = 1;
   @Output() message = new EventEmitter();
+  @ViewChildren(DynamicRecursiveFormComponent) items!: QueryList<DynamicRecursiveFormComponent>;
 
-  matDialog = inject(MatDialog);
+  cdr = inject(ChangeDetectorRef);
 
   ngOnInit() {
     if (this.initialValue) {
       this.formArray.patchValue(this.initialValue);
     }
+  }
+
+  ngAfterViewInit() {
+    this.items.changes.subscribe(() => {
+      this.setLastEditable();
+    });
   }
 
   removeItem($index: number) {
@@ -47,6 +68,14 @@ export class NodeGroupListRendererComponent implements OnInit {
 
   addItem() {
     this.formArray.push(buildFormFromSchema(this.nodeGroupList.type, null));
+  }
+
+  setLastEditable() {
+    const lastItem = this.items.last;
+    if (lastItem) {
+      lastItem.editable = this.editable;
+    }
+    this.cdr.detectChanges();
   }
 
   asFormGroup(group: any) {

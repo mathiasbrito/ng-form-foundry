@@ -1,12 +1,12 @@
 :host {
   position: relative;
+  width: 100%;
 }
 
 .fields {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 8px;
 }
 
 .title {
