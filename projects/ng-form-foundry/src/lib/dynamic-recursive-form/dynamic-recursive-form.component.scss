@@ -69,6 +69,10 @@ mat-card {
   width: 100%;
 }
 
+.mat-card-no-broder {
+  border: 0;
+}
+
 mat-card-content {
   box-sizing: border-box;
   padding: 16px;

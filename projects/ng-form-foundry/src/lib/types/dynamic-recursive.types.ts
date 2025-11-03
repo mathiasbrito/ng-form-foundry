@@ -43,6 +43,7 @@ export type LeafEnum = LeafBase & {
 
 export type Appearance = {
   flatten?: boolean;
+  noBorder?: boolean;
 }
 
 export type Leaf = LeafString | LeafNumber | LeafBoolean | LeafEnum;

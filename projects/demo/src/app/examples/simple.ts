@@ -18,6 +18,9 @@ export const PLMNSchema: NodeGroup = {
   kind: 'nodeGroup',
   name: 'plmn',
   label: 'PLMN',
+  appearance: {
+    noBorder: true,
+  },
   children: {
     mcc: { kind: 'leaf', type: 'number', name: 'mcc' },
     mnc: { kind: 'leaf', type: 'number', name: 'mnc' },
@@ -36,6 +39,9 @@ export const ServingCellConfigCommonSchema: NodeGroup = {
   kind: 'nodeGroup',
   name: 'servingCellConfigCommon_item',
   label: 'Spectrum Configuration',
+  appearance: {
+    noBorder: true,
+  },
   children: {
     absoluteFrequencySSB: {
       kind: 'leaf',

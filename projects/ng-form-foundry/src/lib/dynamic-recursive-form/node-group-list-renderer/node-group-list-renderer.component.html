@@ -1,20 +1,24 @@
-@if(formArray && nodeGroupList) {
-  <div class="fields">
-    @for (group of formArray.controls; track $index) {
-      <nff-dynamic-recursive-form
-        [schema]="nodeGroupList.type"
-        [formGroup]="asFormGroup(group)"
-        [title]="getTitle($index)"
-        [index]="$index"
-        [removable]="formArray.length > minItems"
-        (remove)="removeItem($index)"
-        [editable]="editable"
-      />
-      @if($last) {
-        <div class="actions">
-          <button matIconButton class="small-icon-button" matTooltip=" + Add new {{ nodeGroupList.type.label ?? nodeGroupList.type.name  }}" (click)="addItem()"><mat-icon>add</mat-icon></button>
+@if (formArray && nodeGroupList) {
+  <div class="fields-container">
+      @for (group of formArray.controls; track $index) {
+        <div class="field-item">
+        <nff-dynamic-recursive-form
+          [schema]="nodeGroupList.type"
+          [formGroup]="asFormGroup(group)"
+          [title]="getTitle($index)"
+          [index]="$index"
+          [removable]="formArray.length > minItems"
+          (remove)="removeItem($index)"
+          [editable]="editable"
+        />
+          <div class="actions">
+            <button matIconButton class="small-icon-button"
+                    matTooltip=" + Add new {{ nodeGroupList.type.label ?? nodeGroupList.type.name  }}"
+                    (click)="addItem()">
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
         </div>
       }
-    }
   </div>
 }

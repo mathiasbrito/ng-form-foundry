@@ -218,6 +218,11 @@ mat-card.top-level-config-card {
   }
 }
 
+.add-button {
+  background-color: var(--mat-sys-primary-container);
+  @include mat.elevation(1);
+}
+
 // ANIMATIONS
 
 @keyframes glow-up {
