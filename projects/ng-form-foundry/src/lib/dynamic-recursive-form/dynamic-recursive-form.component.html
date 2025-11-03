@@ -97,6 +97,9 @@
   <div class="form-content" [formGroup]="formGroup">
     <div class="leafs-container">
       <div class="fields">
+        <button matIconButton class="small-icon-button"  [class]="{ 'edit-icon': !editable}"  (click)="editable = !editable">
+          <mat-icon>edit</mat-icon>
+        </button>
         @for (childItem of nodeGroupChildrenList; track $index) {
           @let child = childItem.value;
           @if (child.kind == 'leaf') {

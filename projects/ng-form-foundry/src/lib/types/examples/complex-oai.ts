@@ -4,6 +4,9 @@ export const SnssaiSchema: NodeGroup = {
   kind: 'nodeGroup',
   name: 'snssai',
   label: 'SNSSAI',
+  appearance: {
+    flatten: true
+  },
   children: {
     sst: { kind: 'leaf', type: 'number', name: 'sst' },
     sd: { kind: 'leaf', type: 'number', name: 'sd' },
@@ -29,6 +32,9 @@ export const PLMNSchema: NodeGroup = {
 export const SCTPSchema: NodeGroup = {
   kind: 'nodeGroup',
   name: 'SCTP',
+  appearance: {
+    flatten: true,
+  },
   children: {
     SCTP_INSTREAMS: { kind: 'leaf', type: 'number', name: 'SCTP_INSTREAMS' },
     SCTP_OUTSTREAMS: { kind: 'leaf', type: 'number', name: 'SCTP_OUTSTREAMS' },
@@ -708,6 +714,7 @@ export const DUConfigSchema: NodeGroup = {
   kind: 'nodeGroup',
   name: 'du_config',
   label: 'DU Configuration',
+  root: true,
   children: {
     Active_gNBs: {
       kind: 'leafList',
