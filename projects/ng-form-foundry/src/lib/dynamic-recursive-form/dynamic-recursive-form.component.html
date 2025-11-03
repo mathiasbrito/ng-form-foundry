@@ -64,7 +64,7 @@
   @if (schema.appearance?.flatten) {
     <div class="flattened-form">
     <ng-container *ngTemplateOutlet="formRender"></ng-container>
-    @if (removable) {
+    @if (editable && removable) {
       <button matIconButton  class="small-icon-button edit-icon" [class]="{ 'edit-icon': !editable}" (click)="emitRemoveEvent(); $event.stopPropagation()">
         <mat-icon>delete</mat-icon>
       </button>

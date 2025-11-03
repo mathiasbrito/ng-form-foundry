@@ -4,14 +4,16 @@
       <nff-dynamic-recursive-form
         [schema]="nodeGroupList.type"
         [formGroup]="asFormGroup(group)"
-        [title]="`${nodeGroupList.type.label ?? nodeGroupList.type.name} ${'#' + ($index + 1)}`"
+        [title]="getTitle($index)"
         [index]="$index"
-        [removable]="formArray.length > minItems && formArray.length < maxItems"
+        [removable]="formArray.length > minItems"
         (remove)="removeItem($index)"
         [editable]="editable"
       />
-      @if($last && formArray.length < maxItems) {
+      @if($last) {
+        <div class="actions">
           <button matIconButton class="small-icon-button" matTooltip=" + Add new {{ nodeGroupList.type.label ?? nodeGroupList.type.name  }}" (click)="addItem()"><mat-icon>add</mat-icon></button>
+        </div>
       }
     }
   </div>

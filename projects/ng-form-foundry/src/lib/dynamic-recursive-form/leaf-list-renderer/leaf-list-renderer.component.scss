@@ -9,21 +9,33 @@
 .fields {
   position: relative;
   display: flex;
-  flex-direction: row;
   flex-wrap: wrap;
   gap: 8px;
   align-items: baseline;
 }
 
+.field-item {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+}
+
 .actions {
-  position: relative;
-  right: 24px;
-  bottom: 8px;
   z-index: 100;
   display: flex;
-  flex-direction: row;    /* stack buttons vertically */
+  flex-direction: column;    /* stack buttons vertically */
   align-items: flex-end;
   gap: 4px;
+  height: 100%;
+}
+
+.actions-spacer {
+  height: 20px;
+}
+
+nff-anon-leaf-renderer {
+  width: 100%;
 }
 
 .add-button {

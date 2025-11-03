@@ -42,7 +42,7 @@ export type LeafEnum = LeafBase & {
 };
 
 export type Appearance = {
-  flatten: boolean;
+  flatten?: boolean;
 }
 
 export type Leaf = LeafString | LeafNumber | LeafBoolean | LeafEnum;
@@ -54,6 +54,8 @@ export type LeafList<TKind extends Leaf['type'] = Leaf['type']> = {
   description?: string;
   default?: Exclude<Leaf['default'], undefined>[];
   type: TKind;
+  minItems?: number;
+  maxItems?: number;
 };
 
 export type NodeGroupList = {
@@ -62,6 +64,8 @@ export type NodeGroupList = {
   label?: string;
   description?: string;
   type: NodeGroup;
+  minItems?: number;
+  maxItems?: number;
 };
 
 export type NodeGroup = {

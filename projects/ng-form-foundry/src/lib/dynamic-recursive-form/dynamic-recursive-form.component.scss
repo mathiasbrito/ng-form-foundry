@@ -15,6 +15,7 @@
   flex-direction: row;
   gap: 8px;
   flex-wrap: wrap;
+  flex: 1 1 0;
 }
 
 .mat-expansion-panel-content {
@@ -30,10 +31,12 @@
   gap: 16px;
 }
 
+
 .form-content {
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .leafs-container {
@@ -93,6 +96,14 @@ mat-card-header {
   display: flex;
   flex-direction: row;
   width: 100%;
+}
+
+.flattened-style-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: flex-start;
 }
 
 @keyframes icon-hovered {

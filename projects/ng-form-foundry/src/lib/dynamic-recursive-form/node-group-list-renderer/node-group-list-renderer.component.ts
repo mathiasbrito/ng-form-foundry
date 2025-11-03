@@ -47,6 +47,12 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
     if (this.initialValue) {
       this.formArray.patchValue(this.initialValue);
     }
+    if (this.nodeGroupList.maxItems) {
+      this.maxItems = this.nodeGroupList.maxItems;
+    }
+    if (this.nodeGroupList.minItems) {
+      this.minItems = this.nodeGroupList.minItems;
+    }
   }
 
   ngAfterViewInit() {
@@ -80,5 +86,16 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
 
   asFormGroup(group: any) {
     return group as FormGroup;
+  }
+
+  getTitle($index: number) {
+    let title = `${this.nodeGroupList.type.label ?? this.nodeGroupList.type.name}`;
+    if (this.formArray.length > 1) {
+      return `${title} #${$index + 1}`;
+    }
+    else {
+      return title;
+    }
+
   }
 }

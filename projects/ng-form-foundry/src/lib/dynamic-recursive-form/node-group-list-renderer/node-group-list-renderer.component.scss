@@ -1,19 +1,32 @@
 :host {
   position: relative;
   width: 100%;
+  flex: 1 1 0;
 }
 
 .fields {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-wrap: wrap;
+  width: 100%;
 }
 
-.title {
+.actions {
   display: flex;
   flex-direction: row;
   gap: 8px;
   align-items: center;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+nff-dynamic-recursive-form {
+  flex: 1;
 }
 
 .add-button {

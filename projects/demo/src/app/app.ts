@@ -11,6 +11,7 @@ import { simpleForm } from './examples/simple';
       [schema]="simpleForm"
       [formGroup]="formGroup"
     ></nff-dynamic-recursive-form>
+
     <nff-dynamic-recursive-form
       [schema]="DUConfigSchema"
       [formGroup]="duFormGroup"
