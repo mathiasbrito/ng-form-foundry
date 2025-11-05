@@ -76,28 +76,37 @@ export const simpleForm: NodeGroup = {
   label: 'Cell Configuration',
   root: true,
   children: {
-    gNB: {
+    gNBs: {
       label: 'Cell Configuration',
-      name: 'gNB',
-      kind: 'nodeGroup',
-      appearance: {
-        flatten: true,
-      },
-      children: {
-        plmn_list: {
-          kind: 'nodeGroupList',
-          name: 'plmn_list',
-          label: "PLMN",
-          type: PLMNSchema,
+      name: 'gNBs',
+      kind: 'nodeGroupList',
+      maxItems: 1,
+      minItems: 1,
+      type: {
+        name: 'gNBs',
+        kind: 'nodeGroup',
+        label: 'PLMN and SSNAIs',
+        appearance: {
+          flatten: true,
         },
-        servingCellConfigCommon: {
-          kind: 'nodeGroupList',
-          name: 'servingCellConfigCommon',
-          label: 'Spectrum Configuration',
-          maxItems: 1,
-          minItems: 1,
-          type: ServingCellConfigCommonSchema,
-        },
+        children: {
+          plmn_list: {
+            kind: 'nodeGroupList',
+            name: 'plmn_list',
+            label: "PLMN",
+            maxItems: 1,
+            minItems: 1,
+            type: PLMNSchema,
+          },
+          servingCellConfigCommon: {
+            kind: 'nodeGroupList',
+            name: 'servingCellConfigCommon',
+            label: 'Spectrum Configuration',
+            maxItems: 1,
+            minItems: 1,
+            type: ServingCellConfigCommonSchema,
+          },
+        }
       }
     }
   }
