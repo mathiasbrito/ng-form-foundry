@@ -19,6 +19,28 @@ export function nodeGroupChildrenLeafs(schema: NodeGroup): Array<{ key: string; 
   }, [] as Array<{ key: string; value: Leaf }>);
 }
 
+export function removeNullAndEmptyArrays(value: any): any {
+  if (Array.isArray(value)) {
+    const cleanedArray = value
+      .map(removeNullAndEmptyArrays)
+      .filter(v => v != null && (typeof v !== 'object' || Object.keys(v).length > 0));
+
+    return cleanedArray.length > 0 ? cleanedArray : undefined;
+  }
+
+  if (value && typeof value === 'object') {
+    const cleanedObject = Object.fromEntries(
+      Object.entries(value)
+        .map(([k, v]) => [k, removeNullAndEmptyArrays(v)])
+        .filter(([_, v]) => v != null && (typeof v !== 'object' || Object.keys(v).length > 0))
+    );
+
+    return Object.keys(cleanedObject).length > 0 ? cleanedObject : undefined;
+  }
+
+  return value != null ? value : undefined;
+}
+
 export function asFormControl(control: any) {
   return control as FormControl;
 }

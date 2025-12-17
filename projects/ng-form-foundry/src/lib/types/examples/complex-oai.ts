@@ -279,6 +279,9 @@ export const RUConfigSchema: NodeGroup = {
   kind: 'nodeGroup',
   name: 'ru_config',
   label: 'RU',
+  appearance: {
+    flatten: true,
+  },
   children: {
     iq_width: { kind: 'leaf', type: 'number', name: 'iq_width' },
     iq_width_prach: { kind: 'leaf', type: 'number', name: 'iq_width_prach' },

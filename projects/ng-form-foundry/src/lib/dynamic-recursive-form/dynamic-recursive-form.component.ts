@@ -15,6 +15,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { NgTemplateOutlet } from '@angular/common';
 import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   imports: [
@@ -28,6 +29,7 @@ import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
     NgTemplateOutlet,
     MatCardModule,
     MatExpansionModule,
+    MatTooltip,
   ],
   selector: 'nff-dynamic-recursive-form',
   standalone: true,
@@ -43,6 +45,7 @@ export class DynamicRecursiveFormComponent implements OnInit {
   @Output() remove = new EventEmitter();
   @Input() title!: string;
   @Input() editable = false;
+  @Input() addButtonCallback: ((index: number) => void) | null = null;
   root: boolean = false;
 
   ngOnInit() {

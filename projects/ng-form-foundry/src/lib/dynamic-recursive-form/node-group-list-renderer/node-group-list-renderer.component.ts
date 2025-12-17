@@ -72,14 +72,14 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
     this.formArray.removeAt($index);
   }
 
-  addItem() {
+  addItem = (index: number) => {
     this.formArray.push(buildFormFromSchema(this.nodeGroupList.type, null));
   }
 
   setLastEditable() {
     const lastItem = this.items.last;
     if (lastItem) {
-      lastItem.editable = this.editable;
+      lastItem.editable = true;
     }
     this.cdr.detectChanges();
   }

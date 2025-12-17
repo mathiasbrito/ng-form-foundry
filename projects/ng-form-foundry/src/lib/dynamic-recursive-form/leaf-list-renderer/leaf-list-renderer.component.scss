@@ -2,11 +2,10 @@
 
 :host {
   display: flex;
-  flex-direction: column;
-  flex-wrap: wrap;
+  flex-direction: row;
 }
 
-.fields-container {
+.fields {
   position: relative;
   display: flex;
   flex-wrap: wrap;
@@ -19,6 +18,7 @@
   flex-direction: row;
   gap: 8px;
   align-items: center;
+  flex: 1 1 0;
 }
 
 .actions {

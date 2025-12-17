@@ -6,18 +6,12 @@
           [schema]="nodeGroupList.type"
           [formGroup]="asFormGroup(group)"
           [title]="getTitle($index)"
-          [index]="$index"
+          [index]="0"
           [removable]="formArray.length > minItems"
           (remove)="removeItem($index)"
           [editable]="editable"
+          [addButtonCallback]="addItem"
         />
-          <div class="actions">
-            <button matIconButton class="small-icon-button"
-                    matTooltip=" + Add new {{ nodeGroupList.type.label ?? nodeGroupList.type.name  }}"
-                    (click)="addItem()">
-              <mat-icon>add</mat-icon>
-            </button>
-          </div>
         </div>
       }
   </div>

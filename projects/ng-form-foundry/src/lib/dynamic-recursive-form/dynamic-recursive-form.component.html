@@ -64,6 +64,11 @@
   @if (schema.appearance?.flatten) {
     <div class="flattened-form">
     <ng-container *ngTemplateOutlet="formRender"></ng-container>
+      @if (editable && index != null && addButtonCallback != null) {
+        <button matIconButton  matTooltip="+ Add new {{ schema.label ?? schema.name }}" class="small-icon-button edit-icon" [class]="{ 'edit-icon': !editable}" (click)="addButtonCallback(index)">
+          <mat-icon>add</mat-icon>
+        </button>
+      }
     @if (editable && removable) {
       <button matIconButton  class="small-icon-button edit-icon" [class]="{ 'edit-icon': !editable}" (click)="emitRemoveEvent(); $event.stopPropagation()">
         <mat-icon>delete</mat-icon>
@@ -78,6 +83,11 @@
         <button matIconButton class="small-icon-button"  [class]="{ 'edit-icon': !editable}"  (click)="editable = !editable">
           <mat-icon>edit</mat-icon>
         </button>
+        @if (editable && index != null && addButtonCallback != null) {
+          <button matIconButton  matTooltip="+ Add new {{ schema.label ?? schema.name }}" class="small-icon-button edit-icon" [class]="{ 'edit-icon': !editable}" (click)="addButtonCallback(index)">
+            <mat-icon>add</mat-icon>
+          </button>
+        }
         @if (editable && removable) {
           <button matIconButton  class="small-icon-button edit-icon" [class]="{ 'edit-icon': !editable}" (click)="emitRemoveEvent(); $event.stopPropagation()">
             <mat-icon>delete</mat-icon>

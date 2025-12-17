@@ -1,5 +1,4 @@
 @if (formArray && leaf_) {
-  <div class="fields">
     @for (control of formArray.controls; track $index) {
       <div class="field-item">
         <nff-anon-leaf-renderer
@@ -27,5 +26,4 @@
         </div>
       </div>
     }
-  </div>
 }
