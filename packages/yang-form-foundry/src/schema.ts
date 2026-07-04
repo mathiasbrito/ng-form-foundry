@@ -36,6 +36,12 @@ export interface NodeGroup {
   name: string;
   label?: string;
   root?: boolean;
+  /**
+   * When true, the group is optional and rendered with an on/off toggle: absent
+   * unless the user enables it. Maps a YANG presence container — present-but-empty
+   * serializes as `{}`, absent is omitted.
+   */
+  presence?: boolean;
   children: Record<string, NodeType>;
 }
 

@@ -51,8 +51,11 @@ function mapNode(node: EffNode): NodeType {
       if (node.maxElements !== undefined) list.maxItems = node.maxElements;
       return list;
     }
-    case 'container':
-      return { kind: 'nodeGroup', name: node.name, children: mapChildren(node.children) };
+    case 'container': {
+      const group: NodeGroup = { kind: 'nodeGroup', name: node.name, children: mapChildren(node.children) };
+      if (node.presence) group.presence = true;
+      return group;
+    }
     case 'list': {
       const groupList: NodeGroupList = {
         kind: 'nodeGroupList',

@@ -76,10 +76,15 @@ types now covered:
 | `bits` | group of checkboxes | reverts to the space-separated set |
 | `binary`, `instance-identifier`, `leafref`, `union` | text | member types / leafref path kept in the binding |
 
-Still needing a form-model extension (tracked separately): `choice`/`case` (a
-discriminated-selection node) and **presence** containers (a group on/off
-toggle); plus `must`/`when` cross-field validity — see the
-[adapter plan](https://ng-form-foundry.readthedocs.io).
+Container types: plain `container` → nodeGroup; **presence** `container` →
+nodeGroup flagged `presence: true` (present-but-empty round-trips as `{}`, absent
+is omitted).
+
+Still needing work: `choice`/`case` (a discriminated-selection node) and the
+ng-form-foundry **presence toggle** rendering (the adapter maps presence
+containers, but the form component must add/remove the control on toggle, since a
+disabled group stays in Angular's `form.value`); plus `must`/`when` cross-field
+validity — see the [adapter plan](https://ng-form-foundry.readthedocs.io).
 
 ## Develop
 
