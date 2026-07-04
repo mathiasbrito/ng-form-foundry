@@ -1,0 +1,39 @@
+module example-interfaces {
+  yang-version 1.1;
+  namespace "urn:example:interfaces";
+  prefix exif;
+
+  // Matches test/fixtures/example-interfaces.ts. Run the integration path with:
+  //   python3 python/emit_effective_tree.py --entry example-interfaces \
+  //     --source test/fixtures
+  // and it should emit the same effective model the FakeEngine serves.
+
+  container interfaces {
+    list interface {
+      key "name";
+
+      leaf name {
+        type string;
+        mandatory true;
+      }
+      leaf enabled {
+        type boolean;
+        default "true";
+      }
+      leaf mtu {
+        type uint16;
+      }
+      leaf byte-count {
+        type uint64;
+      }
+      leaf oper-status {
+        config false;
+        type enumeration {
+          enum up;
+          enum down;
+          enum testing;
+        }
+      }
+    }
+  }
+}
