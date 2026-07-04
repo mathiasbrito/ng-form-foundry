@@ -1,19 +1,25 @@
-import { EffectiveModel, EffNode } from './model';
+import { EffectiveModel, EffLeaf, EffNode } from './model';
 import { FormValue } from './schema';
-import { qualifiedName } from './rfc7951';
+import { bareIdentity, qualifyIdentity, qualifiedName } from './rfc7951';
 
 /**
  * The round-trip between a plain form value and RFC 7951 instance data, driven
  * entirely by the resolved {@link EffectiveModel} (the server-side binding).
  *
- * `toFormValue` strips module qualification and hands the app a plain object
- * keyed by bare names. `toYangData` re-applies qualification, keeps list keys as
- * ordinary members, and drops `config false` state — the write-back payload.
- * Neither coerces scalar values, so int64/uint64/decimal64 (carried as strings)
- * keep full precision.
+ * `toFormValue` strips module qualification and decodes each leaf to the shape
+ * the form renders; `toYangData` re-encodes, keeps list keys as ordinary
+ * members, and drops `config false` state. Neither coerces plain scalar values,
+ * so int64/uint64/decimal64 (carried as strings) keep full precision.
+ *
+ * Per-type wire handling (RFC 7951 §6): `empty` is present as `[null]` /
+ * absent; `bits` is a space-separated flag string modeled as a boolean group;
+ * `identityref` is `module:identity` qualified only across module boundaries.
  *
  * Counterpart of the forward `mapToSchema` in `mapper.ts`.
  */
+
+/** Sentinel returned by the encoder to mean "omit this member entirely". */
+const OMIT = Symbol('omit');
 
 /** RFC 7951 JSON instance data → a plain form value keyed by bare names. */
 export function toFormValue(rfc7951: unknown, model: EffectiveModel): FormValue {
@@ -33,7 +39,8 @@ export function toYangData(value: FormValue, model: EffectiveModel): Record<stri
     if (isExcluded(node)) continue;
     const v = value[node.name];
     if (v === undefined) continue;
-    out[qualifiedName(node.name, node.module, null)] = encodeNode(node, v);
+    const encoded = encodeNode(node, v);
+    if (encoded !== OMIT) out[qualifiedName(node.name, node.module, null)] = encoded;
   }
   return out;
 }
@@ -43,7 +50,7 @@ export function toYangData(value: FormValue, model: EffectiveModel): Record<stri
 function decodeNode(node: EffNode, raw: unknown): unknown {
   switch (node.kind) {
     case 'leaf':
-      return raw;
+      return decodeLeaf(node, raw);
     case 'leaf-list':
       return Array.isArray(raw) ? [...raw] : raw;
     case 'container':
@@ -52,6 +59,24 @@ function decodeNode(node: EffNode, raw: unknown): unknown {
       return (Array.isArray(raw) ? raw : []).map((entry) =>
         decodeObject(node.children, asObject(entry), node.module),
       );
+  }
+}
+
+function decodeLeaf(node: EffLeaf, raw: unknown): unknown {
+  switch (node.type.base) {
+    case 'empty':
+      // Present at all (encoded as [null]) means the flag is set.
+      return true;
+    case 'bits': {
+      const set = new Set(typeof raw === 'string' ? raw.split(/\s+/).filter(Boolean) : []);
+      const group: FormValue = {};
+      for (const bit of node.type.bits ?? []) group[bit] = set.has(bit);
+      return group;
+    }
+    case 'identityref':
+      return typeof raw === 'string' ? bareIdentity(raw) : raw;
+    default:
+      return raw;
   }
 }
 
@@ -66,10 +91,10 @@ function decodeObject(children: EffNode[], raw: Record<string, unknown>, parentM
 
 // --- encode (form -> RFC 7951) ------------------------------------------------
 
-function encodeNode(node: EffNode, value: unknown): unknown {
+function encodeNode(node: EffNode, value: unknown): unknown | typeof OMIT {
   switch (node.kind) {
     case 'leaf':
-      return value;
+      return encodeLeaf(node, value);
     case 'leaf-list':
       return Array.isArray(value) ? [...value] : value;
     case 'container':
@@ -81,13 +106,29 @@ function encodeNode(node: EffNode, value: unknown): unknown {
   }
 }
 
+function encodeLeaf(node: EffLeaf, value: unknown): unknown | typeof OMIT {
+  switch (node.type.base) {
+    case 'empty':
+      return value ? [null] : OMIT;
+    case 'bits': {
+      const group = asObject(value);
+      return (node.type.bits ?? []).filter((bit) => group[bit]).join(' ');
+    }
+    case 'identityref':
+      return typeof value === 'string' ? qualifyIdentity(value, node.module, node.type) : value;
+    default:
+      return value;
+  }
+}
+
 function encodeObject(children: EffNode[], value: FormValue, parentModule: string): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const child of children) {
     if (isExcluded(child)) continue;
     const v = value[child.name];
     if (v === undefined) continue;
-    out[qualifiedName(child.name, child.module, parentModule)] = encodeNode(child, v);
+    const encoded = encodeNode(child, v);
+    if (encoded !== OMIT) out[qualifiedName(child.name, child.module, parentModule)] = encoded;
   }
   return out;
 }

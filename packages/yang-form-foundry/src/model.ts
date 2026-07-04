@@ -32,6 +32,14 @@ export interface YangType {
   enums?: string[];
   /** Digit count for `decimal64`. */
   fractionDigits?: number;
+  /** Derived identities for `identityref`, each tagged with its defining module. */
+  identities?: { name: string; module: string }[];
+  /** Named flags for `bits`, in schema order. */
+  bits?: string[];
+  /** Member types for `union` (ordered; RFC 7950 §9.12). */
+  members?: YangType[];
+  /** Schema-node path a `leafref` points at (RFC 7950 §9.9). */
+  leafrefPath?: string;
 }
 
 export interface EffLeaf {

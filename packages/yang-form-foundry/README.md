@@ -64,11 +64,21 @@ The core is a plain class, so a NestJS provider is a thin wrapper — see
 
 ## Status
 
-`0.1.0`, early. The **v0.1 subset** covers container / list (+keys) / leaf /
-leaf-list and the common built-in types (`string`, `boolean`, `int`/`uint` 8–32,
-`enumeration`), plus `int64`/`uint64`/`decimal64` as strings. Deferred to later
-phases: `choice`/`case`, `leafref`, `identityref`, `union`, `bits`, `empty`,
-presence containers, and `must`/`when` — see the
+`0.1.0`, early. Structure: container / list (+keys) / leaf / leaf-list. Leaf
+types now covered:
+
+| YANG type | Form control | Notes |
+| --- | --- | --- |
+| `string`, `boolean`, int/uint 8–32 | text / checkbox / number | direct |
+| `int64`, `uint64`, `decimal64` | text | kept as strings (precision-safe) |
+| `enumeration`, `identityref` | enum (dropdown) | identityref re-qualified across modules |
+| `empty` | checkbox | `[null]` when set, omitted when not |
+| `bits` | group of checkboxes | reverts to the space-separated set |
+| `binary`, `instance-identifier`, `leafref`, `union` | text | member types / leafref path kept in the binding |
+
+Still needing a form-model extension (tracked separately): `choice`/`case` (a
+discriminated-selection node) and **presence** containers (a group on/off
+toggle); plus `must`/`when` cross-field validity — see the
 [adapter plan](https://ng-form-foundry.readthedocs.io).
 
 ## Develop

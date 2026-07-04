@@ -1,4 +1,4 @@
-import { EffectiveModel, EffNode } from './model';
+import { EffectiveModel, EffLeaf, EffNode } from './model';
 import { Leaf, LeafList, NodeGroup, NodeGroupList, NodeType } from './schema';
 import { toFormLeafType } from './rfc7951';
 
@@ -32,10 +32,17 @@ function mapChildren(nodes: EffNode[]): Record<string, NodeType> {
 function mapNode(node: EffNode): NodeType {
   switch (node.kind) {
     case 'leaf': {
+      // `bits` has no scalar form control; render it as a group of checkboxes,
+      // one boolean per flag. The revert collapses the group back to the wire
+      // string.
+      if (node.type.base === 'bits' && node.type.bits) {
+        return bitsGroup(node, node.type.bits);
+      }
       const leaf: Leaf = { kind: 'leaf', name: node.name, type: toFormLeafType(node.type) };
       if (node.mandatory) leaf.required = true;
       if (node.default !== undefined) leaf.default = node.default;
-      if (node.type.enums) leaf.enum = [...node.type.enums];
+      const options = node.type.enums ?? node.type.identities?.map((i) => i.name);
+      if (options) leaf.enum = [...options];
       return leaf;
     }
     case 'leaf-list': {
@@ -57,4 +64,12 @@ function mapNode(node: EffNode): NodeType {
       return groupList;
     }
   }
+}
+
+function bitsGroup(node: EffLeaf, bits: string[]): NodeGroup {
+  const children: Record<string, NodeType> = {};
+  for (const bit of bits) {
+    children[bit] = { kind: 'leaf', name: bit, type: 'boolean' };
+  }
+  return { kind: 'nodeGroup', name: node.name, children };
 }

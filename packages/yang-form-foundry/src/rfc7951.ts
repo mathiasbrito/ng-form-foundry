@@ -30,16 +30,38 @@ export function isStringEncoded(base: YangBase): boolean {
 /**
  * Map a resolved YANG type to the form model's four leaf value types.
  *
+ * - `boolean` and `empty` → boolean (empty is a present/absent checkbox).
+ * - `enumeration` and `identityref` → enum (a dropdown of names).
+ * - the fixed-width integers (int/uint 8..32) → number.
+ * - everything else — string, binary, leafref, instance-identifier, union, and
+ *   the string-encoded int64/uint64/decimal64 — renders as text.
+ *
  * 64-bit integers and decimal64 map to `'string'` deliberately: a JS `number`
- * cannot hold them without loss, so they stay strings end to end.
+ * cannot hold them without loss, so they stay strings end to end. `bits` has no
+ * leaf equivalent and is mapped to a group of boolean checkboxes by the mapper,
+ * so it never reaches this function.
  */
 export function toFormLeafType(t: YangType): LeafType {
-  if (t.base === 'boolean') return 'boolean';
-  if (t.base === 'enumeration') return 'enum';
+  if (t.base === 'boolean' || t.base === 'empty') return 'boolean';
+  if (t.base === 'enumeration' || t.base === 'identityref') return 'enum';
   if (NUMBER_BASES.has(t.base)) return 'number';
-  // string, binary, leafref, identityref, instance-identifier, and the
-  // string-encoded 64-bit / decimal64 types all render as text.
   return 'string';
+}
+
+/**
+ * RFC 7951 identityref value (§6.8): `module:identity` when the identity is
+ * defined in a different module than the referencing leaf, otherwise the bare
+ * identity name.
+ */
+export function qualifyIdentity(name: string, leafModule: string, t: YangType): string {
+  const id = t.identities?.find((i) => i.name === name);
+  return id && id.module !== leafModule ? `${id.module}:${name}` : name;
+}
+
+/** The local identity name, dropping any `module:` prefix. */
+export function bareIdentity(value: string): string {
+  const i = value.indexOf(':');
+  return i === -1 ? value : value.slice(i + 1);
 }
 
 /**

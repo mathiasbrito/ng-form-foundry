@@ -45,15 +45,44 @@ def build_type(stmt):
     type_stmt = stmt.search_one("type")
     if type_stmt is None:
         return {"base": "string"}
+    return type_info(type_stmt)
+
+
+def type_info(type_stmt):
     base = resolved_base(type_stmt)
     out = {"base": base}
     if base == "enumeration":
         out["enums"] = [e.arg for e in type_stmt.search("enum")]
-    if base == "decimal64":
+    elif base == "bits":
+        out["bits"] = [b.arg for b in type_stmt.search("bit")]
+    elif base == "union":
+        out["members"] = [type_info(t) for t in type_stmt.search("type")]
+    elif base == "identityref":
+        out["identities"] = collect_identities(type_stmt)
+    elif base == "decimal64":
         fd = type_stmt.search_one("fraction-digits")
         if fd is not None:
             out["fractionDigits"] = int(fd.arg)
+    elif base == "leafref":
+        path = type_stmt.search_one("path")
+        if path is not None:
+            out["leafrefPath"] = path.arg
     return out
+
+
+def collect_identities(type_stmt):
+    """Derived identities for an identityref, each tagged with its module.
+
+    Best-effort against pyang internals (``i_identity.i_derived``); refine when
+    validating this integration path in Phase 1.
+    """
+    result = []
+    base = type_stmt.search_one("base")
+    identity = getattr(base, "i_identity", None) if base is not None else None
+    derived = getattr(identity, "i_derived", None) if identity is not None else None
+    for ident in derived or []:
+        result.append({"name": ident.arg, "module": ident.i_module.i_modulename})
+    return result
 
 
 def module_name(stmt):
