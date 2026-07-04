@@ -52,7 +52,6 @@ export class DynamicRecursiveFormComponent implements OnInit {
     this.root = this.schema.root ?? false;
     if (this.initialValue) {
       this.formGroup.patchValue(this.initialValue);
-      console.log(this.formGroup.value);
     }
   }
 

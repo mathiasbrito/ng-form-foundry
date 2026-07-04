@@ -39,7 +39,11 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
   @Input() minItems: number = 1;
   @Input() maxItems: number = 1;
   @Output() message = new EventEmitter();
-  @ViewChildren(DynamicRecursiveFormComponent) items!: QueryList<DynamicRecursiveFormComponent>;
+  // forwardRef: DynamicRecursiveFormComponent and this component import each
+  // other, so the class reference is undefined when this query is evaluated at
+  // decoration time. forwardRef defers the lookup and keeps the selector valid.
+  @ViewChildren(forwardRef(() => DynamicRecursiveFormComponent))
+  items!: QueryList<DynamicRecursiveFormComponent>;
 
   cdr = inject(ChangeDetectorRef);
 

@@ -73,9 +73,12 @@ function buildNodeGroupControl<G extends NodeGroup>(
   const controls: any = {} as Partial<FormGroupType<G>>;
   for (const key in group.children) {
     const child = group.children[key];
+    // Forward only this child's slice of the initial data, keyed by the child's
+    // record key. Passing the whole `initial` object seeds every leaf with the
+    // parent record and prevents list builders from sizing to the real data.
     controls[key] = buildControl(
       child,
-      initial,
+      initial?.[key],
     ) as FormGroupType<G>[typeof key];
   }
   return new FormGroup(controls as FormGroupType<G>) as DFormGroup<G>;
@@ -83,14 +86,30 @@ function buildNodeGroupControl<G extends NodeGroup>(
 
 function buildNodeGroupListControl<GL extends NodeGroupList>(
   list: GL,
-  initial: GL[] | null = null,
+  initial: unknown[] | null = null,
 ): FormArray<DFormGroup<GL['type']>> {
+  // `initial` is the runtime data array — one group per element. Fall back to a
+  // single empty group only when no initial data is supplied.
   const values = Array.isArray(initial) ? initial : [null];
   return new FormArray(
-    values.map((v) => buildNodeGroupControl(list.type, v as any)),
+    values.map((v) =>
+      buildNodeGroupControl(list.type, v as Record<string, unknown> | null),
+    ),
   );
 }
 
+/**
+ * Build the `AbstractControl` for a single schema node.
+ *
+ * Dispatches on `node.kind`: a `leaf` becomes a `FormControl`, a `leafList` a
+ * `FormArray` of controls, a `nodeGroup` a nested `FormGroup`, and a
+ * `nodeGroupList` a `FormArray` of groups. `initial` is the runtime value for
+ * this node — a scalar for a leaf, an array for a list, an object for a group —
+ * and seeds the control's value (falling back to the node's `default`).
+ *
+ * Most callers use {@link buildFormFromSchema}; this is exposed for building a
+ * control from a single non-root node.
+ */
 export function buildControl<T extends NodeType>(
   node: T,
   initial?: unknown | null,
@@ -115,15 +134,46 @@ export function buildControl<T extends NodeType>(
   if (isNodeGroupList(node)) {
     return buildNodeGroupListControl(
       node,
-      initial ? (initial as NodeGroupList[]) : null,
+      initial ? (initial as unknown[]) : null,
     ) as DFormControl<T>;
   }
   return new FormControl(initial ?? '') as DFormControl<T>;
 }
 
+/**
+ * Build a typed `FormGroup` from a root `NodeGroup` schema.
+ *
+ * The returned group's control structure, keys, and value types are inferred
+ * from the schema literal — a `leaf` of `type: 'number'` yields a
+ * `FormControl<number>`, a `nodeGroup` a nested `FormGroup`, and so on. `initial`
+ * is an optional value object keyed by the schema's `children` keys; each child
+ * control is seeded from its matching slice (falling back to the node `default`).
+ *
+ * Inference only holds when `schema`'s literal type is preserved. Author schemas
+ * with {@link defineSchema} or a `satisfies NodeGroup` annotation — never
+ * `const schema: NodeGroup = ...`, which widens `children` and erases the field
+ * names and value types.
+ */
 export function buildFormFromSchema<S extends NodeGroup>(
   schema: S,
   initial: Record<string, unknown> | null = null,
 ): DFormGroup<S> {
   return buildNodeGroupControl<S>(schema, initial);
+}
+
+/**
+ * Capture a schema literal with its exact type while checking it against
+ * `NodeGroup`.
+ *
+ * This is an identity function whose only job is the `const` type parameter,
+ * which keeps the narrow literal type of `schema` (field names, each node's
+ * `type`) instead of widening it to `NodeGroup`. Assigning a schema to a
+ * `: NodeGroup`-annotated constant widens `children` to
+ * `Record<string, NodeType>` and erases that information, so
+ * {@link buildFormFromSchema} can no longer infer a typed `FormGroup`. Passing
+ * the schema through `defineSchema` (or annotating it `satisfies NodeGroup`)
+ * preserves the schema-to-`FormGroup` inference.
+ */
+export function defineSchema<const S extends NodeGroup>(schema: S): S {
+  return schema;
 }

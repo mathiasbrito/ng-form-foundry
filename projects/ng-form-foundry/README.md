@@ -1,63 +1,93 @@
-# NgFormFoundry
+# ng-form-foundry
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.0.
+Build fully-typed Angular Reactive Forms and Angular Material UI from a single
+declarative, recursive **form-description schema**. You write the schema; the
+library gives you a typed `FormGroup` and a rendered form.
 
-## Code scaffolding
+```ts
+const schema = defineSchema({
+  kind: 'nodeGroup',
+  name: 'profile',
+  children: {
+    firstName: { kind: 'leaf', type: 'string', name: 'firstName', required: true },
+    age:       { kind: 'leaf', type: 'number', name: 'age' },
+    subscribe: { kind: 'leaf', type: 'boolean', name: 'subscribe' },
+  },
+});
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+form = buildFormFromSchema(schema);
+// form: FormGroup<{ firstName: FormControl<string>; age: FormControl<number>; subscribe: FormControl<boolean> }>
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
+```html
+<nff-dynamic-recursive-form [schema]="schema" [formGroup]="form" [editable]="true" />
 ```
 
-## Building
+## Features
 
-To build the library, run:
+- **One schema → typed form + UI.** `NodeGroup` / `Leaf` / `LeafList` /
+  `NodeGroupList` describe nested objects, primitive lists, and repeatable
+  groups.
+- **Type inference.** The returned `FormGroup`'s keys and control value types are
+  inferred from the schema literal — no manual `FormGroup<...>` typing.
+- **Angular Material renderers** for string, number, boolean, and enum fields,
+  plus add/remove lists and collapsible groups.
+- **Standalone components**, Angular 20, reactive forms throughout.
 
-```bash
-ng build ng-form-foundry
-```
-
-This command will compile your project, and the build artifacts will be placed in the `dist/` directory.
-
-### Publishing the Library
-
-Once the project is built, you can publish your library by following these steps:
-
-1. Navigate to the `dist` directory:
-   ```bash
-   cd dist/ng-form-foundry
-   ```
-
-2. Run the `npm publish` command to publish your library to the npm registry:
-   ```bash
-   npm publish
-   ```
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## Installation
 
 ```bash
-ng test
+npm install ng-form-foundry
 ```
 
-## Running end-to-end tests
+### Peer dependencies
 
-For end-to-end (e2e) testing, run:
+`ng-form-foundry` renders with Angular Material, so your app must have:
+
+| Package | Version |
+| --- | --- |
+| `@angular/core`, `@angular/common`, `@angular/forms` | `^20.1.0` |
+| `@angular/material`, `@angular/cdk` | `^20.2.0` |
+| `rxjs` | `^7.8.0` |
 
 ```bash
-ng e2e
+npm install @angular/material @angular/cdk
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+### Application setup
 
-## Additional Resources
+Load a Material theme and the Material Icons font. Animations are optional in
+Angular Material 20.
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```scss
+// styles.scss
+@use '@angular/material' as mat;
+html { @include mat.theme((color: mat.$violet-palette, typography: Roboto, density: 0)); }
+```
+
+```html
+<!-- index.html <head> -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+```
+
+See the [documentation](https://ng-form-foundry.readthedocs.io) for optional
+animation setup.
+
+## Reading the value
+
+`buildFormFromSchema` returns a standard reactive `FormGroup`:
+
+```ts
+this.form.value;         // current value (omits disabled controls)
+this.form.getRawValue(); // full value, typed to the schema
+this.form.valid;         // validity from required / enum / list validators
+```
+
+## Documentation
+
+Full guide, schema reference, and worked examples:
+**https://ng-form-foundry.readthedocs.io**
+
+## License
+
+Apache-2.0 © Mathias Santos de Brito

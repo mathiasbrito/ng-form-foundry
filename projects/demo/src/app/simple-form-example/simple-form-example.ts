@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { buildFormFromSchema, DynamicRecursiveFormComponent } from 'ng-form-foundry';
-import { simpleForm } from '../examples-schemas/simple';
+import { simpleForm } from './simple-schema';
 import { MatButtonModule } from '@angular/material/button';
 
 @Component({
@@ -8,8 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
   imports: [
     DynamicRecursiveFormComponent, MatButtonModule
   ],
-  templateUrl: './simple-form-example.component.html',
-  styleUrl: './simple-form-example.component.scss',
+  templateUrl: './simple-form-example.html',
+  styleUrl: './simple-form-example.scss',
 })
 export class SimpleFormExample {
 
@@ -20,6 +20,10 @@ export class SimpleFormExample {
 
   print() {
     console.log(this.formGroup.value);
+  }
+
+  printCleaned() {
+    console.log(this.formGroup.getRawValue());
   }
 
 

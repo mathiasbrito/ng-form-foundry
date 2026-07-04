@@ -10,7 +10,7 @@
     "noImplicitReturns": true,
     "paths": {
       "ng-form-foundry": [
-        "./dist/ng-form-foundry"
+        "./projects/ng-form-foundry/src/public-api.ts"
       ]
     },
     "noFallthroughCasesInSwitch": true,

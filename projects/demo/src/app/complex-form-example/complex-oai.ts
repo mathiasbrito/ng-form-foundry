@@ -1,4 +1,4 @@
-import { NodeGroup } from '../dynamic-recursive.types';
+import { NodeGroup } from 'ng-form-foundry';
 
 export const SnssaiSchema: NodeGroup = {
   kind: 'nodeGroup',

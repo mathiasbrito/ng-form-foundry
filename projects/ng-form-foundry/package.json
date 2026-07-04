@@ -1,33 +1,38 @@
 {
   "name": "ng-form-foundry",
-  "version": "0.0.2",
+  "version": "0.1.0",
+  "description": "Build fully-typed Angular Reactive Forms and Angular Material UI from a declarative, recursive form-description schema.",
+  "keywords": [
+    "angular",
+    "forms",
+    "reactive-forms",
+    "dynamic-forms",
+    "schema-driven-forms",
+    "form-builder",
+    "angular-material",
+    "json-schema",
+    "typescript"
+  ],
+  "author": "Mathias Santos de Brito",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mathiasbrito/ng-form-foundry.git"
+  },
+  "homepage": "https://ng-form-foundry.readthedocs.io",
+  "bugs": {
+    "url": "https://github.com/mathiasbrito/ng-form-foundry/issues"
+  },
   "peerDependencies": {
-    "@angular/common": "^20.3.0",
-    "@angular/core": "^20.3.0"
+    "@angular/cdk": "^20.2.0",
+    "@angular/common": "^20.1.0",
+    "@angular/core": "^20.1.0",
+    "@angular/forms": "^20.1.0",
+    "@angular/material": "^20.2.0",
+    "rxjs": "^7.8.0"
   },
   "dependencies": {
     "tslib": "^2.3.0"
   },
-  "sideEffects": false,
-  "devDependencies": {
-    "angular-eslint": "^20.5.1"
-  },
-  "main": "../../dist/ng-form-foundry/bundles/ng-form-foundry.umd.js",
-  "module": "../../dist/ng-form-foundry/fesm2020/ng-form-foundry.mjs",
-  "es2020": "../../dist/ng-form-foundry/fesm2020/ng-form-foundry.mjs",
-  "esm2020": "../../dist/ng-form-foundry/esm2020/ng-form-foundry.mjs",
-  "fesm2020": "../../dist/ng-form-foundry/fesm2020/ng-form-foundry.mjs",
-  "typings": "../../dist/ng-form-foundry/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./index.d.ts",
-        "default": "./fesm2020/ng-form-foundry.mjs"
-      },
-      "require": {
-        "types": "./index.d.ts",
-        "default": "./bundles/ng-form-foundry.umd.js"
-      }
-    }
-  }
+  "sideEffects": false
 }

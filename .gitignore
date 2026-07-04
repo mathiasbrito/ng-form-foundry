@@ -37,6 +37,12 @@ yarn-error.log
 testem.log
 /typings
 
+# Documentation build
+/docs/_build
+
+# Packaged library tarballs
+*.tgz
+
 # System files
 .DS_Store
 Thumbs.db
@@ -46,3 +52,8 @@ storybook-static
 
 .vscode
 .editorconfig
+
+# Standalone packages (own toolchain)
+packages/**/node_modules
+packages/**/dist
+packages/**/out-tsc

@@ -24,27 +24,11 @@
         "test": {
           "builder": "@angular/build:karma",
           "options": {
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
             "tsConfig": "projects/ng-form-foundry/tsconfig.spec.json"
-          }
-        },
-        "storybook": {
-          "builder": "@storybook/angular:start-storybook",
-          "options": {
-            "configDir": "projects/ng-form-foundry/.storybook",
-            "browserTarget": "ng-form-foundry:build",
-            "compodoc": false,
-            "port": 6006,
-            "styles": ["ng-form-foundry/src/styles.scss"]
-          }
-        },
-        "build-storybook": {
-          "builder": "@storybook/angular:build-storybook",
-          "options": {
-            "configDir": "projects/ng-form-foundry/.storybook",
-            "browserTarget": "ng-form-foundry:build",
-            "compodoc": false,
-            "outputDir": "storybook-static",
-            "styles": ["ng-form-foundry/src/styles.scss"]
           }
         }
       }
