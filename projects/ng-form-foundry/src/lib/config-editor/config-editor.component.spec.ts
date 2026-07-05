@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { FormArray } from '@angular/forms';
+import { FormArray, FormGroup } from '@angular/forms';
 
 import { ConfigEditorComponent } from './config-editor.component';
 import { buildFormFromSchema } from '../core/dynamic-recursive-forms-builder';
@@ -25,6 +25,12 @@ describe('ConfigEditorComponent', () => {
         name: 'ifaces',
         type: { kind: 'nodeGroup', name: 'iface', children: { nm: { kind: 'leaf', type: 'string', name: 'nm' } } },
       },
+      optional: {
+        kind: 'nodeGroup',
+        name: 'optional',
+        presence: true,
+        children: { flag: { kind: 'leaf', type: 'boolean', name: 'flag' } },
+      },
     },
   };
 
@@ -43,7 +49,7 @@ describe('ConfigEditorComponent', () => {
   it('builds the tree and selects the root with its own leaves', () => {
     expect(component.selected).toBe(component.root);
     expect(component.root.leaves.map((l) => l.key)).toEqual(['hostname']);
-    expect(component.root.children.map((c) => c.label)).toEqual(['system', 'ifaces']);
+    expect(component.root.children.map((c) => c.label)).toEqual(['system', 'ifaces', 'optional']);
   });
 
   it('expands a nodeGroupList into one tree node per item', () => {
@@ -82,5 +88,30 @@ describe('ConfigEditorComponent', () => {
     expect(list.children.length).toBe(1);
     expect(list.children[0].removable!.index).toBe(0);
     expect(list.children[0].label).toBe('iface #1');
+  });
+
+  it('shows an absent presence group as a placeholder node', () => {
+    const opt = component.root.children.find((c) => c.label === 'optional')!;
+    expect(opt.presence).toBeTruthy();
+    expect(opt.present).toBe(false);
+    expect(component.formGroup.get('optional')).toBeNull();
+  });
+
+  it('setPresence(true) enables the group, builds its fields, and selects it', () => {
+    const opt = component.root.children.find((c) => c.label === 'optional')!;
+    component.setPresence(opt, true);
+    expect(opt.present).toBe(true);
+    expect(component.formGroup.get('optional')).toBeInstanceOf(FormGroup);
+    expect(opt.leaves.map((l) => l.key)).toEqual(['flag']);
+    expect(component.selected).toBe(opt);
+  });
+
+  it('setPresence(false) removes the group again', () => {
+    const opt = component.root.children.find((c) => c.label === 'optional')!;
+    component.setPresence(opt, true);
+    component.setPresence(opt, false);
+    expect(opt.present).toBe(false);
+    expect(component.formGroup.get('optional')).toBeNull();
+    expect(opt.leaves.length).toBe(0);
   });
 });

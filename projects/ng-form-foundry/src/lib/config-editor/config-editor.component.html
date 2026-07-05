@@ -20,7 +20,16 @@
           <span class="twisty-spacer"></span>
         }
 
-        <span class="tree-label">{{ node.label }}</span>
+        @if (node.presence) {
+          <mat-checkbox
+            class="presence-check"
+            [checked]="!!node.present"
+            [disabled]="!editable"
+            (change)="setPresence(node, $event.checked)"
+            (click)="$event.stopPropagation()"
+          ></mat-checkbox>
+        }
+        <span class="tree-label" [class.absent]="node.presence && !node.present">{{ node.label }}</span>
 
         @if (editable && node.list) {
           <button
@@ -78,6 +87,9 @@
           <p class="empty">This node has no fields of its own — pick a child on the left.</p>
         }
       </div>
+    } @else if (selected && selected.presence && !selected.present) {
+      <h3 class="detail-title">{{ selected.label }}</h3>
+      <p class="empty">This optional group is off. Tick its box in the tree to add it.</p>
     } @else if (selected && selected.list) {
       <h3 class="detail-title">{{ selected.label }}</h3>
       <p class="empty">

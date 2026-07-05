@@ -3,6 +3,7 @@ import { FormArray, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltip } from '@angular/material/tooltip';
 import { Leaf, LeafList, NodeGroup } from '../types/dynamic-recursive.types';
 import { asFormArray, asFormControl } from '../core/utils';
@@ -32,6 +33,10 @@ interface TreeNode {
   list?: ListRef;
   /** Present on a list-item node: the FormArray and current index it can be removed from. */
   removable?: { array: FormArray; index: number };
+  /** Present on an optional (presence) group node: lets a checkbox add/remove the group. */
+  presence?: { parentGroup: FormGroup; key: string; schema: NodeGroup };
+  /** For a presence node: whether the group is currently present. */
+  present?: boolean;
 }
 
 /**
@@ -49,6 +54,7 @@ interface TreeNode {
     NgTemplateOutlet,
     MatIconModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatTooltip,
     LeafRendererComponent,
     LeafListRendererComponent,
@@ -106,8 +112,38 @@ export class ConfigEditorComponent implements OnInit {
     if (this.selected === item) this.select(listNode);
   }
 
+  /** Enable or disable an optional (presence) group by adding/removing its control. */
+  setPresence(node: TreeNode, present: boolean) {
+    const p = node.presence;
+    if (!p) return;
+    if (present) {
+      if (!(p.parentGroup.get(p.key) instanceof FormGroup)) {
+        const group = buildFormFromSchema(p.schema);
+        p.parentGroup.addControl(p.key, group);
+        const built = this.buildTree(p.schema, group, node.label);
+        node.children = built.children;
+        node.leaves = built.leaves;
+        node.leafLists = built.leafLists;
+        node.group = group;
+      }
+      node.present = true;
+      this.select(node);
+    } else {
+      p.parentGroup.removeControl(p.key);
+      node.children = [];
+      node.leaves = [];
+      node.leafLists = [];
+      node.group = null;
+      node.present = false;
+    }
+  }
+
   protected readonly asFormControl = asFormControl;
   protected readonly asFormArray = asFormArray;
+
+  private placeholder(label: string): TreeNode {
+    return { id: String(this.nextId++), label, children: [], leaves: [], leafLists: [], group: null };
+  }
 
   /** Re-index and re-label a list node's item children after add/remove. */
   private renumber(listNode: TreeNode): void {
@@ -131,7 +167,16 @@ export class ConfigEditorComponent implements OnInit {
         leafLists.push({ key, node: child });
       } else if (child.kind === 'nodeGroup') {
         const childGroup = group.get(key);
-        if (childGroup instanceof FormGroup) {
+        if (child.presence) {
+          // Optional group: always a tree node — a placeholder when absent.
+          const node =
+            childGroup instanceof FormGroup
+              ? this.buildTree(child, childGroup, child.label ?? key)
+              : this.placeholder(child.label ?? key);
+          node.presence = { parentGroup: group, key, schema: child };
+          node.present = childGroup instanceof FormGroup;
+          children.push(node);
+        } else if (childGroup instanceof FormGroup) {
           children.push(this.buildTree(child, childGroup, child.label ?? key));
         }
       } else if (child.kind === 'nodeGroupList') {

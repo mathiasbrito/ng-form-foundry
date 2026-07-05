@@ -22,6 +22,8 @@ export class TreeEditorExample {
       { name: 'eth0', mtu: 1500, enabled: true },
       { name: 'eth1', mtu: 9000, enabled: false },
     ],
+    // 'management' present (checkbox on); 'logging' omitted (checkbox off).
+    management: { user: 'admin' },
   });
 
   print() {

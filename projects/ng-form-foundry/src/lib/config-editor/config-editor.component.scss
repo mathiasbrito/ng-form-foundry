@@ -57,10 +57,20 @@
   width: 24px;
 }
 
+.presence-check {
+  flex: 0 0 auto;
+  margin-right: 2px;
+}
+
 .tree-label {
   flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.tree-label.absent {
+  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.55));
+  font-style: italic;
 }
 
 .row-btn {
