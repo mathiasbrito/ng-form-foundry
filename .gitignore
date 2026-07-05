@@ -61,3 +61,6 @@ packages/**/out-tsc
 # Python
 __pycache__/
 *.pyc
+
+# Nested lockfile — installs run at the workspace root only
+projects/ng-form-foundry/package-lock.json
