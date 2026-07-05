@@ -65,6 +65,13 @@ describe('ConfigEditorComponent', () => {
     expect(system.leaves.map((l) => l.key)).toEqual(['tz']);
   });
 
+  it('selecting a node with children expands it in the tree', () => {
+    const list = component.root.children.find((c) => c.label === 'ifaces')!;
+    expect(component.expanded.has(list.id)).toBe(false);
+    component.select(list);
+    expect(component.expanded.has(list.id)).toBe(true);
+  });
+
   it('addItem appends to the FormArray and the tree and selects the new item', () => {
     const list = component.root.children.find((c) => c.label === 'ifaces')!;
     const array = component.formGroup.get('ifaces') as FormArray;
@@ -87,7 +94,24 @@ describe('ConfigEditorComponent', () => {
     expect(array.length).toBe(1);
     expect(list.children.length).toBe(1);
     expect(list.children[0].removable!.index).toBe(0);
-    expect(list.children[0].label).toBe('iface #1');
+    expect(list.children[0].label).toBe('#1');
+  });
+
+  it('pathTo returns the root-to-node breadcrumb path', () => {
+    const list = component.root.children.find((c) => c.label === 'ifaces')!;
+    const item = list.children[0];
+    expect(component.pathTo(component.root).map((n) => n.label)).toEqual(['device']);
+    expect(component.pathTo(item).map((n) => n.label)).toEqual(['device', 'ifaces', '#1']);
+  });
+
+  it('open selects a child and keeps its parent expanded', () => {
+    const list = component.root.children.find((c) => c.label === 'ifaces')!;
+    const first = list.children[0];
+
+    component.open(list, first);
+
+    expect(component.selected).toBe(first);
+    expect(component.expanded.has(list.id)).toBe(true);
   });
 
   it('shows an absent presence group as a placeholder node', () => {

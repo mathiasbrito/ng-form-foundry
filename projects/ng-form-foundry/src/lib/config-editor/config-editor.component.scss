@@ -39,11 +39,16 @@
   font-weight: 600;
 }
 
+// Drive the button size through Material's own tokens, not width/height on the
+// element: mat-icon-button computes its internal padding from
+// --mat-icon-button-state-layer-size, and mat-icon carries a hardcoded 24px, so
+// a smaller glyph must override both the icon-size token and mat-icon's box to
+// stay centered. Clamping width/height directly would desync the two and
+// off-center the icon.
 .twisty {
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  line-height: 24px;
+  --mat-icon-button-state-layer-size: 28px;
+  --mat-icon-button-icon-size: 18px;
 
   mat-icon {
     font-size: 18px;
@@ -54,7 +59,7 @@
 
 .twisty-spacer {
   flex: 0 0 auto;
-  width: 24px;
+  width: 28px;
 }
 
 .presence-check {
@@ -75,9 +80,8 @@
 
 .row-btn {
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  line-height: 24px;
+  --mat-icon-button-state-layer-size: 28px;
+  --mat-icon-button-icon-size: 18px;
 
   mat-icon {
     font-size: 18px;
@@ -102,8 +106,28 @@
   overflow: auto;
 }
 
-.detail-title {
+// The detail-pane title is a navigable breadcrumb: each ancestor is a link back
+// up the tree, the current node is bold plain text.
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
   margin: 4px 0 12px;
+  font-size: 1.15rem;
+}
+
+.crumb-current {
+  font-weight: 600;
+}
+
+.crumb-link {
+  font-size: inherit;
+  padding: 0;
+}
+
+.crumb-sep {
+  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.5));
 }
 
 .fields {
@@ -115,4 +139,89 @@
 .empty {
   color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.6));
   font-style: italic;
+}
+
+.item-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// A link-styled button so the item is keyboard-focusable and screen-reader-announced.
+.item-link {
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--mat-sys-primary, #6750a4);
+  font: inherit;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.item-link:hover {
+  text-decoration: underline;
+}
+
+.remove-item {
+  flex: 0 0 auto;
+}
+
+.list-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+// A group's own fields on the left, its child-section menu docked on the right.
+.group-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.group-body .fields {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// Links to child sections, a right-hand menu so you can navigate deeper without
+// going back to the tree on the left.
+.child-links {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding-left: 16px;
+  border-left: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+}
+
+.child-links-title {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.6));
+}
+
+.child-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
 }

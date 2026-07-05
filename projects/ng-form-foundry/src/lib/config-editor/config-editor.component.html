@@ -66,35 +66,81 @@
   </nav>
 
   <section class="detail">
+    @if (selected) {
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        @for (crumb of pathTo(selected); track crumb.id; let last = $last) {
+          @if (last) {
+            <span class="crumb-current" aria-current="page">{{ crumb.label }}</span>
+          } @else {
+            <button type="button" class="item-link crumb-link" (click)="select(crumb)">{{ crumb.label }}</button>
+            <span class="crumb-sep" aria-hidden="true">/</span>
+          }
+        }
+      </nav>
+    }
     @if (selected && selected.group) {
-      <h3 class="detail-title">{{ selected.label }}</h3>
-      <div class="fields" [formGroup]="selected.group">
-        @for (leaf of selected.leaves; track leaf.key) {
-          <nff-leaf-renderer
-            [leaf_]="leaf.node"
-            [control]="asFormControl(selected.group.get(leaf.key))"
-            [editable]="editable"
-          />
-        }
-        @for (list of selected.leafLists; track list.key) {
-          <nff-leaf-list-renderer
-            [leaf_]="list.node"
-            [formArray]="asFormArray(selected.group.get(list.key))"
-            [editable]="editable"
-          />
-        }
-        @if (!selected.leaves.length && !selected.leafLists.length) {
-          <p class="empty">This node has no fields of its own — pick a child on the left.</p>
+      <div class="group-body">
+        <div class="fields" [formGroup]="selected.group">
+          @for (leaf of selected.leaves; track leaf.key) {
+            <nff-leaf-renderer
+              [leaf_]="leaf.node"
+              [control]="asFormControl(selected.group.get(leaf.key))"
+              [editable]="editable"
+            />
+          }
+          @for (list of selected.leafLists; track list.key) {
+            <nff-leaf-list-renderer
+              [leaf_]="list.node"
+              [formArray]="asFormArray(selected.group.get(list.key))"
+              [editable]="editable"
+            />
+          }
+          @if (!selected.leaves.length && !selected.leafLists.length && !selected.children.length) {
+            <p class="empty">This node has no fields.</p>
+          }
+        </div>
+        @if (selected.children.length) {
+          <nav class="child-links">
+            <h4 class="child-links-title">Sections</h4>
+            @for (child of selected.children; track child.id) {
+              <button type="button" class="item-link child-link" (click)="open(selected, child)">
+                <mat-icon>chevron_right</mat-icon>{{ child.label }}
+              </button>
+            }
+          </nav>
         }
       </div>
     } @else if (selected && selected.presence && !selected.present) {
-      <h3 class="detail-title">{{ selected.label }}</h3>
       <p class="empty">This optional group is off. Tick its box in the tree to add it.</p>
     } @else if (selected && selected.list) {
-      <h3 class="detail-title">{{ selected.label }}</h3>
-      <p class="empty">
-        {{ selected.children.length }} item(s). Use the <b>+</b> on this node to add one, then pick it to edit.
-      </p>
+      @if (selected.children.length) {
+        <ul class="item-list">
+          @for (item of selected.children; track item.id) {
+            <li class="item-row">
+              <button type="button" class="item-link" (click)="open(selected, item)">{{ item.label }}</button>
+              @if (editable && item.removable) {
+                <button
+                  matIconButton
+                  class="row-btn remove-item"
+                  matTooltip="Remove"
+                  (click)="removeItem(selected, item)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty">No {{ selected.list.itemLabel }} items yet.</p>
+      }
+      @if (editable) {
+        <div class="list-actions">
+          <button matButton (click)="addItem(selected)">
+            <mat-icon>add</mat-icon> Add {{ selected.list.itemLabel }}
+          </button>
+        </div>
+      }
     } @else {
       <p class="empty">Select a node on the left to edit its fields.</p>
     }

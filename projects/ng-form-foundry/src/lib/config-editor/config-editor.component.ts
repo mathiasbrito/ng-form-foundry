@@ -81,6 +81,32 @@ export class ConfigEditorComponent implements OnInit {
 
   select(node: TreeNode) {
     this.selected = node;
+    // Reveal the node's direct children in the tree as it opens on the right.
+    if (node.children.length) this.expanded.add(node.id);
+  }
+
+  /** Select a child (list item or sub-group) from the detail pane, keeping its parent expanded in the tree. */
+  open(parent: TreeNode, child: TreeNode) {
+    this.expanded.add(parent.id);
+    this.select(child);
+  }
+
+  /**
+   * Root-to-`target` path for the detail-pane breadcrumb (inclusive of both ends),
+   * or an empty array if `target` is not in the current tree. Searched fresh each
+   * call so it stays correct after add/remove/presence mutations rebuild subtrees.
+   */
+  pathTo(target: TreeNode): TreeNode[] {
+    const walk = (node: TreeNode, trail: TreeNode[]): TreeNode[] | null => {
+      const here = [...trail, node];
+      if (node === target) return here;
+      for (const child of node.children) {
+        const found = walk(child, here);
+        if (found) return found;
+      }
+      return null;
+    };
+    return this.root ? (walk(this.root, []) ?? []) : [];
   }
 
   toggle(node: TreeNode) {
@@ -145,12 +171,11 @@ export class ConfigEditorComponent implements OnInit {
     return { id: String(this.nextId++), label, children: [], leaves: [], leafLists: [], group: null };
   }
 
-  /** Re-index and re-label a list node's item children after add/remove. */
+  /** Re-index and re-label a list node's item children (just "#n") after add/remove. */
   private renumber(listNode: TreeNode): void {
-    const base = listNode.list?.itemLabel ?? '';
     listNode.children.forEach((child, i) => {
       if (child.removable) child.removable.index = i;
-      child.label = `${base} #${i + 1}`;
+      child.label = `#${i + 1}`;
     });
   }
 
@@ -187,7 +212,9 @@ export class ConfigEditorComponent implements OnInit {
             ? array.controls
                 .filter((c): c is FormGroup => c instanceof FormGroup)
                 .map((item, i) => {
-                  const node = this.buildTree(child.type, item, `${itemLabel} #${i + 1}`);
+                  // Just "#n": the item sits under its list node, so repeating the
+                  // item name (e.g. "Interface #1") only echoes the parent.
+                  const node = this.buildTree(child.type, item, `#${i + 1}`);
                   node.removable = { array, index: i };
                   return node;
                 })
