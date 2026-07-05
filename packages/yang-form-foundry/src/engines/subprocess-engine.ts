@@ -19,8 +19,8 @@ export interface SubprocessEngineOptions {
  * in the deployment image, or run this behind a sidecar.
  *
  * `resolve` runs `emit_effective_tree.py` and parses its JSON as an
- * {@link EffectiveModel}. `validate` is a Phase-0 no-op: full RFC 7951 validation
- * with yangson needs the target's yang-library and is wired in a later phase.
+ * {@link EffectiveModel}. `validate` is currently a no-op — full RFC 7951
+ * validation with yangson needs the target's yang-library.
  * Counterpart of `FakeEngine`, which serves canned models for tests.
  */
 export class SubprocessEngine implements YangEngine {
@@ -50,8 +50,7 @@ export class SubprocessEngine implements YangEngine {
   }
 
   async validate(_data: unknown, _model: EffectiveModel): Promise<ValidationResult> {
-    // Phase 0: no-op. RFC 7951 validation via yangson requires the target's
-    // yang-library and is wired in a later phase.
+    // No-op: RFC 7951 validation via yangson requires the target's yang-library.
     return { valid: true, errors: [] };
   }
 

@@ -11,9 +11,12 @@ becomes:
 | `leafList` | a list of scalars | `FormArray<FormControl>` |
 | `nodeGroup` | a nested object | `FormGroup` |
 | `nodeGroupList` | a list of objects | `FormArray<FormGroup>` |
+| `choice` | a discriminated selection | `FormGroup` (a case selector + the chosen case's fields) |
 
 The root of every schema is a `nodeGroup`. Its `children` map contains the fields;
-each child is itself any of the four kinds, so groups nest to any depth.
+each child is itself any of these kinds, so groups nest to any depth. A
+`nodeGroup` can also be marked `presence` (see the
+[schema reference](schema-reference.md)) to make it an optional, toggleable group.
 
 ```ts
 {

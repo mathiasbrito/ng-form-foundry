@@ -7,10 +7,9 @@ groupings), then walks pyang's resolved child tree (``i_children``) and prints a
 ``EffectiveModel`` matching ``src/model.ts`` to stdout.
 
 Requires pyang on the host: ``pip install pyang``. The JS unit tests do not run
-this — they use ``FakeEngine`` — so treat the type coverage here as the v0.1
-subset (container/list/leaf/leaf-list + common built-in types, keys, config,
-default, mandatory, enumeration). Richer types (union/leafref/identityref/bits/…)
-are emitted with their YANG base and refined in later phases.
+this — they use ``FakeEngine``. It emits container/list/leaf/leaf-list, choice
+and the built-in types, with keys, config, default, mandatory, and the type
+metadata (enum names, bits, union members, identities, leafref path).
 
 Usage:
     emit_effective_tree.py --entry <module> --source <dir> [--path <dir> ...] \\
@@ -73,8 +72,7 @@ def type_info(type_stmt):
 def collect_identities(type_stmt):
     """Derived identities for an identityref, each tagged with its module.
 
-    Best-effort against pyang internals (``i_identity.i_derived``); refine when
-    validating this integration path in Phase 1.
+    Best-effort against pyang internals (``i_identity.i_derived``).
     """
     result = []
     base = type_stmt.search_one("base")
@@ -147,7 +145,7 @@ def walk(stmt):
             node["mandatory"] = True
         return node
 
-    return None  # case/anydata/anyxml handled in later phases
+    return None  # anydata/anyxml are not emitted
 
 
 def walk_children(stmt):

@@ -88,8 +88,10 @@ property.
 | `Leaf` | A single scalar field. Union of `LeafString`, `LeafNumber`, `LeafBoolean`, `LeafEnum`. |
 | `LeafList` | A list of scalar fields. |
 | `NodeGroupList` | A list of groups. |
-| `NodeType` | `Leaf \| LeafList \| NodeGroup \| NodeGroupList`. |
+| `NodeChoice` | A discriminated selection (`cases`); in the form value the selection is `{ __case, ...fields }`. |
+| `NodeType` | `Leaf \| LeafList \| NodeGroup \| NodeGroupList \| NodeChoice`. |
 | `Appearance` | Presentation options for a `nodeGroup` (`flatten`, `noBorder`). |
+| `CASE_KEY` | The form-value key (`'__case'`) that records a choice's active case. |
 
 ### Inferred (advanced)
 

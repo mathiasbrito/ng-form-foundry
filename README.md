@@ -4,7 +4,10 @@ Build fully-typed Angular Reactive Forms and Angular Material UI from a single
 declarative, recursive **form-description schema**.
 
 - **Library:** [`projects/ng-form-foundry`](projects/ng-form-foundry) — the
-  publishable package.
+  publishable Angular package.
+- **YANG adapter:** [`packages/yang-form-foundry`](packages/yang-form-foundry) —
+  a standalone Node + TypeScript library that turns a YANG model into an
+  ng-form-foundry schema and reverts the edited value back to RFC 7951 data.
 - **Demo:** [`projects/demo`](projects/demo) — example forms consuming the library.
 - **Documentation:** <https://ng-form-foundry.readthedocs.io> (source in
   [`docs/`](docs)).
@@ -33,6 +36,7 @@ a quickstart.
 | Run the demo app | `ng serve` → http://localhost:4200/ |
 | Build the library | `ng build ng-form-foundry` (output in `dist/ng-form-foundry`) |
 | Test the library | `ng test ng-form-foundry` |
+| Build/test the YANG adapter | `cd packages/yang-form-foundry && npm ci && npm test` |
 | Build the docs | `pip install -r docs/requirements.txt && sphinx-build -b html docs docs/_build/html` |
 
 Continuous integration (build, test, pack, and docs build) runs on every push and

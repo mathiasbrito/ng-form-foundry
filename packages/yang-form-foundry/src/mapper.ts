@@ -5,10 +5,11 @@ import { toFormLeafType } from './rfc7951';
 /**
  * Derive the frontend `NodeGroup` schema from a resolved {@link EffectiveModel}.
  *
- * The v0.1 subset: container → nodeGroup, list → nodeGroupList, leaf → leaf,
- * leaf-list → leafList, with the common built-in types. Presentation-only and
- * wire-encoding concerns stay in the binding (the effective model); this output
- * is the pure render contract handed to the Angular app.
+ * container → nodeGroup (presence containers flagged `presence`), list →
+ * nodeGroupList, leaf-list → leafList, choice → a `Choice` node, and leaf → leaf
+ * (with `bits` becoming a group of boolean checkboxes and identityref/enum
+ * carrying their options). Wire-encoding concerns stay in the binding (the
+ * effective model); this output is the pure render contract handed to the app.
  *
  * Counterpart of the revert in `revert.ts`, which walks the same effective model.
  */

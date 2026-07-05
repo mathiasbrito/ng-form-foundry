@@ -31,7 +31,8 @@ form = buildFormFromSchema(schema);
 - **Type inference.** The returned `FormGroup`'s keys and control value types are
   inferred from the schema literal — no manual `FormGroup<...>` typing.
 - **Angular Material renderers** for string, number, boolean, and enum fields,
-  plus add/remove lists and collapsible groups.
+  add/remove lists, collapsible groups, optional **presence** groups with a
+  toggle, and **choice/case** selection.
 - **Standalone components**, Angular 20, reactive forms throughout.
 
 ## Installation
