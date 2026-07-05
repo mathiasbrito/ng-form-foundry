@@ -96,7 +96,9 @@ jobs:
 
       # Publish to Read the Docs by asking it to rebuild the `latest` version
       # (which tracks the default branch). Only on pushes to main, never on PRs.
-      # No-op if the token secret is absent, so CI stays green before it is set.
+      # Best-effort: a missing token or an RTD error (e.g. project not imported
+      # yet) warns but never fails CI — the docs artifact above is the source of
+      # truth for the build itself.
       - name: Trigger Read the Docs build
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -106,6 +108,14 @@ jobs:
             echo "READTHEDOCS_TOKEN not set; skipping Read the Docs trigger."
             exit 0
           fi
-          curl -fsSL -X POST \
+          status=$(curl -sS -o /tmp/rtd.out -w '%{http_code}' -X POST \
             -H "Authorization: Token ${RTD_TOKEN}" \
-            "https://readthedocs.org/api/v3/projects/ng-form-foundry/versions/latest/builds/"
+            "https://readthedocs.org/api/v3/projects/ng-form-foundry/versions/latest/builds/" || true)
+          status=${status:-000}
+          echo "Read the Docs responded HTTP ${status}"
+          cat /tmp/rtd.out 2>/dev/null || true
+          echo
+          case "${status}" in
+            2*) echo "Read the Docs build triggered." ;;
+            *) echo "::warning::Read the Docs build not triggered (HTTP ${status}). Import the project on readthedocs.org (slug 'ng-form-foundry') and check the token." ;;
+          esac
