@@ -4,6 +4,7 @@ import { ComplexFormExample } from './complex-form-example/complex-form-example'
 import { SplitFormExample } from './split-form-example/split-form-example';
 import { InitialPage } from './initial-page/initial-page';
 import { YangExample } from './yang-example/yang-example';
+import { TreeEditorExample } from './tree-editor-example/tree-editor-example';
 
 export const routes: Routes = [
   {
@@ -30,5 +31,9 @@ export const routes: Routes = [
   {
     path: 'yang',
     component: YangExample
+  },
+  {
+    path: 'tree',
+    component: TreeEditorExample
   }
 ];

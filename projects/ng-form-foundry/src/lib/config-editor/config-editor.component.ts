@@ -1,0 +1,103 @@
+import { Component, Input, OnInit } from '@angular/core';
+import { FormArray, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { NgTemplateOutlet } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { Leaf, LeafList, NodeGroup } from '../types/dynamic-recursive.types';
+import { asFormArray, asFormControl } from '../core/utils';
+import { LeafRendererComponent } from '../dynamic-recursive-form/leaf-renderer/leaf-renderer.component';
+import { LeafListRendererComponent } from '../dynamic-recursive-form/leaf-list-renderer/leaf-list-renderer.component';
+
+/** A navigable node in the config tree. Groups and list items are tree nodes; leaves are their detail. */
+interface TreeNode {
+  id: string;
+  label: string;
+  children: TreeNode[];
+  /** Leaves editable when this node is selected. Empty for list-container nodes. */
+  leaves: { key: string; node: Leaf }[];
+  leafLists: { key: string; node: LeafList }[];
+  /** The FormGroup holding this node's leaves, or null for a list-container node. */
+  group: FormGroup | null;
+}
+
+/**
+ * A tree/detail editor for a schema-built form: the structure (containers, lists,
+ * groups) is a tree on the left, and selecting a node shows that node's leaf
+ * fields for editing on the right. An alternative to the all-in-one
+ * {@link DynamicRecursiveFormComponent} for large configs.
+ */
+@Component({
+  selector: 'nff-config-editor',
+  standalone: true,
+  imports: [
+    ReactiveFormsModule,
+    NgTemplateOutlet,
+    MatIconModule,
+    MatButtonModule,
+    LeafRendererComponent,
+    LeafListRendererComponent,
+  ],
+  templateUrl: './config-editor.component.html',
+  styleUrl: './config-editor.component.scss',
+})
+export class ConfigEditorComponent implements OnInit {
+  @Input({ required: true }) schema!: NodeGroup;
+  @Input({ required: true }) formGroup!: FormGroup;
+  @Input() editable = true;
+
+  root!: TreeNode;
+  selected: TreeNode | null = null;
+  readonly expanded = new Set<string>();
+
+  ngOnInit() {
+    this.root = this.buildTree(this.schema, this.formGroup, '', this.schema.label ?? this.schema.name);
+    this.expanded.add(this.root.id);
+    this.select(this.root);
+  }
+
+  select(node: TreeNode) {
+    this.selected = node;
+  }
+
+  toggle(node: TreeNode) {
+    if (this.expanded.has(node.id)) this.expanded.delete(node.id);
+    else this.expanded.add(node.id);
+  }
+
+  protected readonly asFormControl = asFormControl;
+  protected readonly asFormArray = asFormArray;
+
+  private buildTree(schema: NodeGroup, group: FormGroup, id: string, label: string): TreeNode {
+    const leaves: TreeNode['leaves'] = [];
+    const leafLists: TreeNode['leafLists'] = [];
+    const children: TreeNode[] = [];
+
+    for (const key of Object.keys(schema.children)) {
+      const child = schema.children[key];
+      if (child.kind === 'leaf') {
+        leaves.push({ key, node: child });
+      } else if (child.kind === 'leafList') {
+        leafLists.push({ key, node: child });
+      } else if (child.kind === 'nodeGroup') {
+        const childGroup = group.get(key);
+        if (childGroup instanceof FormGroup) {
+          children.push(this.buildTree(child, childGroup, `${id}/${key}`, child.label ?? key));
+        }
+      } else if (child.kind === 'nodeGroupList') {
+        const array = group.get(key);
+        const items =
+          array instanceof FormArray
+            ? array.controls
+                .filter((c): c is FormGroup => c instanceof FormGroup)
+                .map((item, i) =>
+                  this.buildTree(child.type, item, `${id}/${key}/${i}`, `${child.type.label ?? child.type.name} #${i + 1}`),
+                )
+            : [];
+        children.push({ id: `${id}/${key}`, label: child.label ?? key, children: items, leaves: [], leafLists: [], group: null });
+      }
+      // choice nodes are not shown in the tree yet.
+    }
+
+    return { id: id || '/', label, children, leaves, leafLists, group };
+  }
+}

@@ -48,7 +48,7 @@ function buildControl<T extends NodeType>(
 ): DFormControl<T>;
 ```
 
-## Component
+## Components
 
 ### `<nff-dynamic-recursive-form>`
 
@@ -76,6 +76,23 @@ Always pass a `formGroup` built from the same `schema` with `buildFormFromSchema
 Rendering with `[schema]` alone binds the fields to a throwaway group and the
 values won't reach your form.
 ```
+
+### `<nff-config-editor>`
+
+`ConfigEditorComponent` — a tree/detail editor for large configs. The structure
+(containers, lists, groups) is a tree on the left; selecting a node shows that
+node's leaf fields for editing on the right. Binds to the same `FormGroup` as the
+form component.
+
+```html
+<nff-config-editor [schema]="schema" [formGroup]="form" />
+```
+
+| Input | Type | Default | Description |
+| --- | --- | --- | --- |
+| `schema` | `NodeGroup` | — | **Required.** The schema to edit. |
+| `formGroup` | `FormGroup` | — | **Required.** The form from `buildFormFromSchema(schema)`. |
+| `editable` | `boolean` | `true` | Whether the detail fields are editable. |
 
 ## Types
 

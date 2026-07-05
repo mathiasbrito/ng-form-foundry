@@ -1,0 +1,84 @@
+@use '@angular/material' as mat;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.editor {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  min-height: 320px;
+}
+
+.tree {
+  flex: 0 0 260px;
+  overflow: auto;
+  border: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+  border-radius: 8px;
+  padding: 4px 0;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.tree-row:hover {
+  background: var(--mat-sys-surface-container-high, rgba(0, 0, 0, 0.04));
+}
+
+.tree-row.selected {
+  background: var(--mat-sys-secondary-container, rgba(103, 80, 164, 0.12));
+  font-weight: 600;
+}
+
+.twisty {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.twisty-spacer {
+  flex: 0 0 auto;
+  width: 24px;
+}
+
+.tree-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: auto;
+}
+
+.detail-title {
+  margin: 4px 0 12px;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.6));
+  font-style: italic;
+}
