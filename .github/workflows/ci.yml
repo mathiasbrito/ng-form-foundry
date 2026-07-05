@@ -93,3 +93,19 @@ jobs:
         with:
           name: docs-html
           path: docs/_build/html
+
+      # Publish to Read the Docs by asking it to rebuild the `latest` version
+      # (which tracks the default branch). Only on pushes to main, never on PRs.
+      # No-op if the token secret is absent, so CI stays green before it is set.
+      - name: Trigger Read the Docs build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          RTD_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
+        run: |
+          if [ -z "${RTD_TOKEN}" ]; then
+            echo "READTHEDOCS_TOKEN not set; skipping Read the Docs trigger."
+            exit 0
+          fi
+          curl -fsSL -X POST \
+            -H "Authorization: Token ${RTD_TOKEN}" \
+            "https://readthedocs.org/api/v3/projects/ng-form-foundry/versions/latest/builds/"

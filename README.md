@@ -40,7 +40,35 @@ a quickstart.
 | Build the docs | `pip install -r docs/requirements.txt && sphinx-build -b html docs docs/_build/html` |
 
 Continuous integration (build, test, pack, and docs build) runs on every push and
-pull request — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+pull request — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml). On pushes
+to `main` that same workflow triggers a Read the Docs rebuild of the `latest` version.
+
+## Releasing
+
+Both packages are published to npm by
+[`.github/workflows/release.yml`](.github/workflows/release.yml) when a version tag
+is pushed. Each package publishes at the version in its own `package.json`; a version
+already on npm is skipped, so re-running a tag is safe.
+
+1. Bump the version in `projects/ng-form-foundry/package.json` and/or
+   `packages/yang-form-foundry/package.json`.
+2. Commit, then tag and push:
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+Required repository secrets (**Settings → Secrets and variables → Actions**):
+
+| Secret | Used by | Purpose |
+| --- | --- | --- |
+| `NPM_TOKEN` | `release.yml` | npm **Automation** access token with publish rights for both packages. |
+| `READTHEDOCS_TOKEN` | `ci.yml` | Read the Docs API token used to trigger a docs rebuild on pushes to `main`. |
+
+npm [provenance](https://docs.npmjs.com/generating-provenance-statements) is enabled,
+which requires a public repository; drop `--provenance` from `release.yml` if the
+repository is private. If you connect Read the Docs' native GitHub webhook instead,
+`READTHEDOCS_TOKEN` is optional and the trigger step no-ops when it is unset.
 
 ## License
 

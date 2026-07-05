@@ -1,0 +1,106 @@
+name: Release
+
+# Publish both packages to npm when a version tag is pushed, e.g.:
+#   git tag v0.1.0 && git push origin v0.1.0
+# Each package publishes at the version in its own package.json; a version that
+# is already on npm is skipped, so re-running a tag is safe.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance
+
+jobs:
+  publish-library:
+    name: Publish ng-form-foundry to npm
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build library
+        run: npx ng build ng-form-foundry
+
+      - name: Test library
+        run: npx ng test ng-form-foundry --watch=false --browsers=ChromeHeadless --no-progress
+
+      - name: Skip if this version is already on npm
+        id: guard
+        working-directory: dist/ng-form-foundry
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "Already published: $NAME@$VER — skipping."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        if: steps.guard.outputs.publish == 'true'
+        working-directory: dist/ng-form-foundry
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-yang-adapter:
+    name: Publish yang-form-foundry to npm
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: packages/yang-form-foundry
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: packages/yang-form-foundry/package-lock.json
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Skip if this version is already on npm
+        id: guard
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "Already published: $NAME@$VER — skipping."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        if: steps.guard.outputs.publish == 'true'
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
