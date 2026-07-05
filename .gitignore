@@ -57,3 +57,7 @@ storybook-static
 packages/**/node_modules
 packages/**/dist
 packages/**/out-tsc
+
+# Python
+__pycache__/
+*.pyc
