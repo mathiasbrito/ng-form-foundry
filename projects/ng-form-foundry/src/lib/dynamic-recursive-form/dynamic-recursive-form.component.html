@@ -165,6 +165,33 @@
             />
           }
         }
+        @for (childItem of nodeGroupChildrenList; track $index) {
+          @let child = childItem.value;
+          @if (child.kind == 'choice') {
+            @let choiceGroup = asFormGroup(formGroup.get(childItem.key));
+            @let selectedCase = activeCase(childItem.key);
+            <div class="choice-group" [formGroup]="choiceGroup">
+              <mat-form-field [appearance]="editable ? 'fill' : 'outline'">
+                <mat-label>{{ child.label ?? child.name }}</mat-label>
+                <mat-select
+                  [formControlName]="CASE_KEY"
+                  (selectionChange)="switchCase(childItem.key, child, $event.value)"
+                >
+                  @for (caseName of objectKeys(child.cases); track caseName) {
+                    <mat-option [value]="caseName">{{ caseName }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (selectedCase) {
+                <nff-dynamic-recursive-form
+                  [schema]="caseAsGroup(child, selectedCase)"
+                  [formGroup]="choiceGroup"
+                  [editable]="editable"
+                />
+              }
+            </div>
+          }
+        }
       </div>
     </div>
     <mat-accordion multi>
