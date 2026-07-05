@@ -30,15 +30,23 @@
       </div>
       @for (childItem of nodeGroupChildrenList; track $index) {
         @let child = childItem.value;
-        @if (child.kind == 'nodeGroup' && child.appearance?.flatten) {
-          <nff-dynamic-recursive-form
-            [schema]="child"
-            [formGroup]="asFormGroup(formGroup.get(child.name))"
-            [initialValue]="formGroup.get(child.name)?.value"
-            [editable]="editable"
-          />
+        @if (child.kind == 'nodeGroup' && child.presence) {
+          <div class="presence-group">
+            <mat-checkbox
+              [checked]="!!formGroup.get(childItem.key)"
+              [disabled]="!editable"
+              (change)="togglePresence(childItem.key, child, $event.checked)"
+            >{{ child.label ?? child.name }}</mat-checkbox>
+            @if (formGroup.get(childItem.key)) {
+              <nff-dynamic-recursive-form
+                [schema]="child"
+                [formGroup]="asFormGroup(formGroup.get(childItem.key))"
+                [editable]="editable"
+              />
+            }
+          </div>
         }
-        @else if (child.kind == 'nodeGroup'){
+        @else if (child.kind == 'nodeGroup') {
           <nff-dynamic-recursive-form
             [schema]="child"
             [formGroup]="asFormGroup(formGroup.get(child.name))"
@@ -156,7 +164,28 @@
       }
       @for (childItem of nodeGroupChildrenList; track $index) {
         @let child = childItem.value;
-        @if (child.kind == 'nodeGroup') {
+        @if (child.kind == 'nodeGroup' && child.presence) {
+          <mat-expansion-panel togglePosition="before" [expanded]="!!formGroup.get(childItem.key)">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-checkbox
+                  [checked]="!!formGroup.get(childItem.key)"
+                  [disabled]="!editable"
+                  (click)="$event.stopPropagation()"
+                  (change)="togglePresence(childItem.key, child, $event.checked)"
+                >{{ child.label ?? child.name }}</mat-checkbox>
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+            @if (formGroup.get(childItem.key)) {
+              <nff-dynamic-recursive-form
+                [schema]="child"
+                [formGroup]="asFormGroup(formGroup.get(childItem.key))"
+                [editable]="editable"
+              />
+            }
+          </mat-expansion-panel>
+        }
+        @else if (child.kind == 'nodeGroup') {
           <mat-expansion-panel togglePosition="before" expanded="true">
             <mat-expansion-panel-header >
               <mat-panel-title>

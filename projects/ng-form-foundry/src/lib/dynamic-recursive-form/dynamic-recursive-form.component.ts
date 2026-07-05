@@ -15,7 +15,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { NgTemplateOutlet } from '@angular/common';
 import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
+import { buildFormFromSchema } from '../core/dynamic-recursive-forms-builder';
 import { MatTooltip } from '@angular/material/tooltip';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 @Component({
   imports: [
@@ -28,7 +30,7 @@ import { MatTooltip } from '@angular/material/tooltip';
     MatButtonModule,
     NgTemplateOutlet,
     MatCardModule,
-    MatExpansionModule,
+    MatCheckboxModule,
     MatTooltip,
   ],
   selector: 'nff-dynamic-recursive-form',
@@ -65,6 +67,20 @@ export class DynamicRecursiveFormComponent implements OnInit {
 
   emitRemoveEvent() {
     this.remove.emit();
+  }
+
+  /**
+   * Add or remove a presence group's control on this form. Removing it drops the
+   * group from `form.value`; adding it rebuilds the sub-group from its schema.
+   */
+  togglePresence(key: string, schema: NodeGroup, present: boolean) {
+    if (present) {
+      if (!this.formGroup.get(key)) {
+        this.formGroup.addControl(key, buildFormFromSchema(schema));
+      }
+    } else if (this.formGroup.get(key)) {
+      this.formGroup.removeControl(key);
+    }
   }
 
   protected readonly asFormGroup = asFormGroup;

@@ -10,6 +10,12 @@
   margin: 4px 0;
 }
 
+.presence-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .fields {
   display: flex;
   flex-direction: row;

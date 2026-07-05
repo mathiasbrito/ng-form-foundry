@@ -75,6 +75,13 @@ export type NodeGroup = {
   subType?: string;
   label?: string;
   root?: boolean;
+  /**
+   * When true, the group is optional: rendered with an on/off toggle and present
+   * in the form only while enabled. Its control is removed from the parent
+   * FormGroup when absent (so it drops from `form.value`) and re-added when the
+   * user toggles it on. The builder omits it unless an initial value is supplied.
+   */
+  presence?: boolean;
   description?: string;
   children: Record<string, NodeType>;
   appearance?: Appearance;

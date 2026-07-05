@@ -77,14 +77,12 @@ types now covered:
 | `binary`, `instance-identifier`, `leafref`, `union` | text | member types / leafref path kept in the binding |
 
 Container types: plain `container` → nodeGroup; **presence** `container` →
-nodeGroup flagged `presence: true` (present-but-empty round-trips as `{}`, absent
-is omitted).
+nodeGroup flagged `presence: true`, rendered as an on/off toggle in
+ng-form-foundry (present-but-empty round-trips as `{}`, absent is omitted).
 
-Still needing work: `choice`/`case` (a discriminated-selection node) and the
-ng-form-foundry **presence toggle** rendering (the adapter maps presence
-containers, but the form component must add/remove the control on toggle, since a
-disabled group stays in Angular's `form.value`); plus `must`/`when` cross-field
-validity — see the [adapter plan](https://ng-form-foundry.readthedocs.io).
+Still needing work: `choice`/`case` (a discriminated-selection node) and
+`must`/`when` cross-field validity — see the
+[adapter plan](https://ng-form-foundry.readthedocs.io).
 
 ## Develop
 

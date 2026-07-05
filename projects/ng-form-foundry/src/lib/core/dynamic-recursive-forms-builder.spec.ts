@@ -205,4 +205,30 @@ describe('dynamic-recursive-forms-builder', () => {
     expect(g instanceof FormGroup).toBe(true);
     expect(Object.keys(g.controls).sort()).toEqual(['x', 'y']);
   });
+
+  // ---- presence groups ---------------------------------------------------
+  const presenceSchema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    children: {
+      ntp: {
+        kind: 'nodeGroup',
+        name: 'ntp',
+        presence: true,
+        children: { server: { kind: 'leaf', type: 'string', name: 'server' } },
+      },
+    },
+  };
+
+  it('omits an absent presence group from the form and its value', () => {
+    const g = buildFormFromSchema(presenceSchema);
+    expect(g.get('ntp')).toBeNull();
+    expect((g.getRawValue() as any).ntp).toBeUndefined();
+  });
+
+  it('keeps a presence group that has an initial value', () => {
+    const g = buildFormFromSchema(presenceSchema, { ntp: { server: 'pool.ntp.org' } });
+    expect(g.get('ntp')).not.toBeNull();
+    expect((g.getRawValue() as any).ntp).toEqual({ server: 'pool.ntp.org' });
+  });
 });

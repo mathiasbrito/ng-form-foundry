@@ -91,6 +91,7 @@ A group of fields. Builds a nested `FormGroup`. The root of every schema is a
 | `children` | `Record<string, NodeType>` | {sub}`data` | The child nodes, keyed by field name. Required. |
 | `label` | `string` | {sub}`ui` | Group heading (card or panel title). Falls back to `name`. |
 | `root` | `boolean` | {sub}`ui` | Renders the group as the top-level accordion layout instead of a card. Set on the schema root. |
+| `presence` | `boolean` | {sub}`data` | Makes the group optional: rendered with an on/off toggle and absent from the form value until enabled. Its control is removed when off and rebuilt when on. |
 | `appearance` | `Appearance` | {sub}`ui` | Layout options (see below). |
 
 ### `Appearance`

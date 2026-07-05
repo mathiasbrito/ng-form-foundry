@@ -154,11 +154,36 @@ export function buildControl<T extends NodeType>(
  * `const schema: NodeGroup = ...`, which widens `children` and erases the field
  * names and value types.
  */
+/**
+ * Remove presence groups that have no initial value so they are absent from the
+ * built form (and from `form.value`) until the user toggles them on. Runs on the
+ * fully-built, attached tree. `removeControl` is used rather than `disable`
+ * because a disabled group is still included in `FormGroup.value`.
+ */
+function applyPresence(
+  group: FormGroup,
+  schema: NodeGroup,
+  initial?: Record<string, unknown> | null,
+): void {
+  for (const key in schema.children) {
+    const child = schema.children[key];
+    if (child.kind !== 'nodeGroup') continue;
+    const childInitial = (initial as Record<string, unknown> | null | undefined)?.[key];
+    if (child.presence && childInitial == null) {
+      group.removeControl(key);
+    } else if (group.get(key) instanceof FormGroup) {
+      applyPresence(group.get(key) as FormGroup, child, childInitial as Record<string, unknown> | null);
+    }
+  }
+}
+
 export function buildFormFromSchema<S extends NodeGroup>(
   schema: S,
   initial: Record<string, unknown> | null = null,
 ): DFormGroup<S> {
-  return buildNodeGroupControl<S>(schema, initial);
+  const group = buildNodeGroupControl<S>(schema, initial);
+  applyPresence(group, schema, initial);
+  return group;
 }
 
 /**
