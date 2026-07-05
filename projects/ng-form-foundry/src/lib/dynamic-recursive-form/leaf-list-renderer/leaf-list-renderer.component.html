@@ -9,21 +9,21 @@
           [label]="leaf_.label ?? leaf_.name"
           (remove)="removeItem($index)"
         />
-        <div class="actions">
-          @if (formArray.length > minItems && editable) {
-            <button class="remove-button small-icon-button" matIconButton (click)="removeItem($index)">
-              <mat-icon matPrefix>delete</mat-icon>
-            </button>
-          }
-          @if ($last) {
-            @if (editable) {
+        @if (editable) {
+          <div class="actions">
+            @if (formArray.length > minItems) {
+              <button class="remove-button small-icon-button" matIconButton (click)="removeItem($index)">
+                <mat-icon matPrefix>delete</mat-icon>
+              </button>
+            }
+            @if ($last) {
               <button class="add-button small-icon-button" matIconButton (click)="addItem()">
                 <mat-icon matPrefix>add</mat-icon>
               </button>
             }
-          }
-          <div class="actions-spacer"></div>
-        </div>
+            <div class="actions-spacer"></div>
+          </div>
+        }
       </div>
     }
 }

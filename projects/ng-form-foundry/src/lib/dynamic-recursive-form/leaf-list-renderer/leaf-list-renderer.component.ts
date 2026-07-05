@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, HostBinding, inject, Input, OnInit, Output } from '@angular/core';
 import { LeafList } from '../../types/dynamic-recursive.types';
 import { FormControl } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,6 +28,17 @@ export class LeafListRendererComponent implements OnInit {
   @Output() message = new EventEmitter();
 
   matDialog = inject(MatDialog);
+
+  /**
+   * Take a full-width row of its own once the array holds more than one entry.
+   * A multi-entry array grows vertically as its items wrap; sitting inline next
+   * to a regular leaf that would stretch the leaf to match. On its own line it
+   * cannot. Consumed by the `:host(.stacked)` rule.
+   */
+  @HostBinding('class.stacked')
+  get stacked(): boolean {
+    return (this.formArray?.length ?? 0) > 1;
+  }
 
   ngOnInit() {
     if (this.initialValue) {

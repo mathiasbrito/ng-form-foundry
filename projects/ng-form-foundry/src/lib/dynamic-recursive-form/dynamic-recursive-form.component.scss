@@ -22,6 +22,9 @@
   flex-direction: row;
   gap: 8px;
   flex-wrap: wrap;
+  // Top-align so a taller item (e.g. a multi-entry array leaf) never stretches
+  // its shorter neighbours to match its height.
+  align-items: flex-start;
   flex: 1 1 0;
 }
 
@@ -108,10 +111,45 @@ mat-card-header {
   animation: icon-transition 0.5s;
 }
 
+// Add/remove buttons for list items — same colored pills as the leaf-list
+// renderer, so leaf arrays and group arrays share one look and feel. Laid out
+// horizontally beside the card title (vertical stacking is only for the buttons
+// that sit right after an input field, in the leaf-list renderer).
+.card-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+// A flattened list item has no card header — its add/remove buttons sit right
+// after the last field, so they stack vertically like the leaf-list's action
+// column (vertical is the rule for buttons that follow an input field).
+.flattened-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: flex-start;
+  gap: 4px;
+}
+
+.add-button {
+  background-color: var(--mat-sys-primary-container);
+  @include mat.elevation(1);
+}
+
+.remove-button {
+  background-color: var(--mat-sys-error-container);
+  @include mat.elevation(1);
+}
+
 .flattened-form {
   display: flex;
   flex-direction: row;
   width: 100%;
+  // Same field-to-buttons gap the leaf-list uses (its .field-item), so the
+  // action column doesn't touch the last input field.
+  gap: 4px;
 }
 
 .flattened-style-actions {
