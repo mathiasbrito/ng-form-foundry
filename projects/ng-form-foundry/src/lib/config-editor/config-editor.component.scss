@@ -58,8 +58,32 @@
 }
 
 .tree-label {
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.row-btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// The add (+) on a list node stays visible for discoverability; remove shows on hover/selection.
+.row-btn.remove {
+  visibility: hidden;
+}
+
+.tree-row:hover .row-btn.remove,
+.tree-row.selected .row-btn.remove {
+  visibility: visible;
 }
 
 .detail {

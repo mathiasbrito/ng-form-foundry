@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormArray } from '@angular/forms';
 
 import { ConfigEditorComponent } from './config-editor.component';
 import { buildFormFromSchema } from '../core/dynamic-recursive-forms-builder';
@@ -56,5 +57,30 @@ describe('ConfigEditorComponent', () => {
     component.select(system);
     expect(component.selected).toBe(system);
     expect(system.leaves.map((l) => l.key)).toEqual(['tz']);
+  });
+
+  it('addItem appends to the FormArray and the tree and selects the new item', () => {
+    const list = component.root.children.find((c) => c.label === 'ifaces')!;
+    const array = component.formGroup.get('ifaces') as FormArray;
+    expect(array.length).toBe(2);
+
+    component.addItem(list);
+
+    expect(array.length).toBe(3);
+    expect(list.children.length).toBe(3);
+    expect(component.selected).toBe(list.children[2]);
+    expect(component.selected!.leaves.map((l) => l.key)).toEqual(['nm']);
+  });
+
+  it('removeItem removes from the FormArray and re-indexes the remaining items', () => {
+    const list = component.root.children.find((c) => c.label === 'ifaces')!;
+    const array = component.formGroup.get('ifaces') as FormArray;
+
+    component.removeItem(list, list.children[0]);
+
+    expect(array.length).toBe(1);
+    expect(list.children.length).toBe(1);
+    expect(list.children[0].removable!.index).toBe(0);
+    expect(list.children[0].label).toBe('iface #1');
   });
 });

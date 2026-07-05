@@ -1,6 +1,6 @@
 <div class="editor">
   <nav class="tree">
-    <ng-template #treeNode let-node let-depth="depth">
+    <ng-template #treeNode let-node let-depth="depth" let-parent="parent">
       <div
         class="tree-row"
         [class.selected]="node === selected"
@@ -19,11 +19,36 @@
         } @else {
           <span class="twisty-spacer"></span>
         }
+
         <span class="tree-label">{{ node.label }}</span>
+
+        @if (editable && node.list) {
+          <button
+            matIconButton
+            class="row-btn add"
+            [matTooltip]="'Add ' + node.list.itemLabel"
+            (click)="addItem(node); $event.stopPropagation()"
+          >
+            <mat-icon>add</mat-icon>
+          </button>
+        }
+        @if (editable && node.removable) {
+          <button
+            matIconButton
+            class="row-btn remove"
+            matTooltip="Remove"
+            (click)="removeItem(parent, node); $event.stopPropagation()"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        }
       </div>
+
       @if (expanded.has(node.id)) {
         @for (child of node.children; track child.id) {
-          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: child, depth: depth + 1 }" />
+          <ng-container
+            *ngTemplateOutlet="treeNode; context: { $implicit: child, depth: depth + 1, parent: node }"
+          />
         }
       }
     </ng-template>
@@ -53,9 +78,11 @@
           <p class="empty">This node has no fields of its own — pick a child on the left.</p>
         }
       </div>
-    } @else if (selected) {
+    } @else if (selected && selected.list) {
       <h3 class="detail-title">{{ selected.label }}</h3>
-      <p class="empty">Expand this node and pick an item to edit.</p>
+      <p class="empty">
+        {{ selected.children.length }} item(s). Use the <b>+</b> on this node to add one, then pick it to edit.
+      </p>
     } @else {
       <p class="empty">Select a node on the left to edit its fields.</p>
     }
