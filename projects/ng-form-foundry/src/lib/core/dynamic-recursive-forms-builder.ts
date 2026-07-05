@@ -6,6 +6,7 @@ import {
   Validators,
 } from '@angular/forms';
 import {
+  CASE_KEY,
   DFormControl,
   DFormGroup,
   FormGroupType,
@@ -13,6 +14,7 @@ import {
   LeafEnum,
   LeafList,
   LeafRuntimeType,
+  NodeChoice,
   NodeGroup,
   NodeGroupList,
   NodeType,
@@ -31,6 +33,9 @@ function isNodeGroup(node: NodeType): node is NodeGroup {
 }
 function isNodeGroupList(node: NodeType): node is NodeGroupList {
   return node.kind === 'nodeGroupList';
+}
+function isChoice(node: NodeType): node is NodeChoice {
+  return node.kind === 'choice';
 }
 
 function enumValidator(choices: readonly (string | number)[]): ValidatorFn {
@@ -110,12 +115,38 @@ function buildNodeGroupListControl<GL extends NodeGroupList>(
  * Most callers use {@link buildFormFromSchema}; this is exposed for building a
  * control from a single non-root node.
  */
+/**
+ * Build the FormGroup for a choice: a `__case` control holding the active case
+ * name plus that case's field controls. Only the active case's fields are built,
+ * matching the inline YANG encoding; switching the case swaps them.
+ */
+function buildChoiceControl(
+  choice: NodeChoice,
+  initial?: Record<string, unknown> | null,
+): FormGroup {
+  const active = (initial?.[CASE_KEY] as string | undefined) ?? choice.default;
+  const controls: any = { [CASE_KEY]: new FormControl(active ?? null) };
+  if (active && choice.cases[active]) {
+    const caseChildren = choice.cases[active];
+    for (const key in caseChildren) {
+      controls[key] = buildControl(caseChildren[key], initial?.[key]);
+    }
+  }
+  return new FormGroup(controls);
+}
+
 export function buildControl<T extends NodeType>(
   node: T,
   initial?: unknown | null,
 ): DFormControl<T> | FormControl<LeafRuntimeType<any>> | FormArray<any> {
   if (isLeaf(node)) {
     return buildLeafControl(node, initial);
+  }
+  if (isChoice(node)) {
+    return buildChoiceControl(
+      node,
+      initial ? (initial as Record<string, unknown>) : null,
+    ) as DFormControl<T>;
   }
   if (isLeafList(node)) {
     return buildLeafListControl(

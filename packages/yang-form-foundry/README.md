@@ -83,10 +83,9 @@ ng-form-foundry (present-but-empty round-trips as `{}`, absent is omitted).
 `{ __case, ...fields }`, and the adapter flattens it to the inline YANG encoding
 on write-back (the selected case's fields serialize with no wrapper).
 
-Still on the adapter side: `must`/`when` cross-field validity (left to
-server-side validation). The ng-form-foundry rendering of the choice **selector**
-is the remaining UI piece — see the
-[adapter plan](https://ng-form-foundry.readthedocs.io).
+ng-form-foundry renders a choice as a case **selector** plus the selected case's
+fields. Remaining: `must`/`when` cross-field validity, left to server-side
+validation — see the [adapter plan](https://ng-form-foundry.readthedocs.io).
 
 ## Develop
 

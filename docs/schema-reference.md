@@ -132,6 +132,38 @@ the `type` group.
 | `maxItems` | `number` | {sub}`data` | Maximum item count. |
 | `label` | `string` | {sub}`ui` | List label. Falls back to `name`. |
 
+## `choice` — a discriminated selection
+
+The user picks one `case`; only that case's fields are present. Rendered as a
+case selector plus the selected case's fields.
+
+```ts
+{
+  kind: 'choice',
+  name: 'transport',
+  cases: {
+    tcp: {
+      port: { kind: 'leaf', type: 'number', name: 'port' },
+      tls:  { kind: 'leaf', type: 'boolean', name: 'tls' },
+    },
+    udp: {
+      port: { kind: 'leaf', type: 'number', name: 'port' },
+    },
+  },
+}
+```
+
+| Property | Type | Concern | Description |
+| --- | --- | --- | --- |
+| `kind` | `'choice'` | {sub}`data` | Node discriminant. Required. |
+| `name` | `string` | {sub}`data` | Identity; must equal the `children` key. Required. |
+| `cases` | `Record<string, Record<string, NodeType>>` | {sub}`data` | Each case name → that case's fields. Required. |
+| `default` | `string` | {sub}`data` | Case selected when none is chosen. |
+| `mandatory` | `boolean` | {sub}`data` | Whether a case must be selected. |
+| `label` | `string` | {sub}`ui` | Selector label. Falls back to `name`. |
+
+In the form value a choice is `{ __case: <caseName>, ...that case's fields }`.
+
 ## Current limitations
 
 The library is at an early version (`0.1.x`). A few properties are declared on the

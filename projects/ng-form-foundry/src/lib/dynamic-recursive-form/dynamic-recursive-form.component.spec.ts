@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { FormGroup } from '@angular/forms';
+import { FormControl, FormGroup } from '@angular/forms';
 
 import { DynamicRecursiveFormComponent } from './dynamic-recursive-form.component';
-import { NodeGroup } from '../types/dynamic-recursive.types';
+import { NodeChoice, NodeGroup } from '../types/dynamic-recursive.types';
 
 describe('DynamicRecursiveFormComponent', () => {
   let component: DynamicRecursiveFormComponent;
@@ -39,5 +39,26 @@ describe('DynamicRecursiveFormComponent', () => {
 
     component.togglePresence('ntp', ntp, false);
     expect(component.formGroup.get('ntp')).toBeNull();
+  });
+
+  it('switchCase swaps a choice group field controls', () => {
+    const transport: NodeChoice = {
+      kind: 'choice',
+      name: 'transport',
+      cases: {
+        tcp: { 'tcp-port': { kind: 'leaf', type: 'number', name: 'tcp-port' } },
+        udp: { 'udp-port': { kind: 'leaf', type: 'number', name: 'udp-port' } },
+      },
+    };
+    component.formGroup.addControl(
+      'transport',
+      new FormGroup({ __case: new FormControl('tcp'), 'tcp-port': new FormControl(1) }),
+    );
+
+    component.switchCase('transport', transport, 'udp');
+
+    const t = component.formGroup.get('transport') as FormGroup;
+    expect(t.get('tcp-port')).toBeNull();
+    expect(t.get('udp-port')).not.toBeNull();
   });
 });

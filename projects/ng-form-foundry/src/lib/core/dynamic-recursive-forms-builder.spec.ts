@@ -231,4 +231,35 @@ describe('dynamic-recursive-forms-builder', () => {
     expect(g.get('ntp')).not.toBeNull();
     expect((g.getRawValue() as any).ntp).toEqual({ server: 'pool.ntp.org' });
   });
+
+  // ---- choice ------------------------------------------------------------
+  const choiceSchema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    children: {
+      transport: {
+        kind: 'choice',
+        name: 'transport',
+        cases: {
+          tcp: { 'tcp-port': { kind: 'leaf', type: 'number', name: 'tcp-port' } },
+          udp: { 'udp-port': { kind: 'leaf', type: 'number', name: 'udp-port' } },
+        },
+      },
+    },
+  };
+
+  it('builds a choice group with __case and only the active case fields', () => {
+    const g = buildFormFromSchema(choiceSchema, { transport: { __case: 'tcp', 'tcp-port': 443 } });
+    const t = g.get('transport') as FormGroup;
+    expect(t.get('__case')!.value).toBe('tcp');
+    expect(t.get('tcp-port')!.value).toBe(443);
+    expect(t.get('udp-port')).toBeNull();
+  });
+
+  it('builds a choice group with no case selected as just __case', () => {
+    const g = buildFormFromSchema(choiceSchema);
+    const t = g.get('transport') as FormGroup;
+    expect(t.get('__case')!.value).toBeNull();
+    expect(Object.keys(t.controls)).toEqual(['__case']);
+  });
 });

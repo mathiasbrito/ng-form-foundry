@@ -87,7 +87,25 @@ export type NodeGroup = {
   appearance?: Appearance;
 };
 
-export type NodeType = Leaf | LeafList | NodeGroup | NodeGroupList;
+/**
+ * A discriminated selection: the user picks one `case`, and only that case's
+ * fields are present. In the form it is a FormGroup holding a `__case` control
+ * (the active case name) plus that case's field controls; switching the case
+ * swaps the field controls.
+ */
+export type NodeChoice = {
+  kind: 'choice';
+  name: string;
+  label?: string;
+  cases: Record<string, Record<string, NodeType>>;
+  default?: string;
+  mandatory?: boolean;
+};
+
+/** The control name that records which case of a {@link NodeChoice} is active. */
+export const CASE_KEY = '__case';
+
+export type NodeType = Leaf | LeafList | NodeGroup | NodeGroupList | NodeChoice;
 export type DFormControl<T extends NodeType> = T extends Leaf
   ? FormControl<LeafRuntimeType<T['type']>>
   : T extends LeafList
@@ -96,7 +114,9 @@ export type DFormControl<T extends NodeType> = T extends Leaf
       ? DFormGroup<T>
       : T extends NodeGroupList
         ? FormArray<DFormGroup<T['type']>>
-        : never;
+        : T extends NodeChoice
+          ? FormGroup<any>
+          : never;
 
 export type FormGroupType<T extends NodeGroup> = {
   [TChild in keyof T['children']]: DFormControl<T['children'][TChild]>;
