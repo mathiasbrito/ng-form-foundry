@@ -89,7 +89,27 @@ export interface EffList {
   description?: string;
 }
 
-export type EffNode = EffLeaf | EffLeafList | EffContainer | EffList;
+export interface EffCase {
+  name: string;
+  children: EffNode[];
+}
+
+/**
+ * A YANG choice (RFC 7950 §7.9): mutually-exclusive cases. The choice itself has
+ * no instance data — the selected case's children serialize *inline* at the
+ * choice's location, with no choice/case wrapper.
+ */
+export interface EffChoice {
+  kind: 'choice';
+  name: string;
+  module: string;
+  cases: EffCase[];
+  default?: string;
+  mandatory?: boolean;
+  description?: string;
+}
+
+export type EffNode = EffLeaf | EffLeafList | EffContainer | EffList | EffChoice;
 
 export interface ModuleInfo {
   name: string;

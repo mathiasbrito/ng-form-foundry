@@ -1,5 +1,5 @@
 import { EffectiveModel, EffLeaf, EffNode } from './model';
-import { Leaf, LeafList, NodeGroup, NodeGroupList, NodeType } from './schema';
+import { Choice, Leaf, LeafList, NodeGroup, NodeGroupList, NodeType } from './schema';
 import { toFormLeafType } from './rfc7951';
 
 /**
@@ -65,6 +65,16 @@ function mapNode(node: EffNode): NodeType {
       if (node.minElements !== undefined) groupList.minItems = node.minElements;
       if (node.maxElements !== undefined) groupList.maxItems = node.maxElements;
       return groupList;
+    }
+    case 'choice': {
+      const cases: Record<string, Record<string, NodeType>> = {};
+      for (const c of node.cases) {
+        cases[c.name] = mapChildren(c.children);
+      }
+      const choice: Choice = { kind: 'choice', name: node.name, cases };
+      if (node.default) choice.default = node.default;
+      if (node.mandatory) choice.mandatory = true;
+      return choice;
     }
   }
 }

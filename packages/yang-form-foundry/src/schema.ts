@@ -54,7 +54,25 @@ export interface NodeGroupList {
   maxItems?: number;
 }
 
-export type NodeType = Leaf | LeafList | NodeGroup | NodeGroupList;
+/**
+ * A discriminated selection: the user picks one `case`, and only that case's
+ * fields are present. In the form value a choice is an object
+ * `{ __case: <caseName>, ...that case's fields }`; the adapter flattens it to the
+ * inline YANG encoding on write-back.
+ */
+export interface Choice {
+  kind: 'choice';
+  name: string;
+  label?: string;
+  cases: Record<string, Record<string, NodeType>>;
+  default?: string;
+  mandatory?: boolean;
+}
+
+export type NodeType = Leaf | LeafList | NodeGroup | NodeGroupList | Choice;
+
+/** The form-value key that records which case of a {@link Choice} is active. */
+export const CASE_KEY = '__case';
 
 /** A plain, nested value object produced/consumed by a rendered form. */
 export type FormValue = Record<string, unknown>;

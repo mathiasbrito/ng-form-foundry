@@ -129,7 +129,25 @@ def walk(stmt):
         }
         return node
 
-    return None  # choice/case/anydata/anyxml handled in later phases
+    if kw == "choice":
+        cases = []
+        for case in getattr(stmt, "i_children", []):
+            if case.keyword == "case":
+                cases.append({"name": case.arg, "children": walk_children(case)})
+            else:
+                # shorthand case: a single data node directly under the choice
+                child = walk(case)
+                if child is not None:
+                    cases.append({"name": case.arg, "children": [child]})
+        node = {"kind": "choice", "name": stmt.arg, "module": module_name(stmt), "cases": cases}
+        default = stmt.search_one("default")
+        if default is not None:
+            node["default"] = default.arg
+        if stmt.search_one("mandatory", "true") is not None:
+            node["mandatory"] = True
+        return node
+
+    return None  # case/anydata/anyxml handled in later phases
 
 
 def walk_children(stmt):
@@ -179,6 +197,8 @@ def strip_state(nodes):
             continue
         if "children" in n:
             n["children"] = strip_state(n["children"])
+        for case in n.get("cases", []):
+            case["children"] = strip_state(case["children"])
         kept.append(n)
     return kept
 

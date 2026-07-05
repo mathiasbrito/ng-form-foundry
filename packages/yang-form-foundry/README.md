@@ -76,12 +76,16 @@ types now covered:
 | `bits` | group of checkboxes | reverts to the space-separated set |
 | `binary`, `instance-identifier`, `leafref`, `union` | text | member types / leafref path kept in the binding |
 
-Container types: plain `container` → nodeGroup; **presence** `container` →
+Structural types: plain `container` → nodeGroup; **presence** `container` →
 nodeGroup flagged `presence: true`, rendered as an on/off toggle in
 ng-form-foundry (present-but-empty round-trips as `{}`, absent is omitted).
+**`choice`/`case`** → a `Choice` node: in the form value the selection is
+`{ __case, ...fields }`, and the adapter flattens it to the inline YANG encoding
+on write-back (the selected case's fields serialize with no wrapper).
 
-Still needing work: `choice`/`case` (a discriminated-selection node) and
-`must`/`when` cross-field validity — see the
+Still on the adapter side: `must`/`when` cross-field validity (left to
+server-side validation). The ng-form-foundry rendering of the choice **selector**
+is the remaining UI piece — see the
 [adapter plan](https://ng-form-foundry.readthedocs.io).
 
 ## Develop
