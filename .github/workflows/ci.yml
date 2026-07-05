@@ -41,6 +41,34 @@ jobs:
           name: ng-form-foundry-package
           path: ng-form-foundry-*.tgz
 
+  yang-adapter:
+    name: Build & test YANG adapter
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: packages/yang-form-foundry
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: packages/yang-form-foundry/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Pack (verify publishable tarball)
+        run: npm pack
+
   docs:
     name: Build documentation
     runs-on: ubuntu-24.04
