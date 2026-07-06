@@ -15,12 +15,12 @@ jobs:
     name: Build & test library
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -36,7 +36,7 @@ jobs:
         run: npm pack ./dist/ng-form-foundry
 
       - name: Upload package artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ng-form-foundry-package
           path: ng-form-foundry-*.tgz
@@ -48,12 +48,12 @@ jobs:
       run:
         working-directory: packages/yang-form-foundry
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: packages/yang-form-foundry/package-lock.json
 
@@ -73,10 +73,10 @@ jobs:
     name: Build documentation
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -89,7 +89,7 @@ jobs:
         run: sphinx-build -b html -W --keep-going docs docs/_build/html
 
       - name: Upload docs artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docs-html
           path: docs/_build/html
