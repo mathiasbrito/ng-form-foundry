@@ -53,10 +53,11 @@ already on npm is skipped, so re-running a tag is safe.
 
 1. Bump the version in `projects/ng-form-foundry/package.json` and/or
    `packages/ng-form-foundry-transformers/package.json`.
-2. Commit, then tag and push:
+2. Commit, then tag and push (both packages release together at the tag version;
+   a package version already on npm is skipped):
    ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
+   git tag v0.2.1
+   git push origin v0.2.1
    ```
 
 Required repository secrets (**Settings → Secrets and variables → Actions**):
