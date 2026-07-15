@@ -41,12 +41,12 @@ jobs:
           name: ng-form-foundry-package
           path: ng-form-foundry-*.tgz
 
-  yang-adapter:
-    name: Build & test YANG adapter
+  transformers:
+    name: Build & test transformers
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: packages/yang-form-foundry
+        working-directory: packages/ng-form-foundry-transformers
     steps:
       - uses: actions/checkout@v7
 
@@ -55,7 +55,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: packages/yang-form-foundry/package-lock.json
+          cache-dependency-path: packages/ng-form-foundry-transformers/package-lock.json
 
       - name: Install dependencies
         run: npm ci

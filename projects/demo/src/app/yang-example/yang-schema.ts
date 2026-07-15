@@ -1,7 +1,7 @@
 import { defineSchema } from 'ng-form-foundry';
 
 /**
- * A small schema shaped like the output of the yang-form-foundry adapter:
+ * A small schema shaped like the output of the ng-form-foundry-transformers YANG transformer:
  * a root group with a leaf, a presence container (NTP), and a choice (transport).
  */
 export const yangExample = defineSchema({

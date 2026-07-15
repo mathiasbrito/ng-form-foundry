@@ -61,12 +61,12 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  publish-yang-adapter:
-    name: Publish yang-form-foundry to npm
+  publish-transformers:
+    name: Publish ng-form-foundry-transformers to npm
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: packages/yang-form-foundry
+        working-directory: packages/ng-form-foundry-transformers
     steps:
       - uses: actions/checkout@v7
 
@@ -75,7 +75,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: packages/yang-form-foundry/package-lock.json
+          cache-dependency-path: packages/ng-form-foundry-transformers/package-lock.json
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
