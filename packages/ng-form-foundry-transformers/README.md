@@ -69,9 +69,13 @@ const out = yamlTransformer.toSource({ ...initialValue, port: 9090 }, binding);
 //   port: 9090
 ```
 
-With a JSON Schema: `yamlTransformer.toSchema(yaml, { schema })` — `object` →
-nodeGroup, `array` of objects → nodeGroupList, scalar `enum` → enum leaf,
-`required`/`title`/`default` carried onto the leaves.
+With a JSON Schema: `yamlTransformer.toSchema(yaml, { schema })`. The mapping
+covers **draft 2020-12** (back-compatible with draft-07): `object` → nodeGroup (or
+a `map` for `additionalProperties`/`patternProperties`), `array` → nodeGroupList /
+leafList, `anyOf`/`oneOf` → choice (or a nullable leaf for `[T, null]`), `$ref` →
+`$defs`/`definitions` resolved inline, `const` → a read-only leaf, and the string /
+number constraints (`pattern`, `minLength`, `minimum`, `multipleOf`, `format`, …)
+carried onto the leaves as validators.
 
 ## JSON transformer
 

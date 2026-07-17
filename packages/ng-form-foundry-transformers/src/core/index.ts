@@ -21,6 +21,8 @@ export type {
   LeafList,
   NodeGroupList,
   Choice,
+  ChoiceCase,
+  NodeMap,
   LeafType,
   FormValue,
 } from './schema';

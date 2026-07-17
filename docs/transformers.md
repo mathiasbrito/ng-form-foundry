@@ -86,10 +86,30 @@ requires Node ≥ 21 for this; on older Node it throws rather than silently roun
 
 ### Driving the form from a JSON Schema
 
-`yamlTransformer.toSchema(text, { schema })` and the JSON equivalent accept a JSON
-Schema to shape the form: `object` → nodeGroup, array-of-objects → nodeGroupList,
-scalar `enum` → enum leaf, with `required`/`title`/`default` carried onto the
-leaves. Without it, the form is inferred from the data's structure and value types.
+`yamlTransformer.toSchema(text, { schema })` and the JSON equivalent accept a **JSON
+Schema (draft 2020-12, back-compatible with draft-07)** to shape the form; without
+one, the form is inferred from the data's structure and value types. The exported
+`jsonSchemaToNodeGroup(schema)` does the mapping and can be used on its own.
+
+| JSON Schema | Maps to |
+| --- | --- |
+| `object` with `properties` | `nodeGroup` (children keyed by property; `required` marks fields) |
+| `object` with `additionalProperties: <schema>` / `patternProperties` | `map` (open dictionary; `patternProperties` key → `keyPattern`) |
+| `array` of objects / of scalars | `nodeGroupList` / `leafList` |
+| `anyOf` / `oneOf` | `choice` — auto-named cases, `title` → case label |
+| `anyOf: [T, null]` | a single **nullable** leaf (not a choice) |
+| `string` + `pattern`/`minLength`/`maxLength`/`format` | string leaf with those validators |
+| `number`/`integer` + `minimum`/`maximum`/`multipleOf` | number leaf (`integer` flagged) |
+| `type: [T, "null"]` | a **nullable** leaf |
+| `const` | a read-only leaf pinned to the value |
+| `enum` | enum leaf |
+| `$ref` → `#/$defs/…` or `#/definitions/…` | resolved inline |
+| `title` / `description` / `default` | label / description / default |
+
+Not yet mapped: `allOf` composition, `exclusiveMinimum`/`exclusiveMaximum`, and
+`additionalProperties` *alongside* fixed `properties` (the fixed keys win). An
+optional (non-`required`) property maps to a non-required field — author
+`presence` by hand when an *absent key* must round-trip.
 
 ## YANG
 
