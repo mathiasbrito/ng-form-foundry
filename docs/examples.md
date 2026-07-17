@@ -5,7 +5,9 @@ Every example is complete and copy-pasteable. They assume you've done the
 
 ## A field of every kind
 
-Shows all four `kind`s and all leaf `type`s in one schema.
+Shows the core `kind`s and all leaf `type`s in one schema.
+([choice](#a-discriminated-choice) and [map](#an-open-map) have their own examples
+below.)
 
 ```ts
 import { defineSchema } from 'ng-form-foundry';
@@ -98,27 +100,107 @@ groups, an `aliases` array of two produces two inputs.
 
 ## Validation and required fields
 
-`required: true` and `enum` produce validators. Validity surfaces through the
-standard reactive-forms API.
+Constraints on a leaf become validators and inline `mat-error`s. Validity surfaces
+through the standard reactive-forms API.
 
 ```ts
 export const signup = defineSchema({
   kind: 'nodeGroup',
   name: 'signup',
   children: {
-    email: { kind: 'leaf', type: 'string', name: 'email', label: 'Email', required: true },
-    role:  { kind: 'leaf', type: 'enum', name: 'role', label: 'Role', enum: ['user', 'admin'] },
+    email:    { kind: 'leaf', type: 'string', name: 'email', label: 'Email', required: true, format: 'email' },
+    username: { kind: 'leaf', type: 'string', name: 'username', label: 'Username', pattern: '^[a-z0-9_]+$', minLength: 3, maxLength: 20 },
+    age:      { kind: 'leaf', type: 'number', name: 'age', label: 'Age', min: 18, max: 120, integer: true },
+    role:     { kind: 'leaf', type: 'enum', name: 'role', label: 'Role', enum: ['user', 'admin'] },
   },
 });
 
 const form = buildFormFromSchema(signup);
 
-form.valid;                         // false — email is required and empty
-form.controls.email.errors;         // { required: true }
+form.valid;                          // false — email is required and empty
+form.controls.email.errors;          // { required: true }
 
-form.controls.email.setValue('ada@example.com');
+form.controls.username.setValue('ab');
+form.controls.username.errors;       // { minlength: { requiredLength: 3, actualLength: 2 } }
+
+form.controls.age.setValue(17);
+form.controls.age.errors;            // { min: { min: 18, actual: 17 } }
+
 form.controls.role.setValue('root'); // not in the enum
 form.controls.role.errors;           // { enum: true }
+```
+
+## Optional and nullable fields
+
+`nullable` lets `null` be a value; `presence` makes the key itself optional (absent
+until toggled on). See [Features](features.md#optional-nullable-and-present-fields).
+
+```ts
+export const settings = defineSchema({
+  kind: 'nodeGroup',
+  name: 'settings',
+  children: {
+    displayName: { kind: 'leaf', type: 'string', name: 'displayName', label: 'Display name', nullable: true },
+    webhook:     { kind: 'leaf', type: 'string', name: 'webhook', label: 'Webhook URL', format: 'uri', presence: true },
+  },
+});
+
+buildFormFromSchema(settings).getRawValue();
+// { displayName: null }   — nullable key present as null; `webhook` absent until toggled on
+```
+
+## A discriminated choice
+
+The user picks one case; only that case's fields are present. Seeding from inline
+data infers the active case.
+
+```ts
+export const target = defineSchema({
+  kind: 'nodeGroup',
+  name: 'target',
+  root: true,
+  children: {
+    scope: {
+      kind: 'choice', name: 'scope', label: 'Scope',
+      caseLabels: { byUe: 'By UE', byCell: 'By cell' },
+      cases: {
+        byUe:   { ueId:   { kind: 'leaf', type: 'string', name: 'ueId', label: 'UE id', required: true } },
+        byCell: { cellId: { kind: 'leaf', type: 'string', name: 'cellId', label: 'Cell id', required: true } },
+      },
+    },
+  },
+});
+
+const form = buildFormFromSchema(target, { scope: { cellId: 'c-1' } });
+form.controls.scope.get('__case')!.value;  // 'byCell' — inferred from the data
+form.getRawValue().scope;                   // { __case: 'byCell', cellId: 'c-1' }
+```
+
+## An open map
+
+A dictionary of arbitrary keys sharing one value schema. `getRawValue()` is the map
+object directly.
+
+```ts
+export const service = defineSchema({
+  kind: 'nodeGroup',
+  name: 'service',
+  root: true,
+  children: {
+    image:  { kind: 'leaf', type: 'string', name: 'image', label: 'Image' },
+    labels: {
+      kind: 'map', name: 'labels', label: 'Labels', keyLabel: 'Name',
+      value: { kind: 'leaf', type: 'string', name: 'value', label: 'Value' },
+    },
+  },
+});
+
+const form = buildFormFromSchema(service, {
+  image: 'nginx:1.27',
+  labels: { env: 'prod', region: 'eu-west' },
+});
+
+form.getRawValue().labels;   // { env: 'prod', region: 'eu-west' }
 ```
 
 ## Deeply nested groups

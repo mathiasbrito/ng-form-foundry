@@ -72,6 +72,19 @@ export const appConfig: ApplicationConfig = {
 };
 ```
 
+## Optional: the transformers package
+
+If you generate schemas from a **YAML/JSON config** or a **YANG model** instead of
+authoring them by hand, install the companion Node package on your **backend** (it
+has no Angular or browser dependency):
+
+```bash
+npm install ng-form-foundry-transformers
+```
+
+See [Transformers](transformers.md). The browser package above is all you need to
+render hand-authored schemas.
+
 ## Verify
 
 Import the component and the builder in a standalone component and render a

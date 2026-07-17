@@ -102,6 +102,10 @@ this.form.controls.role.setValue('editor');
 
 ## Next
 
+- Operate each capability — validation, optional/nullable fields, choices, maps —
+  in [Features](features.md).
 - Add nested groups, primitive lists, and repeatable groups — see
   [Examples](examples.md).
 - Understand each node type — see [Concepts](concepts.md).
+- Generate schemas from a config file or YANG model — see
+  [Transformers](transformers.md).

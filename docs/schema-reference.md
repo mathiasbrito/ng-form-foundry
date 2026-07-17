@@ -1,6 +1,6 @@
 # Schema reference
 
-Every node in a schema is one of four `kind`s. This page documents each one and
+Every node in a schema is one of six `kind`s. This page documents each one and
 all of its properties.
 
 Each property is tagged with its **concern**:
@@ -29,9 +29,28 @@ A scalar field. Builds a `FormControl`.
 | `type` | `'string' \| 'number' \| 'boolean' \| 'enum'` | {sub}`data` | The value type (see table below). Required. |
 | `required` | `true` | {sub}`data` | Adds `Validators.required`. Omit for optional fields. |
 | `default` | matches `type` | {sub}`data` | Initial value when no value is supplied to `buildFormFromSchema`. |
+| `readOnly` | `boolean` | {sub}`ui` | Render the field read-only even when the form is editable. With `default`, expresses a JSON Schema `const`: `{ default: v, readOnly: true }`. (Single-element `enum` is the alternative for a constant.) |
 | `label` | `string` | {sub}`ui` | Field label. Falls back to `name` when omitted. |
 | `enum` | `(string \| number)[]` | {sub}`data` | **Required when `type: 'enum'`.** The allowed values; also enforced by a validator. |
 | `enumLabel` | `string[]` | {sub}`ui` | Display labels for the enum options, positionally aligned with `enum`. |
+| `pattern` | `string` | {sub}`data` | **`type: 'string'` only.** Reject values not matching this regex. Uses JSON Schema semantics — an *unanchored* `RegExp.test`, so anchor with `^…$` for a whole-value match. |
+| `minLength` / `maxLength` | `number` | {sub}`data` | **`type: 'string'` only.** Inclusive bounds on string length. |
+| `format` | `'email' \| 'uri' \| 'url'` | {sub}`data` | **`type: 'string'` only.** Adds a format validator: `email`, or a parseable absolute URI for `uri`/`url`. |
+| `min` / `max` | `number` | {sub}`data` | **`type: 'number'` only.** Inclusive numeric bounds (JSON Schema `minimum`/`maximum`). |
+| `multipleOf` | `number` | {sub}`data` | **`type: 'number'` only.** Require the value to be an integer multiple of this number. |
+| `integer` | `boolean` | {sub}`data` | **`type: 'number'` only.** Require a whole-number value (JSON Schema `type: 'integer'`). |
+| `nullable` | `boolean` | {sub}`data` | The value may be `null` (JSON Schema `type: [T, 'null']`). Builds a nullable control so `null` is a valid value that survives the round-trip. Distinct from `presence` (an *absent key*). |
+| `presence` | `boolean` | {sub}`data` | Optional scalar whose presence is itself data (mirrors `nodeGroup.presence`). Rendered with an on/off toggle; omitted from `form.value` when absent, re-added when toggled on. |
+
+```{admonition} Constraint validators and error messages
+:class: note
+The constraint properties above wire into Angular `Validators` (with custom
+validators for `pattern`, `multipleOf`, and the `uri` format). Their error keys
+(`pattern`, `minlength`, `maxlength`, `email`, `uri`, `min`, `max`, `multipleOf`)
+are surfaced as a `mat-error` under each `string`/`number` field by the built-in
+`leaf-renderer`. They are the direct target of a JSON Schema → schema mapping
+(`pattern`/`minLength`/`maxLength`/`format`, `minimum`/`maximum`/`multipleOf`).
+```
 
 `type` maps to a control value type:
 
@@ -157,17 +176,94 @@ case selector plus the selected case's fields.
 | --- | --- | --- | --- |
 | `kind` | `'choice'` | {sub}`data` | Node discriminant. Required. |
 | `name` | `string` | {sub}`data` | Identity; must equal the `children` key. Required. |
-| `cases` | `Record<string, Record<string, NodeType>>` | {sub}`data` | Each case name → that case's fields. Required. |
-| `default` | `string` | {sub}`data` | Case selected when none is chosen. |
+| `cases` | `Record<string, ChoiceCase>` | {sub}`data` | Each case name → that case's body: a field record, **or a single node** (a leaf-bodied case). Required. |
+| `caseLabels` | `Record<string, string>` | {sub}`ui` | Display label per case name — for anonymous/auto-named cases. Falls back to the case name. |
+| `default` | `string` | {sub}`data` | Case selected when none is chosen and none can be inferred. |
 | `mandatory` | `boolean` | {sub}`data` | Whether a case must be selected. |
 | `label` | `string` | {sub}`ui` | Selector label. Falls back to `name`. |
 
 In the form value a choice is `{ __case: <caseName>, ...that case's fields }`.
 
+### Anonymous cases, `__case` inference, and leaf-bodied cases
+
+Case names are arbitrary keys, so `anyOf`/`oneOf` branches with no name can be
+**auto-named** (`case0`, `case1`, …) and given friendly `caseLabels` for the
+selector. A **leaf-bodied case** — a branch that is a bare scalar rather than an
+object — may be written as a single node; it is normalized to a one-field record
+keyed by the node's `name`. (An `anyOf: [{type:'string'}, {type:'null'}]` branch
+is usually better modeled as a single `nullable` leaf.)
+
+The wire form of a choice is *inline* (the active case's fields sit at the
+choice's location, with no `__case` key). When a form is built from such data,
+the builder **infers** the active case: it picks the case whose fields best
+overlap the data. This is how a branch discriminated **by which properties are
+present/required** round-trips without a discriminator key.
+
+```{admonition} Recipe — `anyOf`/`oneOf` by required-set or `const`
+:class: tip
+- **Required-set discrimination** (e.g. O-RAN A1 `QoSTarget.scope`, five branches
+  each requiring a different id): map each branch to a case whose fields are that
+  branch's properties. Distinct required fields let the builder infer the active
+  case from the data — no discriminator needed.
+- **`const` discriminator** (a shared field pinned to a literal per branch): map
+  the discriminator to an `enum` leaf present in every case, and set each case's
+  `default`/value accordingly; the selected literal identifies the branch.
+```
+
+## `map` — an open, arbitrary-keyed record
+
+A dictionary whose **keys are runtime data**, not declared in the schema, and
+whose values all conform to one shared `value` schema. This is the counterpart to
+`nodeGroup` (a *fixed* key set) and maps JSON Schema
+`additionalProperties: <schema>` / `patternProperties`. The user adds, removes,
+and renames entries.
+
+```ts
+{
+  kind: 'map',
+  name: 'labels',
+  keyLabel: 'Name',
+  value: { kind: 'leaf', type: 'string', name: 'value' },
+}
+```
+
+| Property | Type | Concern | Description |
+| --- | --- | --- | --- |
+| `kind` | `'map'` | {sub}`data` | Node discriminant. Required. |
+| `name` | `string` | {sub}`data` | Identity; must equal the `children` key. Required. |
+| `value` | `NodeType` | {sub}`data` | The schema every entry's value conforms to (a leaf, a group, …). Required. |
+| `keyPattern` | `string` | {sub}`data` | `patternProperties`: entry keys must match this regex. |
+| `minEntries` / `maxEntries` | `number` | {sub}`data` | Bounds on entry count (JSON Schema `minProperties`/`maxProperties`); gate the add/remove controls. |
+| `presence` | `boolean` | {sub}`data` | Optional map: on/off toggle, omitted from the value when absent. |
+| `keyLabel` | `string` | {sub}`ui` | Label for the key column. Defaults to "Key". |
+| `label` | `string` | {sub}`ui` | Section label. |
+
+The map's control is a `FormGroup` whose **control names are the entry keys**, so
+`getRawValue()` is the map object directly (`{ key: value, … }`) — the same
+"`getRawValue()` is your data" contract as every other node. Editing a key is a
+*rename* committed on blur.
+
+```{admonition} `map` vs `nodeGroup`
+:class: note
+Use `nodeGroup` whenever the keys are known at schema-authoring time (the common
+case). Reach for `map` **only** when the keys are open/arbitrary. The two compose:
+a `nodeGroup` may contain a `map` child, and a map's `value` may be a `nodeGroup`.
+```
+
 ## Current limitations
 
-The library is at an early version (`0.1.x`). A few properties are declared on the
+The library is at an early version. A few properties are declared on the
 model but not yet fully wired:
+
+- **`map`** renders in `nff-dynamic-recursive-form` but is **not yet shown in the
+  `nff-config-editor` tree** (same current gap as `choice`). A map `value` of kind
+  `leaf` or `nodeGroup` is rendered; other value kinds are a follow-up.
+- **`minItems` / `maxItems`** currently gate the remove control on
+  `nodeGroupList`, but are not yet enforced as `FormArray` validators, and are not
+  yet applied to `leafList`. Treat them as UI hints for now, and validate
+  cardinality yourself if it must be enforced.
+- **`description`** and **`subType`** exist on the types but are not rendered.
+  Avoid relying on them.
 
 - **`minItems` / `maxItems`** currently gate the remove control on
   `nodeGroupList`, but are not yet enforced as `FormArray` validators, and are not

@@ -68,8 +68,12 @@ into your standalone component's `imports`.
 | `schema` | `NodeGroup` | — | **Required.** The schema to render. |
 | `formGroup` | `FormGroup` | new empty group | The form to bind to — pass the result of `buildFormFromSchema(schema)`. |
 | `initialValue` | object | — | Optional seed value applied on init. Prefer seeding via `buildFormFromSchema(schema, initial)`. |
-| `editable` | `boolean` | `false` | Whether fields start editable. Each group also has an edit toggle. |
+| `editable` | `boolean` | `false` | Whether fields start editable. **Two-way** (`model`) — bind `[(editable)]` to track it; each group also has an edit toggle. |
 | `title` | `string` | — | Overrides the header title of the rendered group. |
+
+The inputs are Angular signal inputs, so template binding is unchanged
+(`[schema]="…"`); reading them off a component instance is a signal call
+(`cmp.schema()`).
 
 ```{note}
 Always pass a `formGroup` built from the same `schema` with `buildFormFromSchema`.
@@ -102,11 +106,13 @@ property.
 | Type | Description |
 | --- | --- |
 | `NodeGroup` | A group of fields (object). The root of a schema. |
-| `Leaf` | A single scalar field. Union of `LeafString`, `LeafNumber`, `LeafBoolean`, `LeafEnum`. |
+| `Leaf` | A single scalar field. Union of `LeafString`, `LeafNumber`, `LeafBoolean`, `LeafEnum`. Carries the constraint, `nullable`, `presence`, and `readOnly` fields. |
 | `LeafList` | A list of scalar fields. |
 | `NodeGroupList` | A list of groups. |
-| `NodeChoice` | A discriminated selection (`cases`); in the form value the selection is `{ __case, ...fields }`. |
-| `NodeType` | `Leaf \| LeafList \| NodeGroup \| NodeGroupList \| NodeChoice`. |
+| `NodeChoice` | A discriminated selection (`cases`, `caseLabels`); in the form value the selection is `{ __case, ...fields }`. The active case is inferred from seed data when no `__case` is present. |
+| `ChoiceCase` | One case body: a field record, or a single node (a leaf-bodied case). |
+| `NodeMap` | An open, arbitrary-keyed record (`value` schema, `keyPattern`, `min`/`maxEntries`). |
+| `NodeType` | `Leaf \| LeafList \| NodeGroup \| NodeGroupList \| NodeChoice \| NodeMap`. |
 | `Appearance` | Presentation options for a `nodeGroup` (`flatten`, `noBorder`). |
 | `CASE_KEY` | The form-value key (`'__case'`) that records a choice's active case. |
 

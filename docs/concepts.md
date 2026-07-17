@@ -12,6 +12,7 @@ becomes:
 | `nodeGroup` | a nested object | `FormGroup` |
 | `nodeGroupList` | a list of objects | `FormArray<FormGroup>` |
 | `choice` | a discriminated selection | `FormGroup` (a case selector + the chosen case's fields) |
+| `map` | an open, arbitrary-keyed record | `FormGroup` (control names are the entry keys) |
 
 The root of every schema is a `nodeGroup`. Its `children` map contains the fields;
 each child is itself any of these kinds, so groups nest to any depth. A
@@ -82,26 +83,60 @@ children: {
 Using [`defineSchema`](typing.md) does not catch this mismatch at compile time, so
 keep `name` and its key identical by convention.
 
+## The value is `getRawValue()`
+
+The library keeps one contract: **`form.getRawValue()` is your data.** A `leaf` is
+its scalar, a `nodeGroup`/`map` is an object, a `leafList`/`nodeGroupList` is an
+array, a `choice` is `{ __case, ...fields }`. Seed a form with
+`buildFormFromSchema(schema, initial)` and read it back with `getRawValue()` and
+the shape round-trips. (`form.value` omits disabled/absent controls — see
+[optional fields](features.md#optional-nullable-and-present-fields).)
+
 ## Data vs. presentation
 
 A schema node carries two kinds of information:
 
 - **Data** — what shapes the value and its validation: `kind`, `type`, `required`,
-  `enum`, `default`, `minItems`, `maxItems`, and the tree structure itself.
-- **Presentation** — what shapes the rendered UI: `label`, `enumLabel`, and the
-  `appearance` options (`flatten`, `noBorder`) and `root` layout flag.
+  `enum`, `default`, the leaf constraints (`pattern`, `min`/`max`, `minLength`,
+  `multipleOf`, `integer`, …), `nullable`, `presence`, `minItems`/`maxItems`, and
+  the tree structure itself.
+- **Presentation** — what shapes the rendered UI: `label`, `enumLabel`,
+  `caseLabels`, `keyLabel`, `readOnly`, the `appearance` options (`flatten`,
+  `noBorder`), and the `root` layout flag.
 
 The [Schema reference](schema-reference.md) tags every property with which concern
 it belongs to, so you can tell at a glance whether a field affects the submitted
 value or only the display.
 
-## Validation
+## Validation lives in the schema
 
-The builder attaches validators from the schema:
+The builder turns schema constraints into Angular validators, and the renderer
+shows an inline `mat-error` for each:
 
-- `required: true` on a leaf → `Validators.required`.
-- `enum` on an enum leaf → a membership validator (values outside the `enum` array
-  are invalid).
+- `required: true` → `Validators.required`.
+- On a `string` leaf: `pattern`, `minLength`, `maxLength`, `format` (`email`/`uri`).
+- On a `number` leaf: `min`, `max`, `multipleOf`, `integer`.
+- `enum` → a membership validator.
 
-Validity surfaces through the standard `form.valid` / `control.errors` API. See
-[Examples › Validation](examples.md#validation-and-required-fields).
+Validity surfaces through the standard `form.valid` / `control.errors` API. There
+is no separate validation layer to keep in sync. See
+[Features › Validation](features.md#validation-and-inline-errors).
+
+## Beyond fixed objects
+
+Two node kinds model shapes a fixed `nodeGroup` can't:
+
+- **`choice`** — a discriminated selection (JSON Schema `anyOf`/`oneOf`): the user
+  picks one case and only that case's fields are present.
+- **`map`** — an open, arbitrary-keyed record (JSON Schema `additionalProperties`):
+  the user adds, removes, and renames keyed entries that share one value schema.
+
+Both are covered in [Features](features.md); `map` is a *sibling* of `nodeGroup`
+(open keys), not a replacement (fixed keys).
+
+## Driving forms from config or models
+
+You can author schemas by hand, or generate them from an existing source with the
+companion **[`ng-form-foundry-transformers`](transformers.md)** package — a YAML or
+JSON config file, or a YANG model — and revert the edited value back to that source
+format.

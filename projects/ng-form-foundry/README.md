@@ -26,17 +26,20 @@ form = buildFormFromSchema(schema);
 ## Features
 
 - **One schema → typed form + UI.** `NodeGroup` / `Leaf` / `LeafList` /
-  `NodeGroupList` describe nested objects, primitive lists, and repeatable
-  groups.
+  `NodeGroupList` / `NodeChoice` / `NodeMap` describe nested objects, primitive
+  lists, repeatable groups, discriminated selections, and open dictionaries.
 - **Type inference.** The returned `FormGroup`'s keys and control value types are
   inferred from the schema literal — no manual `FormGroup<...>` typing.
+- **Validation in the schema.** Per-field constraints (`pattern`, `min`/`max`,
+  `minLength`, `multipleOf`, `integer`, `required`, …) become Angular validators
+  and inline `mat-error` messages.
 - **Angular Material renderers** for string, number, boolean, and enum fields,
-  add/remove lists, collapsible groups, optional **presence** groups with a
-  toggle, and **choice/case** selection.
+  add/remove lists, collapsible groups, optional **presence** fields with a
+  toggle, **choice/case** selection, and add/remove/rename **map** entries.
 - **Two layouts:** an all-in-one recursive form (`nff-dynamic-recursive-form`),
   or a tree/detail **config editor** (`nff-config-editor`) — structure on the
   left, a node's fields on the right.
-- **Standalone components**, Angular 20, reactive forms throughout.
+- **Standalone components**, Angular 20, signal inputs, reactive forms throughout.
 
 ## Installation
 
@@ -84,7 +87,7 @@ animation setup.
 ```ts
 this.form.value;         // current value (omits disabled controls)
 this.form.getRawValue(); // full value, typed to the schema
-this.form.valid;         // validity from required / enum / list validators
+this.form.valid;         // validity from the schema's constraint validators
 ```
 
 ## Documentation
