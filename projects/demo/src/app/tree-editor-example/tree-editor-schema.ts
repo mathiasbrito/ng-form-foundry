@@ -44,14 +44,14 @@ export const treeEditorSchema = defineSchema({
     logging: {
       kind: 'nodeGroup',
       name: 'logging',
-      label: 'Logging (optional)',
+      label: 'Logging',
       presence: true,
       children: { level: { kind: 'leaf', type: 'string', name: 'level', label: 'Level', default: 'info' } },
     },
     management: {
       kind: 'nodeGroup',
       name: 'management',
-      label: 'Management (optional)',
+      label: 'Management',
       presence: true,
       children: { user: { kind: 'leaf', type: 'string', name: 'user', label: 'Admin user' } },
     },

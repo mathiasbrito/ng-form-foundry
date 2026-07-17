@@ -25,7 +25,7 @@ export const showcase = defineSchema({
 
     // --- Optional / nullable / presence / constant ---
     replicas: { kind: 'leaf', type: 'number', name: 'replicas', label: 'Replicas (nullable)', integer: true, nullable: true },
-    notes: { kind: 'leaf', type: 'string', name: 'notes', label: 'Notes (optional — presence)', presence: true },
+    notes: { kind: 'leaf', type: 'string', name: 'notes', label: 'Notes', presence: true },
     apiVersion: { kind: 'leaf', type: 'string', name: 'apiVersion', label: 'API version (const)', default: 'apps/v1', readOnly: true },
 
     // --- Choice: labeled cases, active case inferred from seed data ---

@@ -38,7 +38,7 @@ export const yangExample = defineSchema({
     ntp: {
       kind: 'nodeGroup',
       name: 'ntp',
-      label: 'NTP (presence)',
+      label: 'NTP',
       presence: true,
       children: {
         server: { kind: 'leaf', type: 'string', name: 'server', label: 'Server' },
