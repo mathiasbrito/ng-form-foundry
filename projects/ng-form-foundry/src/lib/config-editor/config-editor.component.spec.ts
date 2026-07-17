@@ -114,12 +114,21 @@ describe('ConfigEditorComponent', () => {
     expect(list.children.map((c) => c.label)).toEqual(['#1', '#2']);
   });
 
-  it('selecting a group node scopes the detail form to its subtree', () => {
+  it('selecting a node flattens its subtree into breadcrumb-separated sections, pre-order', () => {
+    // Root selection: one section per node, the selected node first.
+    expect(component.sections.map((s) => s.node.id)).toEqual([
+      '', 'system', 'ifaces', 'ifaces/0', 'ifaces/1', 'scope', 'scope/ports', 'labels', 'servers', 'servers/s1',
+    ]);
+    // Section trails run from the selected node to the section's node.
+    expect(component.sections[3].trail.map((n) => n.label)).toEqual(['device', 'ifaces', '#1']);
+
     const system = node('system');
     component.select(system);
-    expect(component.detail!.group).toBe(form.get('system') as FormGroup);
-    // The detail schema renders flattened: the breadcrumb already titles the node.
-    expect(component.detail!.schema.appearance?.flatten).toBe(true);
+    expect(component.sections.length).toBe(1);
+    expect(component.sections[0].group).toBe(form.get('system') as FormGroup);
+    // The section schema is a flattened leaf-only slice: no nested section chrome.
+    expect(component.sections[0].schema!.appearance?.flatten).toBe(true);
+    expect(Object.keys(component.sections[0].schema!.children)).toEqual(['tz']);
   });
 
   it('selecting a node with children expands it in the tree', () => {
@@ -135,10 +144,22 @@ describe('ConfigEditorComponent', () => {
     expect(component.pathTo(item).map((n) => n.label)).toEqual(['device', 'ifaces', '#1']);
   });
 
-  it('renders the subtree content inline instead of section links', () => {
+  it('renders the subtree content flat: no section links, no expansion panels, breadcrumb headings between children', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.detail nff-dynamic-recursive-form')).toBeTruthy();
     expect(el.querySelector('.child-links')).toBeNull();
+    expect(el.querySelector('.detail mat-expansion-panel')).toBeNull();
+    const headings = [...el.querySelectorAll<HTMLElement>('.detail .section-heading')];
+    expect(headings.length).toBe(component.sections.length - 1); // every section but the first
+    expect(headings[0].textContent!.replace(/\s+/g, '').trim()).toBe('device/system');
+  });
+
+  it('switchTreeCase swaps the case from the detail selector and re-syncs the sections', () => {
+    component.switchTreeCase(node('scope'), 'byZone');
+    expect((form.get('scope') as FormGroup).get(CASE_KEY)!.value).toBe('byZone');
+    expect(component.selected!.id).toBe('scope');
+    // The zoneId leaf renders in the choice's own section; the ports child section is gone.
+    expect(component.sections.some((s) => s.node.id === 'scope/ports')).toBe(false);
   });
 
   // --- lists -----------------------------------------------------------------

@@ -121,23 +121,88 @@
         }
       </nav>
 
-      @if (selected.mapEntry; as entry) {
-        <mat-form-field class="key-field" [appearance]="editable() ? 'fill' : 'outline'">
-          <mat-label>{{ entry.mapSchema.keyLabel ?? 'Key' }}</mat-label>
-          <input
-            matInput
-            #entryKey
-            [readonly]="!editable()"
-            [value]="entry.key"
-            (change)="renameTreeMapEntry(selected, entryKey.value); entryKey.value = selected.mapEntry?.key ?? entryKey.value"
+      <!-- The selected subtree as a flat section list: each descendant's fields
+           under a breadcrumb heading — the headings, not nesting, mark the
+           boundary between one child and the next. -->
+      @for (s of sections; track s.node.id) {
+        @if (s.trail.length > 1) {
+          <nav class="section-heading" aria-label="Section">
+            @for (crumb of s.trail; track crumb.id; let last = $last) {
+              @if (last) {
+                <span class="crumb-current">{{ crumb.label }}</span>
+              } @else {
+                <button type="button" class="item-link crumb-link" (click)="select(crumb)">{{ crumb.label }}</button>
+                <span class="crumb-sep" aria-hidden="true">/</span>
+              }
+            }
+          </nav>
+        }
+
+        @if (s.node.mapEntry; as entry) {
+          <mat-form-field class="key-field" [appearance]="editable() ? 'fill' : 'outline'">
+            <mat-label>{{ entry.mapSchema.keyLabel ?? 'Key' }}</mat-label>
+            <input
+              matInput
+              #entryKey
+              [readonly]="!editable()"
+              [value]="entry.key"
+              (change)="renameTreeMapEntry(s.node, entryKey.value); entryKey.value = entry.key"
+            />
+          </mat-form-field>
+        }
+
+        @if (s.node.choice; as choice) {
+          @if (editable()) {
+            <mat-form-field class="case-select" appearance="fill">
+              <mat-label>Selected option</mat-label>
+              <mat-select [value]="activeCase(s.node)" (selectionChange)="switchTreeCase(s.node, $event.value)">
+                @for (caseName of objectKeys(choice.schema.cases); track caseName) {
+                  <mat-option [value]="caseName">{{ caseLabel(choice.schema, caseName) }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          } @else {
+            <mat-form-field class="case-select" appearance="outline">
+              <mat-label>Selected option</mat-label>
+              <input matInput readonly [value]="activeCaseLabel(s.node) ?? ''" />
+            </mat-form-field>
+          }
+        }
+
+        @if (s.schema && s.group) {
+          <nff-dynamic-recursive-form [schema]="s.schema" [formGroup]="s.group" [editable]="editable()" />
+        }
+
+        @if (s.node.map && !s.node.map.complex) {
+          <nff-node-map-renderer
+            [nodeMap]="s.node.map.schema"
+            [formGroup]="s.node.map.group"
+            [editable]="editable()"
           />
-        </mat-form-field>
+        }
+
+        @if (editable() && s.node.map?.complex && !mapAtMax(s.node)) {
+          <div class="section-actions">
+            <button matButton (click)="addTreeMapEntry(s.node)"><mat-icon>add</mat-icon> Add entry</button>
+          </div>
+        }
+        @if (editable() && s.node.list) {
+          <div class="section-actions">
+            <button matButton (click)="addItem(s.node)">
+              <mat-icon>add</mat-icon> Add {{ s.node.list.itemLabel }}
+            </button>
+          </div>
+        }
       }
 
-      @if (detail) {
-        <!-- The selected node's whole subtree, rendered by the standard form renderer. -->
-        <nff-dynamic-recursive-form [schema]="detail.schema" [formGroup]="detail.group" [editable]="editable()" />
-      } @else {
+      @if (
+        sections.length === 1 &&
+        !sections[0].schema &&
+        !sections[0].node.choice &&
+        !sections[0].node.map &&
+        !sections[0].node.list &&
+        !sections[0].node.mapEntry
+      ) {
         <p class="empty">This node has no fields.</p>
       }
     } @else {

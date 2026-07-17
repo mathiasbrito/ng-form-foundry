@@ -168,10 +168,34 @@
   color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.5));
 }
 
-// The map-entry key editor sits above the embedded form content.
-.key-field {
+// A section boundary in the flat detail list: a breadcrumb heading over a
+// divider line, marking where one child's fields end and the next begin.
+.section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 20px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+  font-size: 0.95rem;
+
+  .crumb-current {
+    font-weight: 600;
+  }
+}
+
+// The map-entry key editor and choice-case selector sit above their section's fields.
+.key-field,
+.case-select {
   display: block;
   max-width: 320px;
+  margin-bottom: 8px;
+}
+
+.section-actions {
+  display: flex;
+  justify-content: flex-start;
   margin-bottom: 8px;
 }
 

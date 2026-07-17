@@ -200,10 +200,11 @@ render in the `outline` appearance and the toggles are disabled.
 
 For large configs, the [`<nff-config-editor>`](api.md#nff-config-editor) renders
 the structure as a navigable tree beside a detail pane that shows the **selected
-node's whole subtree** through the standard form renderer — the tree scopes the
-view, a breadcrumb marks the position, and structural edits made in either pane
-stay in sync. It supports the full node model — groups, lists, maps, and
-choices — plus a "+ Optional field" menu for absent presence children (each
-added one carries a delete button that returns it to the menu). It draws no
-container of its own, only a divider between the panes, so the embedding page
-owns the chrome.
+node's whole subtree flattened into sections** — each child's fields under a
+breadcrumb heading that marks the boundary and links back up, with no nested
+panels. The tree scopes the view, and structural edits made in either pane stay
+in sync. It supports the full node model — groups, lists, maps, and choices —
+plus a "+ Optional field" menu for absent presence children (each added one
+carries a delete button that returns it to the menu). It draws no container of
+its own, only a divider between the panes, so the embedding page owns the
+chrome.

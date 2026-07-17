@@ -118,17 +118,19 @@ values won't reach your form.
 
 `ConfigEditorComponent` — a tree/detail editor for large configs. The structure
 (groups, lists, maps, choices) is a tree on the left; selecting a node renders
-that node's **entire subtree** — its fields and its child sections' content,
-recursively — on the right through the standard
-[`<nff-dynamic-recursive-form>`](#nff-dynamic-recursive-form). The tree scopes
-what the detail shows; a breadcrumb above the detail marks where you are and
-links back to each ancestor.
+that node's **entire subtree** on the right as a **flat list of sections**: the
+node's own fields first, then every descendant's fields. There is no nesting
+chrome in the detail — each child section is separated by a **breadcrumb
+heading** (`Service / Deploy scope / …`) whose segments link back up, so the
+boundary between one child and the next is the breadcrumb itself. A choice's
+"Selected option" selector, a map's key/value rows, and per-list "Add" buttons
+render inline in their section.
 
-Because the detail *is* the form renderer, every edit works there — including
-structural ones (adding list items, toggling presence, switching a choice case,
-editing map entries) — and the tree keeps itself in sync: it is derived state,
-rebuilt whenever the form's structure changes, with expansion and selection
-preserved (node identity is the path from the root).
+Every edit works in the detail — including structural ones (adding list items,
+toggling presence, switching a choice case, editing map entries) — and the tree
+keeps itself in sync: it is derived state, rebuilt whenever the form's
+structure changes, with expansion and selection preserved (node identity is the
+path from the root).
 
 The tree adds row conveniences of its own:
 

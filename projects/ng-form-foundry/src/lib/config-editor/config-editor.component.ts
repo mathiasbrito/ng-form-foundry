@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltip } from '@angular/material/tooltip';
 import { CASE_KEY, NodeChoice, NodeGroup, NodeMap, NodeType } from '../types/dynamic-recursive.types';
 import {
@@ -16,8 +17,10 @@ import {
   caseFields,
   removeMapEntry,
   renameMapEntry,
+  switchChoiceCase,
 } from '../core/dynamic-recursive-forms-builder';
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form/dynamic-recursive-form.component';
+import { NodeMapRendererComponent } from '../dynamic-recursive-form/node-map-renderer/node-map-renderer.component';
 
 /** Metadata on a list-container node that lets the tree add items to its FormArray. */
 interface ListRef {
@@ -34,10 +37,21 @@ interface OptionalEntry {
   label: string;
 }
 
-/** What the detail pane renders for the selected node: a schema slice bound to its FormGroup. */
-interface DetailView {
-  schema: NodeGroup;
-  group: FormGroup;
+/**
+ * One flat section of the detail pane. The selected node's subtree renders as a
+ * pre-order list of these — no nesting chrome: each section after the first is
+ * separated by a breadcrumb heading (`trail`), and holds only the node's *own*
+ * fields (`schema` is a leaf-only slice; complex children are sections of their
+ * own, deeper in the list).
+ */
+interface DetailSection {
+  node: TreeNode;
+  /** Selected-node-to-here trail, rendered as the section's breadcrumb heading (omitted on the first section). */
+  trail: TreeNode[];
+  /** Leaf-only slice of the node's own schema, or null when it has no own fields. */
+  schema: NodeGroup | null;
+  /** The group `schema` binds to (the node's group; for a choice, the choice group). */
+  group: FormGroup | null;
 }
 
 /**
@@ -74,16 +88,19 @@ interface TreeNode {
 /**
  * A tree/detail editor for a schema-built form: the structure (groups, lists,
  * maps, choices) is a tree on the left, and selecting a node renders that
- * node's **entire subtree** — its fields and its child sections' content — on
- * the right through {@link DynamicRecursiveFormComponent}. The tree scopes what
- * the detail pane shows; it adds row conveniences of its own: `+` on list and
- * map rows, a delete control on removable rows, and a "+ Optional field" menu
- * for absent presence children.
+ * node's **entire subtree** on the right as a **flat list of sections** — the
+ * node's own fields first, then every descendant's fields, each separated by a
+ * breadcrumb heading (`Service / Deploy scope / …`) instead of nested panels.
+ * Leaf fields render through {@link DynamicRecursiveFormComponent} with a
+ * leaf-only schema slice; choice selectors, map rows, and add controls render
+ * inline in their section. The tree adds row conveniences of its own: `+` on
+ * list and map rows, a delete control on removable rows, and a
+ * "+ Optional field" menu for absent presence children.
  *
  * The tree is **derived state**: any structural change to the form — made
- * through the tree rows or through the embedded detail form — triggers a
- * rebuild (a cheap shape signature over `valueChanges` detects it). Node ids
- * are stable paths, so expansion and selection survive rebuilds.
+ * through the tree rows or through the detail sections — triggers a rebuild (a
+ * cheap shape signature over `valueChanges` detects it). Node ids are stable
+ * paths, so expansion and selection survive rebuilds.
  *
  * The component draws no outer container — only a divider between the tree and
  * detail panes — so the embedding client owns the surrounding chrome.
@@ -98,8 +115,10 @@ interface TreeNode {
     MatMenuModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatTooltip,
     DynamicRecursiveFormComponent,
+    NodeMapRendererComponent,
   ],
   templateUrl: './config-editor.component.html',
   styleUrl: './config-editor.component.scss',
@@ -114,8 +133,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   root!: TreeNode;
   selected: TreeNode | null = null;
-  /** What the detail pane renders for the current selection. */
-  detail: DetailView | null = null;
+  /** The selected subtree as a flat, breadcrumb-separated section list. */
+  sections: DetailSection[] = [];
   readonly expanded = new Set<string>();
 
   private shape = '';
@@ -137,7 +156,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   select(node: TreeNode) {
     this.selected = node;
-    this.detail = this.computeDetail(node);
+    this.sections = this.buildSections(node, []);
     // Reveal the selection: expand every ancestor so the row is visible, and
     // the node itself as it opens on the right.
     for (const crumb of this.pathTo(node)) {
@@ -227,6 +246,23 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     const c = node.choice;
     const active = this.activeCase(node);
     return c && active ? (c.schema.caseLabels?.[active] ?? active) : null;
+  }
+
+  /** The display label for a case: the schema's `caseLabels` entry, else the case name. */
+  caseLabel(choice: NodeChoice, caseName: string): string {
+    return choice.caseLabels?.[caseName] ?? caseName;
+  }
+
+  /** Switch a choice node's active case; the structural sync rebuilds the tree and sections. */
+  switchTreeCase(node: TreeNode, caseName: string) {
+    const c = node.choice;
+    if (!c) return;
+    switchChoiceCase(c.group, c.schema, caseName);
+    this.selectByPath(node.id);
+  }
+
+  objectKeys(obj: Record<string, unknown>): string[] {
+    return Object.keys(obj);
   }
 
   /** Append a new entry to a complex map node under a generated unique key, then select it. */
@@ -335,32 +371,43 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * The detail pane's view of a node: choice/map/list nodes render as a named
-   * child of their parent group (so their own section chrome and controls
-   * appear); group-backed nodes render their content flattened, since the
-   * breadcrumb already titles them.
+   * Flatten a subtree into detail sections, pre-order: the node's own fields
+   * first, then each child as its own breadcrumb-headed section. No nesting
+   * chrome — the headings are the boundaries between children.
    */
-  private computeDetail(node: TreeNode): DetailView | null {
-    if (node.choice || node.map || node.list) {
-      const ref = node.ref;
-      if (!ref) return null;
-      return {
-        schema: {
-          kind: 'nodeGroup',
-          name: ref.key,
-          appearance: { flatten: true },
-          children: { [ref.key]: ref.schema },
-        },
-        group: ref.group,
-      };
+  private buildSections(node: TreeNode, trail: TreeNode[]): DetailSection[] {
+    const here = [...trail, node];
+    const list: DetailSection[] = [{ node, trail: here, ...this.sectionContent(node) }];
+    for (const child of node.children) list.push(...this.buildSections(child, here));
+    return list;
+  }
+
+  /** A section's own renderable fields: a leaf-only schema slice and the group it binds to. */
+  private sectionContent(node: TreeNode): { schema: NodeGroup | null; group: FormGroup | null } {
+    if (node.choice) {
+      const active = this.activeCase(node);
+      const body = active && node.choice.schema.cases[active] ? this.caseAsGroup(node.choice.schema, active) : null;
+      return { schema: body ? this.leafOnly(body) : null, group: node.choice.group };
     }
     if (node.schema && node.group) {
-      return {
-        schema: { ...node.schema, root: false, appearance: { ...node.schema.appearance, flatten: true } },
-        group: node.group,
-      };
+      return { schema: this.leafOnly(node.schema), group: node.group };
     }
-    return null;
+    return { schema: null, group: null };
+  }
+
+  /**
+   * The node's own fields as a flattened schema: leaf and leafList children
+   * only. Complex children are rendered as sections of their own, so the
+   * embedded form never draws nested section chrome. Null when there are none.
+   */
+  private leafOnly(schema: NodeGroup): NodeGroup | null {
+    const children: Record<string, NodeType> = {};
+    for (const key of Object.keys(schema.children)) {
+      const child = schema.children[key];
+      if (child.kind === 'leaf' || child.kind === 'leafList') children[key] = child;
+    }
+    if (!Object.keys(children).length) return null;
+    return { ...schema, root: false, children, appearance: { flatten: true } };
   }
 
   // --- tree construction -----------------------------------------------------
