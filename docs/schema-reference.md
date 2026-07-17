@@ -115,10 +115,13 @@ A group of fields. Builds a nested `FormGroup`. The root of every schema is a
 
 ### `Appearance`
 
+Shared layout options, honoured by `nodeGroup`, `choice`, and `map`.
+
 | Property | Type | Concern | Description |
 | --- | --- | --- | --- |
 | `flatten` | `boolean` | {sub}`ui` | Render the group's fields inline, without a surrounding card. |
 | `noBorder` | `boolean` | {sub}`ui` | Render the group card without its border. |
+| `collapsed` | `boolean` | {sub}`ui` | Start the node's section panel collapsed; the user can expand it. Ignored when `flatten` is set. |
 
 ## `nodeGroupList` — a list of objects
 

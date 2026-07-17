@@ -42,6 +42,16 @@ describe('DrfLeafRendererComponent', () => {
     expect(error!.textContent).toContain('at least 3 characters');
   });
 
+  it('shows the required pattern in the error message so the user knows what to type', () => {
+    const leaf: Leaf = { kind: 'leaf', type: 'string', name: 'code', pattern: '^[0-9]{3}$' } as Leaf;
+    const ctrl = buildControl(leaf, 'ab') as FormControl; // fails the pattern
+    fixture.componentRef.setInput('leaf_', leaf);
+    fixture.componentRef.setInput('control', ctrl);
+    fixture.detectChanges();
+
+    expect(component.errorText).toContain('^[0-9]{3}$');
+  });
+
   it('renders a readOnly leaf as a read-only input even when the form is editable', () => {
     const constant: Leaf = { kind: 'leaf', type: 'string', name: 'kind', default: 'A1', readOnly: true } as Leaf;
     fixture.componentRef.setInput('leaf_', constant);

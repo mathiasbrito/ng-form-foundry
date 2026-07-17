@@ -44,9 +44,11 @@ export const showcase = defineSchema({
       kind: 'map', name: 'portMap', label: 'Port map — numeric keys (R1)', keyLabel: 'Port',
       value: { kind: 'leaf', type: 'string', name: 'value', label: 'Service' },
     },
+    // Starts collapsed via `appearance.collapsed`.
     labels: {
       kind: 'map', name: 'labels', label: 'Labels', keyLabel: 'Name',
       value: { kind: 'leaf', type: 'string', name: 'value', label: 'Value' },
+      appearance: { collapsed: true },
     },
 
     // --- A big integer, carried as a string with full precision (R2) ---

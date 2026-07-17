@@ -56,7 +56,7 @@ export class LeafRendererComponent implements OnInit {
     if (e['required']) return `${label} is required`;
     if (e['minlength']) return `Must be at least ${e['minlength'].requiredLength} characters`;
     if (e['maxlength']) return `Must be at most ${e['maxlength'].requiredLength} characters`;
-    if (e['pattern']) return `${label} has an invalid format`;
+    if (e['pattern']) return `Must match ${e['pattern'].requiredPattern ?? 'the required pattern'}`;
     if (e['email']) return 'Must be a valid email address';
     if (e['uri']) return 'Must be a valid URI';
     if (e['min']) return `Must be ≥ ${e['min'].min}`;

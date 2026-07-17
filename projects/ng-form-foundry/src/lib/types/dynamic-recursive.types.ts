@@ -84,6 +84,8 @@ export type LeafEnum = LeafBase & {
 export type Appearance = {
   flatten?: boolean;
   noBorder?: boolean;
+  /** Start this node's section panel collapsed. Ignored when `flatten` is set. */
+  collapsed?: boolean;
 }
 
 export type Leaf = LeafString | LeafNumber | LeafBoolean | LeafEnum;
@@ -160,6 +162,7 @@ export type NodeChoice = {
   caseLabels?: Record<string, string>;
   default?: string;
   mandatory?: boolean;
+  appearance?: Appearance;
 };
 
 /** The control name that records which case of a {@link NodeChoice} is active. */
@@ -190,6 +193,7 @@ export type NodeMap = {
   maxEntries?: number;
   /** Optional map: rendered with an on/off toggle, omitted from the value when absent. */
   presence?: boolean;
+  appearance?: Appearance;
 };
 
 export type NodeType = Leaf | LeafList | NodeGroup | NodeGroupList | NodeChoice | NodeMap;

@@ -74,7 +74,7 @@
         @else if (child.kind == 'choice') {
           @let choiceGroup = asFormGroup(formGroup().get(childItem.key));
           @let selectedCase = activeCase(childItem.key);
-          <mat-expansion-panel class="node-section" expanded="true" togglePosition="before">
+          <mat-expansion-panel class="node-section" [expanded]="!child.appearance?.collapsed" togglePosition="before">
             <mat-expansion-panel-header>
               <mat-panel-title>{{ child.label ?? child.name }}</mat-panel-title>
             </mat-expansion-panel-header>
@@ -116,7 +116,7 @@
       @for (childItem of nodeGroupChildrenList; track $index) {
         @let child = childItem.value;
         @if (child.kind == 'map') {
-          <mat-expansion-panel class="node-section" expanded="true" togglePosition="before">
+          <mat-expansion-panel class="node-section" [expanded]="!child.appearance?.collapsed" togglePosition="before">
             <mat-expansion-panel-header>
               <mat-panel-title>{{ child.label ?? child.name }}</mat-panel-title>
             </mat-expansion-panel-header>
@@ -148,7 +148,7 @@
     </div>
   }
   @else {
-  <mat-expansion-panel class="node-section" expanded="true" togglePosition="before">
+  <mat-expansion-panel class="node-section" [expanded]="!schema().appearance?.collapsed" togglePosition="before">
     <mat-expansion-panel-header>
       <mat-panel-title class="config-form-subsection-card">
         {{ title() ?? schema().label ?? schema().name }}
@@ -226,7 +226,7 @@
       @if (child.kind == 'choice') {
         @let choiceGroup = asFormGroup(formGroup().get(childItem.key));
         @let selectedCase = activeCase(childItem.key);
-        <mat-expansion-panel class="node-section" expanded="true" togglePosition="before">
+        <mat-expansion-panel class="node-section" [expanded]="!child.appearance?.collapsed" togglePosition="before">
           <mat-expansion-panel-header>
             <mat-panel-title>{{ child.label ?? child.name }}</mat-panel-title>
           </mat-expansion-panel-header>
@@ -256,7 +256,7 @@
     @for (childItem of nodeGroupChildrenList; track $index) {
       @let child = childItem.value;
       @if (child.kind == 'map') {
-        <mat-expansion-panel class="node-section" expanded="true" togglePosition="before">
+        <mat-expansion-panel class="node-section" [expanded]="!child.appearance?.collapsed" togglePosition="before">
           <mat-expansion-panel-header>
             <mat-panel-title>{{ child.label ?? child.name }}</mat-panel-title>
           </mat-expansion-panel-header>
