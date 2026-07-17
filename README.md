@@ -12,6 +12,8 @@ declarative, recursive **form-description schema**.
 - **Demo:** [`projects/demo`](projects/demo) — example forms consuming the library.
 - **Documentation:** <https://ng-form-foundry.readthedocs.io> (source in
   [`docs/`](docs)).
+- **AI agents:** [`AGENTS.md`](AGENTS.md) — a condensed guide to the schema
+  model, the library and transformer entry points, and this repo's conventions.
 
 ```ts
 const schema = defineSchema({

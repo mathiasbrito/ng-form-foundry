@@ -48,6 +48,39 @@ function buildControl<T extends NodeType>(
 ): DFormControl<T>;
 ```
 
+### Choice helpers
+
+Used by both renderers; exported for code that drives a choice group
+programmatically.
+
+```ts
+/** Normalize a case body to a field record (a leaf-bodied case becomes a one-field record). */
+function caseFields(body: ChoiceCase): Record<string, NodeType>;
+
+/** The active case: explicit `__case`, else inferred from the data shape, else the schema default. */
+function resolveChoiceCase(choice: NodeChoice, initial?: Record<string, unknown> | null): string | undefined;
+
+/** Switch a choice group to `caseName`: sets `__case`, swaps the field controls. */
+function switchChoiceCase(group: FormGroup, choice: NodeChoice, caseName: string): void;
+```
+
+### Map entry helpers
+
+Add, rename, and remove entries of a `map` node's `FormGroup`. All guard the
+map's `keyPattern` / `minEntries` / `maxEntries` and report what happened, so
+callers can keep their view state in sync.
+
+```ts
+/** Append an entry; generated `keyN` placeholder when `key` is omitted. Returns the committed key or null. */
+function addMapEntry(group: FormGroup, map: NodeMap, key?: string): string | null;
+
+/** Rename an entry, preserving the control instance (and its value). False on a rejected key. */
+function renameMapEntry(group: FormGroup, map: NodeMap, oldKey: string, newKey: string): boolean;
+
+/** Remove an entry unless the map is at `minEntries`. */
+function removeMapEntry(group: FormGroup, map: NodeMap, key: string): boolean;
+```
+
 ## Components
 
 ### `<nff-dynamic-recursive-form>`
@@ -96,6 +129,9 @@ form component.
 - **Optional (presence) children** that are absent are offered by a
   "+ Optional field" menu row at the end of their parent's children; present ones
   carry a delete button that returns them to the menu.
+- A **validation error** anywhere in a node's subtree colors its tree row with
+  the theme's error color, so invalid sections are findable without expanding
+  everything. Truncated labels carry tooltips with the full text.
 
 The component draws **no outer container** — only a vertical divider between the
 tree and the detail pane. Wrap it in your own card or border:
