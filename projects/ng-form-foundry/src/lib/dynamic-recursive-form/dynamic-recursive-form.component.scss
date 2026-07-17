@@ -10,11 +10,22 @@
   margin: 4px 0;
 }
 
-.presence-group,
+.presence-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// A choice is a complex node, so it reads as a contained box like a nodeGroup
+// card — the selector and the selected case's fields grouped together — rather
+// than floating flat among its siblings.
 .choice-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
 }
 
 // A presence leaf sits in the `.fields` row like a normal field: its enable
