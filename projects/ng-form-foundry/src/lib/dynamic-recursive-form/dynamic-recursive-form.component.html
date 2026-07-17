@@ -1,17 +1,34 @@
-@if (!root) {
+@if (!root()) {
   <ng-template #formRender>
-    <div class="form-content" [formGroup]="formGroup">
+    <div class="form-content" [formGroup]="formGroup()">
       <div class="leafs-container">
         <div class="fields">
           @for (childItem of nodeGroupChildrenList; track $index) {
             @let child = childItem.value;
-            @if (child.kind == 'leaf') {
+            @if (child.kind == 'leaf' && child.presence) {
+              <div class="presence-leaf">
+                <mat-checkbox
+                  [checked]="!!formGroup().get(childItem.key)"
+                  [disabled]="!editable()"
+                  (change)="toggleLeafPresence(childItem.key, child, $event.checked)"
+                >{{ child.label ?? child.name }}</mat-checkbox>
+                @if (formGroup().get(childItem.key)) {
+                  <nff-leaf-renderer
+                    [leaf_]=child
+                    [control]=asFormControl(formGroup().get(childItem.key))
+                    [removable]=false
+                    [editable]="editable()"
+                    [initialValue]="formGroup().get(childItem.key)?.value"
+                  />
+                }
+              </div>
+            } @else if (child.kind == 'leaf') {
               <nff-leaf-renderer
                 [leaf_]=child
-                [control]=asFormControl(formGroup.get(child.name))
+                [control]=asFormControl(formGroup().get(child.name))
                 [removable]=false
-                [editable]=editable
-                [initialValue]="formGroup.get(child.name)?.value"
+                [editable]="editable()"
+                [initialValue]="formGroup().get(child.name)?.value"
               />
             }
           }
@@ -20,9 +37,9 @@
             @if (child.kind == 'leafList') {
               <nff-leaf-list-renderer
                 [leaf_]="child"
-                [editable]=editable
-                [formArray]="asFormArray(formGroup.get(child.name))"
-                [initialValue]="formGroup.get(child.name)?.value"
+                [editable]="editable()"
+                [formArray]="asFormArray(formGroup().get(child.name))"
+                [initialValue]="formGroup().get(child.name)?.value"
               />
             }
           }
@@ -33,15 +50,15 @@
         @if (child.kind == 'nodeGroup' && child.presence) {
           <div class="presence-group">
             <mat-checkbox
-              [checked]="!!formGroup.get(childItem.key)"
-              [disabled]="!editable"
+              [checked]="!!formGroup().get(childItem.key)"
+              [disabled]="!editable()"
               (change)="togglePresence(childItem.key, child, $event.checked)"
             >{{ child.label ?? child.name }}</mat-checkbox>
-            @if (formGroup.get(childItem.key)) {
+            @if (formGroup().get(childItem.key)) {
               <nff-dynamic-recursive-form
                 [schema]="child"
-                [formGroup]="asFormGroup(formGroup.get(childItem.key))"
-                [editable]="editable"
+                [formGroup]="asFormGroup(formGroup().get(childItem.key))"
+                [editable]="editable()"
               />
             }
           </div>
@@ -49,23 +66,23 @@
         @else if (child.kind == 'nodeGroup') {
           <nff-dynamic-recursive-form
             [schema]="child"
-            [formGroup]="asFormGroup(formGroup.get(child.name))"
-            [initialValue]="formGroup.get(child.name)?.value"
-            [editable]="editable"
+            [formGroup]="asFormGroup(formGroup().get(child.name))"
+            [initialValue]="formGroup().get(child.name)?.value"
+            [editable]="editable()"
           />
         }
         @else if (child.kind == 'choice') {
-          @let choiceGroup = asFormGroup(formGroup.get(childItem.key));
+          @let choiceGroup = asFormGroup(formGroup().get(childItem.key));
           @let selectedCase = activeCase(childItem.key);
           <div class="choice-group" [formGroup]="choiceGroup">
-            <mat-form-field [appearance]="editable ? 'fill' : 'outline'">
+            <mat-form-field [appearance]="editable() ? 'fill' : 'outline'">
               <mat-label>{{ child.label ?? child.name }}</mat-label>
               <mat-select
                 [formControlName]="CASE_KEY"
                 (selectionChange)="switchCase(childItem.key, child, $event.value)"
               >
                 @for (caseName of objectKeys(child.cases); track caseName) {
-                  <mat-option [value]="caseName">{{ caseName }}</mat-option>
+                  <mat-option [value]="caseName">{{ caseLabel(child, caseName) }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
@@ -73,7 +90,7 @@
               <nff-dynamic-recursive-form
                 [schema]="caseAsGroup(child, selectedCase)"
                 [formGroup]="choiceGroup"
-                [editable]="editable"
+                [editable]="editable()"
               />
             }
           </div>
@@ -85,24 +102,34 @@
         @if (child.kind == 'nodeGroupList') {
           <nff-node-group-list-renderer
             [nodeGroupList]="child"
-            [formArray]="asFormArray(formGroup.get(child.name))"
-            [initialValue]="formGroup.get(child.name)?.value"
-            [editable]="editable"
+            [formArray]="asFormArray(formGroup().get(child.name))"
+            [initialValue]="formGroup().get(child.name)?.value"
+            [editable]="editable()"
+          />
+        }
+      }
+      @for (childItem of nodeGroupChildrenList; track $index) {
+        @let child = childItem.value;
+        @if (child.kind == 'map') {
+          <nff-node-map-renderer
+            [nodeMap]="child"
+            [formGroup]="asFormGroup(formGroup().get(childItem.key))"
+            [editable]="editable()"
           />
         }
       }
     </div>
   </ng-template>
-  @if (schema.appearance?.flatten) {
+  @if (schema().appearance?.flatten) {
     <div class="flattened-form">
     <ng-container *ngTemplateOutlet="formRender"></ng-container>
       <div class="flattened-actions">
-        @if (editable && index != null && addButtonCallback != null) {
-          <button matIconButton  matTooltip="+ Add new {{ schema.label ?? schema.name }}" class="add-button small-icon-button" (click)="addButtonCallback(index)">
+        @if (editable() && index() != null && addButtonCallback() != null) {
+          <button matIconButton  matTooltip="+ Add new {{ schema().label ?? schema().name }}" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!)">
             <mat-icon>add</mat-icon>
           </button>
         }
-        @if (editable && removable) {
+        @if (editable() && removable()) {
           <button matIconButton  class="remove-button small-icon-button" (click)="emitRemoveEvent(); $event.stopPropagation()">
             <mat-icon>delete</mat-icon>
           </button>
@@ -111,25 +138,25 @@
     </div>
   }
   @else {
-  <mat-card appearance="outlined" [class]="{ 'mat-card-no-broder': schema.appearance?.noBorder }">
+  <mat-card appearance="outlined" [class]="{ 'mat-card-no-broder': schema().appearance?.noBorder }">
     <mat-card-header>
       <div class="card-actions">
-        <button matIconButton class="small-icon-button"  [class]="{ 'edit-icon': !editable}"  (click)="editable = !editable">
+        <button matIconButton class="small-icon-button"  [class]="{ 'edit-icon': !editable()}"  (click)="editable.set(!editable())">
           <mat-icon>edit</mat-icon>
         </button>
-        @if (editable && index != null && addButtonCallback != null) {
-          <button matIconButton  matTooltip="+ Add new {{ schema.label ?? schema.name }}" class="add-button small-icon-button" (click)="addButtonCallback(index)">
+        @if (editable() && index() != null && addButtonCallback() != null) {
+          <button matIconButton  matTooltip="+ Add new {{ schema().label ?? schema().name }}" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!)">
             <mat-icon>add</mat-icon>
           </button>
         }
-        @if (editable && removable) {
+        @if (editable() && removable()) {
           <button matIconButton  class="remove-button small-icon-button" (click)="emitRemoveEvent(); $event.stopPropagation()">
             <mat-icon>delete</mat-icon>
           </button>
         }
       </div>
       <mat-card-title class="config-form-subsection-card">
-        {{ title ?? schema.label ?? schema.name }}
+        {{ title() ?? schema().label ?? schema().name }}
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
@@ -138,21 +165,38 @@
   </mat-card>
   }
 } @else {
-  <div class="form-content" [formGroup]="formGroup">
+  <div class="form-content" [formGroup]="formGroup()">
     <div class="leafs-container">
       <div class="fields">
-        <button matIconButton class="small-icon-button"  [class]="{ 'edit-icon': !editable }"  (click)="editable = !editable">
+        <button matIconButton class="small-icon-button"  [class]="{ 'edit-icon': !editable() }"  (click)="editable.set(!editable())">
           <mat-icon>edit</mat-icon>
         </button>
         @for (childItem of nodeGroupChildrenList; track $index) {
           @let child = childItem.value;
-          @if (child.kind == 'leaf') {
+          @if (child.kind == 'leaf' && child.presence) {
+            <div class="presence-leaf">
+              <mat-checkbox
+                [checked]="!!formGroup().get(childItem.key)"
+                [disabled]="!editable()"
+                (change)="toggleLeafPresence(childItem.key, child, $event.checked)"
+              >{{ child.label ?? child.name }}</mat-checkbox>
+              @if (formGroup().get(childItem.key)) {
+                <nff-leaf-renderer
+                  [leaf_]=child
+                  [control]=asFormControl(formGroup().get(childItem.key))
+                  [removable]=false
+                  [editable]="editable()"
+                  [initialValue]="formGroup().get(childItem.key)?.value"
+                />
+              }
+            </div>
+          } @else if (child.kind == 'leaf') {
             <nff-leaf-renderer
               [leaf_]=child
-              [control]=asFormControl(formGroup.get(child.name))
+              [control]=asFormControl(formGroup().get(child.name))
               [removable]=false
-              [editable]=editable
-              [initialValue]="formGroup.get(child.name)?.value"
+              [editable]="editable()"
+              [initialValue]="formGroup().get(child.name)?.value"
             />
           }
         }
@@ -161,26 +205,26 @@
           @if (child.kind == 'leafList') {
             <nff-leaf-list-renderer
               [leaf_]="child"
-              [editable]=editable
-              [formArray]="asFormArray(formGroup.get(child.name))"
-              [initialValue]="formGroup.get(child.name)?.value"
+              [editable]="editable()"
+              [formArray]="asFormArray(formGroup().get(child.name))"
+              [initialValue]="formGroup().get(child.name)?.value"
             />
           }
         }
         @for (childItem of nodeGroupChildrenList; track $index) {
           @let child = childItem.value;
           @if (child.kind == 'choice') {
-            @let choiceGroup = asFormGroup(formGroup.get(childItem.key));
+            @let choiceGroup = asFormGroup(formGroup().get(childItem.key));
             @let selectedCase = activeCase(childItem.key);
             <div class="choice-group" [formGroup]="choiceGroup">
-              <mat-form-field [appearance]="editable ? 'fill' : 'outline'">
+              <mat-form-field [appearance]="editable() ? 'fill' : 'outline'">
                 <mat-label>{{ child.label ?? child.name }}</mat-label>
                 <mat-select
                   [formControlName]="CASE_KEY"
                   (selectionChange)="switchCase(childItem.key, child, $event.value)"
                 >
                   @for (caseName of objectKeys(child.cases); track caseName) {
-                    <mat-option [value]="caseName">{{ caseName }}</mat-option>
+                    <mat-option [value]="caseName">{{ caseLabel(child, caseName) }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -188,7 +232,7 @@
                 <nff-dynamic-recursive-form
                   [schema]="caseAsGroup(child, selectedCase)"
                   [formGroup]="choiceGroup"
-                  [editable]="editable"
+                  [editable]="editable()"
                 />
               }
             </div>
@@ -196,6 +240,16 @@
         }
       </div>
     </div>
+    @for (childItem of nodeGroupChildrenList; track $index) {
+      @let child = childItem.value;
+      @if (child.kind == 'map') {
+        <nff-node-map-renderer
+          [nodeMap]="child"
+          [formGroup]="asFormGroup(formGroup().get(childItem.key))"
+          [editable]="editable()"
+        />
+      }
+    }
     <mat-accordion multi>
       @for (childItem of nodeGroupChildrenList; track $index) {
         @let child = childItem.value;
@@ -203,14 +257,14 @@
           <mat-expansion-panel togglePosition="before">
             <mat-expansion-panel-header>
               <mat-panel-title>
-                {{ title ?? child.label ?? child.name }}
+                {{ title() ?? child.label ?? child.name }}
               </mat-panel-title>
             </mat-expansion-panel-header>
             <nff-node-group-list-renderer
               [nodeGroupList]="child"
-              [formArray]="asFormArray(formGroup.get(child.name))"
-              [initialValue]="formGroup.get(child.name)?.value"
-              [editable]="editable"
+              [formArray]="asFormArray(formGroup().get(child.name))"
+              [initialValue]="formGroup().get(child.name)?.value"
+              [editable]="editable()"
             />
           </mat-expansion-panel>
         }
@@ -218,22 +272,22 @@
       @for (childItem of nodeGroupChildrenList; track $index) {
         @let child = childItem.value;
         @if (child.kind == 'nodeGroup' && child.presence) {
-          <mat-expansion-panel togglePosition="before" [expanded]="!!formGroup.get(childItem.key)">
+          <mat-expansion-panel togglePosition="before" [expanded]="!!formGroup().get(childItem.key)">
             <mat-expansion-panel-header>
               <mat-panel-title>
                 <mat-checkbox
-                  [checked]="!!formGroup.get(childItem.key)"
-                  [disabled]="!editable"
+                  [checked]="!!formGroup().get(childItem.key)"
+                  [disabled]="!editable()"
                   (click)="$event.stopPropagation()"
                   (change)="togglePresence(childItem.key, child, $event.checked)"
                 >{{ child.label ?? child.name }}</mat-checkbox>
               </mat-panel-title>
             </mat-expansion-panel-header>
-            @if (formGroup.get(childItem.key)) {
+            @if (formGroup().get(childItem.key)) {
               <nff-dynamic-recursive-form
                 [schema]="child"
-                [formGroup]="asFormGroup(formGroup.get(childItem.key))"
-                [editable]="editable"
+                [formGroup]="asFormGroup(formGroup().get(childItem.key))"
+                [editable]="editable()"
               />
             }
           </mat-expansion-panel>
@@ -242,15 +296,15 @@
           <mat-expansion-panel togglePosition="before" expanded="true">
             <mat-expansion-panel-header >
               <mat-panel-title>
-                {{ title ?? child.label ?? child.name }}
+                {{ title() ?? child.label ?? child.name }}
               </mat-panel-title>
             </mat-expansion-panel-header>
             <nff-dynamic-recursive-form
               [schema]="child"
-              [formGroup]="asFormGroup(formGroup.get(child.name))"
-              [initialValue]="formGroup.get(child.name)?.value"
+              [formGroup]="asFormGroup(formGroup().get(child.name))"
+              [initialValue]="formGroup().get(child.name)?.value"
               [title]="child.name ?? 'General Settings'"
-              [editable]="editable"
+              [editable]="editable()"
             />
           </mat-expansion-panel>
         }

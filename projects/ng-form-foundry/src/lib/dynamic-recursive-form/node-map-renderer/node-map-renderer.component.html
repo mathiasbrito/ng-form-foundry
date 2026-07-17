@@ -1,0 +1,48 @@
+@if (formGroup && nodeMap) {
+  <div class="map-node">
+    @if (nodeMap.label) {
+      <div class="map-title">{{ nodeMap.label }}</div>
+    }
+    @for (key of entryKeys; track key) {
+      <div class="map-entry">
+        <mat-form-field class="key-field" [appearance]="editable ? 'fill' : 'outline'">
+          <mat-label>{{ nodeMap.keyLabel ?? 'Key' }}</mat-label>
+          <input
+            matInput
+            #keyInput
+            [readonly]="!editable"
+            [value]="key"
+            (change)="renameEntry(key, keyInput.value)"
+          >
+        </mat-form-field>
+
+        <div class="value-field">
+          @if (nodeMap.value.kind === 'leaf') {
+            <nff-leaf-renderer
+              [leaf_]="valueLeaf"
+              [control]="asFormControl(formGroup.get(key))"
+              [editable]="editable"
+            />
+          } @else if (nodeMap.value.kind === 'nodeGroup') {
+            <nff-dynamic-recursive-form
+              [schema]="valueGroup"
+              [formGroup]="asFormGroup(formGroup.get(key))"
+              [editable]="editable"
+            />
+          }
+        </div>
+
+        @if (editable && !atMin) {
+          <button class="remove-button small-icon-button" matIconButton (click)="removeEntry(key)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        }
+      </div>
+    }
+    @if (editable && !atMax) {
+      <button class="add-button small-icon-button" matIconButton (click)="addEntry()">
+        <mat-icon>add</mat-icon>
+      </button>
+    }
+  </div>
+}

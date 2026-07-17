@@ -1,17 +1,19 @@
 @if ('name' in leaf_) {
   @if (leaf_.type === 'string') {
-    <mat-form-field [appearance]="editable ? 'fill' : 'outline'">
+    <mat-form-field [appearance]="fieldEditable ? 'fill' : 'outline'">
       <mat-label>{{ leaf_.label ?? leaf_.name }}</mat-label>
-      <input [readonly]="!editable" matInput type="text" [formControl]="control">
+      <input [readonly]="!fieldEditable" matInput type="text" [formControl]="control">
+      <mat-error>{{ errorText }}</mat-error>
     </mat-form-field>
   } @else if (leaf_.type === 'number') {
-    <mat-form-field [appearance]="editable ? 'fill' : 'outline'">
+    <mat-form-field [appearance]="fieldEditable ? 'fill' : 'outline'">
       <mat-label>{{ leaf_.label ?? leaf_.name  }}</mat-label>
-      <input [readonly]="!editable"  matInput type="number" [formControl]="control">
+      <input [readonly]="!fieldEditable"  matInput type="number" [formControl]="control">
+      <mat-error>{{ errorText }}</mat-error>
     </mat-form-field>
   } @else if (leaf_.type === 'boolean') {
     <mat-checkbox [formControl]="control">{{ leaf_.label ?? leaf_.name }}</mat-checkbox>
   } @else if (leaf_.type === 'enum') {
-    <nff-leaf-enum-renderer [editable]="editable" [leafEnum]="leaf_" [control]="control"></nff-leaf-enum-renderer>
+    <nff-leaf-enum-renderer [editable]="fieldEditable" [leafEnum]="leaf_" [control]="control"></nff-leaf-enum-renderer>
   }
 }

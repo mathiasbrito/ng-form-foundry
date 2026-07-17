@@ -16,6 +16,26 @@ export type LeafBase = {
   required?: true | undefined;
   label?: string;
   description?: string;
+  /**
+   * The value may be `null` (JSON Schema `type: [T, 'null']`). Builds a nullable
+   * control (drops `nonNullable`), so `null` is a first-class value the
+   * constraint validators accept and that survives the round-trip. Distinct from
+   * {@link presence}: `nullable` is an explicit `null`, `presence` is an absent key.
+   */
+  nullable?: boolean;
+  /**
+   * Optional scalar whose *presence itself* is data (mirrors {@link NodeGroup.presence}).
+   * Rendered with an on/off toggle; the control is removed from the parent group
+   * when absent (so it drops from `form.value`) and re-added when toggled on. The
+   * builder omits it unless an initial value is supplied.
+   */
+  presence?: boolean;
+  /**
+   * Render the field read-only even when the surrounding form is editable.
+   * Combine with `default` to express a JSON Schema `const` (a fixed,
+   * display-only value); single-element `enum` is the alternative for a constant.
+   */
+  readOnly?: boolean;
 };
 
 export type AnonLeaf = {
@@ -25,10 +45,30 @@ export type AnonLeaf = {
 export type LeafString = LeafBase & {
   type: 'string';
   default?: LeafRuntimeType<'string'>;
+  /**
+   * Reject values that don't match this regular expression. Follows JSON Schema
+   * `pattern` semantics — an *unanchored* `RegExp.test`, so it matches anywhere
+   * in the value unless the pattern itself anchors with `^`/`$`.
+   */
+  pattern?: string;
+  /** Minimum string length (JSON Schema `minLength`). */
+  minLength?: number;
+  /** Maximum string length (JSON Schema `maxLength`). */
+  maxLength?: number;
+  /** Semantic string format (JSON Schema `format`); adds a matching validator. */
+  format?: 'email' | 'uri' | 'url';
 };
 export type LeafNumber = LeafBase & {
   type: 'number';
   default?: LeafRuntimeType<'number'>;
+  /** Require a whole-number value (JSON Schema `type: 'integer'`). */
+  integer?: boolean;
+  /** Inclusive lower bound (JSON Schema `minimum`). */
+  min?: number;
+  /** Inclusive upper bound (JSON Schema `maximum`). */
+  max?: number;
+  /** Require the value to be an integer multiple of this number (JSON Schema `multipleOf`). */
+  multipleOf?: number;
 };
 export type LeafBoolean = LeafBase & {
   type: 'boolean';
@@ -88,16 +128,36 @@ export type NodeGroup = {
 };
 
 /**
+ * One case of a {@link NodeChoice}: either a record of named fields (an object
+ * branch), or a single node (a *leaf-bodied* case — e.g. an `anyOf` branch that
+ * is a bare scalar). A single node is normalized to a one-field record keyed by
+ * its `name` when the form is built.
+ */
+export type ChoiceCase = Record<string, NodeType> | NodeType;
+
+/**
  * A discriminated selection: the user picks one `case`, and only that case's
  * fields are present. In the form it is a FormGroup holding a `__case` control
  * (the active case name) plus that case's field controls; switching the case
  * swaps the field controls.
+ *
+ * Cases may be **anonymous / auto-named** (any string key) — for JSON Schema
+ * `anyOf`/`oneOf` branches with no name. When a built form is seeded from inline
+ * data that carries no `__case`, the builder **infers** the active case from the
+ * data shape (the case whose fields best match), so a choice round-trips from
+ * real instance data. See the schema reference for the required-set / `const`
+ * discriminator recipe.
  */
 export type NodeChoice = {
   kind: 'choice';
   name: string;
   label?: string;
-  cases: Record<string, Record<string, NodeType>>;
+  cases: Record<string, ChoiceCase>;
+  /**
+   * Display labels for cases, keyed by case name — for anonymous/auto-named
+   * branches whose keys are not human-friendly. Falls back to the case name.
+   */
+  caseLabels?: Record<string, string>;
   default?: string;
   mandatory?: boolean;
 };
@@ -105,7 +165,34 @@ export type NodeChoice = {
 /** The control name that records which case of a {@link NodeChoice} is active. */
 export const CASE_KEY = '__case';
 
-export type NodeType = Leaf | LeafList | NodeGroup | NodeGroupList | NodeChoice;
+/**
+ * An open, arbitrary-keyed record: unlike {@link NodeGroup} (a fixed, declared
+ * key set), a map's keys are runtime data and every value conforms to one shared
+ * `value` schema. Maps JSON Schema `additionalProperties: <schema>` /
+ * `patternProperties`. In the form it is a `FormGroup` whose control *names* are
+ * the entry keys, so `getRawValue()` is the map object directly; the renderer
+ * lets the user add, remove, and rename entries.
+ */
+export type NodeMap = {
+  kind: 'map';
+  name: string;
+  label?: string;
+  description?: string;
+  /** The schema every entry's value conforms to. */
+  value: NodeType;
+  /** Label for the key column in the editor. Defaults to "Key". */
+  keyLabel?: string;
+  /** `patternProperties`: entry keys must match this regular expression. */
+  keyPattern?: string;
+  /** Minimum number of entries (JSON Schema `minProperties`). */
+  minEntries?: number;
+  /** Maximum number of entries (JSON Schema `maxProperties`). */
+  maxEntries?: number;
+  /** Optional map: rendered with an on/off toggle, omitted from the value when absent. */
+  presence?: boolean;
+};
+
+export type NodeType = Leaf | LeafList | NodeGroup | NodeGroupList | NodeChoice | NodeMap;
 export type DFormControl<T extends NodeType> = T extends Leaf
   ? FormControl<LeafRuntimeType<T['type']>>
   : T extends LeafList
@@ -116,7 +203,9 @@ export type DFormControl<T extends NodeType> = T extends Leaf
         ? FormArray<DFormGroup<T['type']>>
         : T extends NodeChoice
           ? FormGroup<any>
-          : never;
+          : T extends NodeMap
+            ? FormGroup<any>
+            : never;
 
 export type FormGroupType<T extends NodeGroup> = {
   [TChild in keyof T['children']]: DFormControl<T['children'][TChild]>;

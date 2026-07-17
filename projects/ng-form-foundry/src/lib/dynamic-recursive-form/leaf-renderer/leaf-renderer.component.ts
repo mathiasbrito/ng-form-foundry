@@ -38,4 +38,31 @@ export class LeafRendererComponent implements OnInit {
       this.control.patchValue(this.initialValue);
     }
   }
+
+  /** Whether this field accepts input: the form is editable and the leaf is not `readOnly`. */
+  get fieldEditable(): boolean {
+    return this.editable && !('name' in this.leaf_ && this.leaf_.readOnly);
+  }
+
+  /**
+   * A human-readable message for the control's active validation error, or `''`
+   * when valid. `mat-form-field` only shows it once the field is in an error
+   * state (invalid and touched), so it can be bound unconditionally.
+   */
+  get errorText(): string {
+    const e = this.control.errors;
+    if (!e) return '';
+    const label = 'name' in this.leaf_ ? this.leaf_.label ?? this.leaf_.name : 'Value';
+    if (e['required']) return `${label} is required`;
+    if (e['minlength']) return `Must be at least ${e['minlength'].requiredLength} characters`;
+    if (e['maxlength']) return `Must be at most ${e['maxlength'].requiredLength} characters`;
+    if (e['pattern']) return `${label} has an invalid format`;
+    if (e['email']) return 'Must be a valid email address';
+    if (e['uri']) return 'Must be a valid URI';
+    if (e['min']) return `Must be ≥ ${e['min'].min}`;
+    if (e['max']) return `Must be ≤ ${e['max'].max}`;
+    if (e['multipleOf']) return `Must be a multiple of ${e['multipleOf'].multipleOf}`;
+    if (e['enum']) return 'Not an allowed value';
+    return 'Invalid value';
+  }
 }

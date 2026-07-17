@@ -1,0 +1,49 @@
+@use '@angular/material' as mat;
+
+:host {
+  display: flex;
+  flex: 1 1 100%;
+}
+
+.map-node {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.map-title {
+  font: var(--mat-sys-title-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.map-entry {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  // Top-align so the remove button lines up with the field, not its error text.
+  align-items: flex-start;
+}
+
+.key-field {
+  flex: 0 0 30%;
+  min-width: 120px;
+}
+
+.value-field {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+// Colored pills, consistent with the leaf-list / group-list add/remove controls.
+.add-button {
+  align-self: flex-start;
+  background-color: var(--mat-sys-primary-container);
+  @include mat.elevation(1);
+}
+
+.remove-button {
+  background-color: var(--mat-sys-error-container);
+  @include mat.elevation(1);
+}

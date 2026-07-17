@@ -7,16 +7,21 @@ import {
 } from '@angular/forms';
 import {
   CASE_KEY,
+  ChoiceCase,
   DFormControl,
   DFormGroup,
   FormGroupType,
   Leaf,
+  LeafBase,
   LeafEnum,
   LeafList,
+  LeafNumber,
   LeafRuntimeType,
+  LeafString,
   NodeChoice,
   NodeGroup,
   NodeGroupList,
+  NodeMap,
   NodeType,
 } from '../types/dynamic-recursive.types';
 
@@ -37,11 +42,72 @@ function isNodeGroupList(node: NodeType): node is NodeGroupList {
 function isChoice(node: NodeType): node is NodeChoice {
   return node.kind === 'choice';
 }
+function isMap(node: NodeType): node is NodeMap {
+  return node.kind === 'map';
+}
 
 function enumValidator(choices: readonly (string | number)[]): ValidatorFn {
   const set = new Set(choices);
   return (ctrl) =>
     ctrl.value == null || set.has(ctrl.value) ? null : { enum: true };
+}
+
+/**
+ * JSON Schema `pattern`: an *unanchored* `RegExp.test`, unlike Angular's built-in
+ * `Validators.pattern` which anchors the expression. An invalid regex disables
+ * the check rather than throwing. Empty/absent values pass (use `required`).
+ */
+function patternValidator(pattern: string): ValidatorFn {
+  let re: RegExp;
+  try {
+    re = new RegExp(pattern);
+  } catch {
+    return () => null;
+  }
+  return (ctrl) => {
+    const v = ctrl.value;
+    if (v == null || v === '') return null;
+    return re.test(String(v)) ? null : { pattern: { requiredPattern: pattern, actualValue: v } };
+  };
+}
+
+/** JSON Schema `type: 'integer'`: reject a value that is not a whole number. */
+function integerValidator(): ValidatorFn {
+  return (ctrl) => {
+    const v = ctrl.value;
+    if (v == null || v === '') return null;
+    const num = typeof v === 'number' ? v : Number(v);
+    return Number.isInteger(num) ? null : { integer: true };
+  };
+}
+
+/** JSON Schema `multipleOf`: reject a value that is not an integer multiple of `step`. */
+function multipleOfValidator(step: number): ValidatorFn {
+  return (ctrl) => {
+    const v = ctrl.value;
+    if (v == null || v === '') return null;
+    const num = typeof v === 'number' ? v : Number(v);
+    if (Number.isNaN(num)) return null;
+    const ratio = num / step;
+    // A small tolerance absorbs binary float drift (e.g. 0.3 / 0.1).
+    return Math.abs(ratio - Math.round(ratio)) < 1e-9
+      ? null
+      : { multipleOf: { multipleOf: step, actual: num } };
+  };
+}
+
+/** JSON Schema `format: uri`: reject a string that is not a parseable absolute URI. */
+function uriValidator(): ValidatorFn {
+  return (ctrl) => {
+    const v = ctrl.value;
+    if (v == null || v === '') return null;
+    try {
+      new URL(String(v));
+      return null;
+    } catch {
+      return { uri: true };
+    }
+  };
 }
 
 function buildLeafControl<L extends Leaf>(
@@ -54,12 +120,31 @@ function buildLeafControl<L extends Leaf>(
     const choices = (leaf as LeafEnum).enum as (string | number)[];
     validators.push(enumValidator(choices));
   }
+  if (leaf.type === 'string') {
+    const s = leaf as LeafString;
+    if (s.pattern != null) validators.push(patternValidator(s.pattern));
+    if (s.minLength != null) validators.push(Validators.minLength(s.minLength));
+    if (s.maxLength != null) validators.push(Validators.maxLength(s.maxLength));
+    if (s.format === 'email') validators.push(Validators.email);
+    else if (s.format === 'uri' || s.format === 'url') validators.push(uriValidator());
+  } else if (leaf.type === 'number') {
+    const n = leaf as LeafNumber;
+    if (n.integer) validators.push(integerValidator());
+    if (n.min != null) validators.push(Validators.min(n.min));
+    if (n.max != null) validators.push(Validators.max(n.max));
+    if (n.multipleOf != null) validators.push(multipleOfValidator(n.multipleOf));
+  }
   const defaultValue =
     initial ?? ('default' in leaf ? (leaf as any).default : undefined) ?? null;
+  // A nullable leaf drops `nonNullable`, so `null` is a first-class value that
+  // `reset()` restores and that survives the round-trip (JSON Schema `null`).
+  // The typed model still treats a leaf value as non-null, so the runtime
+  // nullable control is cast back to the declared type.
+  const nullable = 'nullable' in leaf && (leaf as LeafBase).nullable === true;
   return new FormControl<LeafRuntimeType<L['type']>>(defaultValue, {
-    nonNullable: true,
+    nonNullable: !nullable,
     validators,
-  });
+  }) as FormControl<LeafRuntimeType<L['type']>>;
 }
 
 function buildLeafListControl<L extends LeafList>(
@@ -120,17 +205,79 @@ function buildNodeGroupListControl<GL extends NodeGroupList>(
  * name plus that case's field controls. Only the active case's fields are built,
  * matching the inline YANG encoding; switching the case swaps them.
  */
+/**
+ * Normalize a {@link ChoiceCase} to a field record. A field record is returned
+ * as-is; a single node (a leaf-bodied case, e.g. a scalar `anyOf` branch) becomes
+ * a one-field record keyed by the node's `name`. The discriminant is a top-level
+ * `kind` string, which a field record never has (its keys are field names).
+ */
+export function caseFields(body: ChoiceCase): Record<string, NodeType> {
+  return typeof (body as { kind?: unknown }).kind === 'string'
+    ? { [(body as NodeType).name]: body as NodeType }
+    : (body as Record<string, NodeType>);
+}
+
+/**
+ * The active case of a choice: an explicit `__case` in the initial value, else
+ * the case whose fields best match the initial data (inline wire data carries no
+ * `__case`), else the schema `default`. This lets a choice seed from real
+ * instance data whose branch is discriminated by which fields are present.
+ */
+export function resolveChoiceCase(
+  choice: NodeChoice,
+  initial?: Record<string, unknown> | null,
+): string | undefined {
+  const explicit = initial?.[CASE_KEY];
+  if (typeof explicit === 'string') return explicit;
+  return inferChoiceCase(choice, initial) ?? choice.default;
+}
+
+/** Pick the case whose fields most overlap the initial data (none if nothing matches). */
+function inferChoiceCase(choice: NodeChoice, initial?: Record<string, unknown> | null): string | undefined {
+  if (!initial) return undefined;
+  let best: string | undefined;
+  let bestScore = 0;
+  for (const name of Object.keys(choice.cases)) {
+    const fields = Object.keys(caseFields(choice.cases[name]));
+    let score = 0;
+    for (const field of fields) if (field in initial) score++;
+    if (score > bestScore) {
+      bestScore = score;
+      best = name;
+    }
+  }
+  return best;
+}
+
 function buildChoiceControl(
   choice: NodeChoice,
   initial?: Record<string, unknown> | null,
 ): FormGroup {
-  const active = (initial?.[CASE_KEY] as string | undefined) ?? choice.default;
+  const active = resolveChoiceCase(choice, initial);
   const controls: any = { [CASE_KEY]: new FormControl(active ?? null) };
   if (active && choice.cases[active]) {
-    const caseChildren = choice.cases[active];
+    const caseChildren = caseFields(choice.cases[active]);
     for (const key in caseChildren) {
       controls[key] = buildControl(caseChildren[key], initial?.[key]);
     }
+  }
+  return new FormGroup(controls);
+}
+
+/**
+ * Build the FormGroup for a map: one control per entry, keyed by the entry key,
+ * each built from the map's shared `value` schema. Because the entry keys are the
+ * control names, `getRawValue()` is the map object directly. Empty when no
+ * initial object is supplied; the renderer adds/removes/renames entries.
+ */
+function buildMapControl(
+  map: NodeMap,
+  initial?: Record<string, unknown> | null,
+): FormGroup {
+  const controls: any = {};
+  const source = initial && typeof initial === 'object' && !Array.isArray(initial) ? initial : {};
+  for (const key of Object.keys(source)) {
+    controls[key] = buildControl(map.value, source[key]);
   }
   return new FormGroup(controls);
 }
@@ -144,6 +291,12 @@ export function buildControl<T extends NodeType>(
   }
   if (isChoice(node)) {
     return buildChoiceControl(
+      node,
+      initial ? (initial as Record<string, unknown>) : null,
+    ) as DFormControl<T>;
+  }
+  if (isMap(node)) {
+    return buildMapControl(
       node,
       initial ? (initial as Record<string, unknown>) : null,
     ) as DFormControl<T>;
@@ -186,10 +339,11 @@ export function buildControl<T extends NodeType>(
  * names and value types.
  */
 /**
- * Remove presence groups that have no initial value so they are absent from the
- * built form (and from `form.value`) until the user toggles them on. Runs on the
- * fully-built, attached tree. `removeControl` is used rather than `disable`
- * because a disabled group is still included in `FormGroup.value`.
+ * Remove presence nodes that have no initial value so they are absent from the
+ * built form (and from `form.value`) until the user toggles them on. Applies to
+ * both presence groups and presence leaves. Runs on the fully-built, attached
+ * tree. `removeControl` is used rather than `disable` because a disabled control
+ * is still included in `FormGroup.value`.
  */
 function applyPresence(
   group: FormGroup,
@@ -198,8 +352,12 @@ function applyPresence(
 ): void {
   for (const key in schema.children) {
     const child = schema.children[key];
-    if (child.kind !== 'nodeGroup') continue;
     const childInitial = (initial as Record<string, unknown> | null | undefined)?.[key];
+    if (child.kind === 'leaf' || child.kind === 'map') {
+      if (child.presence && childInitial == null) group.removeControl(key);
+      continue;
+    }
+    if (child.kind !== 'nodeGroup') continue;
     if (child.presence && childInitial == null) {
       group.removeControl(key);
     } else if (group.get(key) instanceof FormGroup) {

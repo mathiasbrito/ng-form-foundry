@@ -83,7 +83,7 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
   setLastEditable() {
     const lastItem = this.items.last;
     if (lastItem) {
-      lastItem.editable = true;
+      lastItem.editable.set(true);
     }
     this.cdr.detectChanges();
   }

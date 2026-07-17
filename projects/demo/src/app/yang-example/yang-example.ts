@@ -18,6 +18,7 @@ export class YangExample {
     hostname: 'router-1',
     transport: { __case: 'tcp', port: 8443, tls: true },
     ntp: { server: 'pool.ntp.org' },
+    labels: { env: 'prod', region: 'eu-west' },
   });
 
   print() {

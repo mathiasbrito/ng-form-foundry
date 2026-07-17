@@ -17,6 +17,16 @@
   gap: 8px;
 }
 
+// A presence leaf sits in the `.fields` row like a normal field: its enable
+// toggle stacks above the input, and it flexes to the same basis as its peers.
+.presence-leaf {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 10%;
+}
+
 .fields {
   display: flex;
   flex-direction: row;

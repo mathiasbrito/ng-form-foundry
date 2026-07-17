@@ -2,8 +2,9 @@ import { FormArray, FormControl, FormGroup } from '@angular/forms';
 import {
   buildControl,
   buildFormFromSchema,
+  caseFields,
 } from './dynamic-recursive-forms-builder';
-import { Leaf, LeafEnum, LeafList, NodeGroup, NodeGroupList } from '../types/dynamic-recursive.types';
+import { Leaf, LeafEnum, LeafList, NodeGroup, NodeGroupList, NodeType } from '../types/dynamic-recursive.types';
 
 /**
  * P0 pure-function tests for the schema -> FormGroup builder.
@@ -102,6 +103,81 @@ describe('dynamic-recursive-forms-builder', () => {
     expect(bad.errors?.['enum']).toBe(true);
     const good = buildControl(enumLeaf, 'red') as FormControl;
     expect(good.errors).toBeNull();
+  });
+
+  // ---- leaf constraint validators ---------------------------------------
+  it('validates string pattern (unanchored, JSON-Schema semantics), minLength and maxLength', () => {
+    const leaf: Leaf = {
+      kind: 'leaf', type: 'string', name: 's',
+      pattern: '^[a-z]+$', minLength: 2, maxLength: 4,
+    } as Leaf;
+    expect((buildControl(leaf, 'abc') as FormControl).valid).toBe(true);
+    expect((buildControl(leaf, 'A1') as FormControl).errors?.['pattern']).toBeTruthy();
+    expect((buildControl(leaf, 'a') as FormControl).errors?.['minlength']).toBeTruthy();
+    expect((buildControl(leaf, 'abcde') as FormControl).errors?.['maxlength']).toBeTruthy();
+  });
+
+  it('applies string format: email and uri validators', () => {
+    const email: Leaf = { kind: 'leaf', type: 'string', name: 'e', format: 'email' } as Leaf;
+    expect((buildControl(email, 'a@b.com') as FormControl).valid).toBe(true);
+    expect((buildControl(email, 'nope') as FormControl).errors?.['email']).toBeTruthy();
+
+    const uri: Leaf = { kind: 'leaf', type: 'string', name: 'u', format: 'uri' } as Leaf;
+    expect((buildControl(uri, 'https://example.dev/x') as FormControl).valid).toBe(true);
+    expect((buildControl(uri, 'not a uri') as FormControl).errors?.['uri']).toBeTruthy();
+  });
+
+  it('validates number min, max and multipleOf', () => {
+    const leaf: Leaf = {
+      kind: 'leaf', type: 'number', name: 'n', min: 1, max: 10, multipleOf: 2,
+    } as Leaf;
+    expect((buildControl(leaf, 4) as FormControl).valid).toBe(true);
+    expect((buildControl(leaf, 0) as FormControl).errors?.['min']).toBeTruthy();
+    expect((buildControl(leaf, 11) as FormControl).errors?.['max']).toBeTruthy();
+    expect((buildControl(leaf, 3) as FormControl).errors?.['multipleOf']).toBeTruthy();
+  });
+
+  it('leaves an unconstrained leaf with no validation errors', () => {
+    expect((buildControl(stringLeaf, 'anything') as FormControl).errors).toBeNull();
+  });
+
+  // ---- integer, nullable & presence leaves ------------------------------
+  it('validates number integer', () => {
+    const leaf: Leaf = { kind: 'leaf', type: 'number', name: 'n', integer: true } as Leaf;
+    expect((buildControl(leaf, 5) as FormControl).valid).toBe(true);
+    expect((buildControl(leaf, 5.5) as FormControl).errors?.['integer']).toBeTruthy();
+  });
+
+  it('a nullable leaf accepts null as a valid value and resets to null', () => {
+    const leaf: Leaf = { kind: 'leaf', type: 'string', name: 's', nullable: true } as Leaf;
+    const c = buildControl(leaf, null) as FormControl;
+    expect(c.value).toBeNull();
+    expect(c.valid).toBe(true);
+    c.setValue('x');
+    c.reset();
+    expect(c.value).toBeNull(); // nonNullable is off for a nullable leaf
+  });
+
+  const presenceLeafSchema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    children: {
+      note: { kind: 'leaf', type: 'string', name: 'note', presence: true },
+      keep: { kind: 'leaf', type: 'string', name: 'keep' },
+    },
+  };
+
+  it('omits an absent presence leaf from the form and its value', () => {
+    const g = buildFormFromSchema(presenceLeafSchema);
+    expect(g.get('note')).toBeNull();
+    expect((g.getRawValue() as any).note).toBeUndefined();
+    expect(g.get('keep')).not.toBeNull();
+  });
+
+  it('keeps a presence leaf that has an initial value', () => {
+    const g = buildFormFromSchema(presenceLeafSchema, { note: 'hi' });
+    expect(g.get('note')).not.toBeNull();
+    expect((g.getRawValue() as any).note).toBe('hi');
   });
 
   // ---- buildControl: leaf list ------------------------------------------
@@ -261,5 +337,105 @@ describe('dynamic-recursive-forms-builder', () => {
     const t = g.get('transport') as FormGroup;
     expect(t.get('__case')!.value).toBeNull();
     expect(Object.keys(t.controls)).toEqual(['__case']);
+  });
+
+  // ---- choice: anonymous cases, __case inference, leaf-bodied ------------
+  const scopeSchema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    children: {
+      // anyOf-style: anonymous cases discriminated by which field is present.
+      scope: {
+        kind: 'choice',
+        name: 'scope',
+        cases: {
+          byUe: { ueId: { kind: 'leaf', type: 'string', name: 'ueId' } },
+          byCell: { cellId: { kind: 'leaf', type: 'string', name: 'cellId' } },
+        },
+      },
+    },
+  };
+
+  it('infers the active choice case from inline data that has no __case', () => {
+    const g = buildFormFromSchema(scopeSchema, { scope: { cellId: 'c-1' } });
+    const c = g.get('scope') as FormGroup;
+    expect(c.get('__case')!.value).toBe('byCell');
+    expect(c.get('cellId')!.value).toBe('c-1');
+    expect(c.get('ueId')).toBeNull();
+  });
+
+  it('normalizes a leaf-bodied case to a single-field record keyed by the node name', () => {
+    const schema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      children: {
+        val: {
+          kind: 'choice',
+          name: 'val',
+          cases: {
+            asText: { kind: 'leaf', type: 'string', name: 'text' }, // leaf-bodied
+            asNum: { n: { kind: 'leaf', type: 'number', name: 'n' } }, // field record
+          },
+        },
+      },
+    };
+    const g = buildFormFromSchema(schema, { val: { __case: 'asText', text: 'hi' } });
+    const c = g.get('val') as FormGroup;
+    expect(c.get('__case')!.value).toBe('asText');
+    expect(c.get('text')!.value).toBe('hi');
+  });
+
+  it('caseFields returns a field record as-is and wraps a single node', () => {
+    const record = { a: { kind: 'leaf', type: 'string', name: 'a' } } as Record<string, NodeType>;
+    expect(caseFields(record)).toBe(record);
+    const single = { kind: 'leaf', type: 'string', name: 'x' } as NodeType;
+    expect(Object.keys(caseFields(single))).toEqual(['x']);
+  });
+
+  // ---- map / dictionary node --------------------------------------------
+  const mapSchema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    children: {
+      labels: {
+        kind: 'map',
+        name: 'labels',
+        value: { kind: 'leaf', type: 'string', name: 'value' },
+      },
+    },
+  };
+
+  it('builds a map as a FormGroup keyed by the entry keys; getRawValue is the object', () => {
+    const g = buildFormFromSchema(mapSchema, { labels: { env: 'prod', tier: 'db' } });
+    const m = g.get('labels') as FormGroup;
+    expect(Object.keys(m.controls).sort()).toEqual(['env', 'tier']);
+    expect(m.get('env')!.value).toBe('prod');
+    expect((g.getRawValue() as any).labels).toEqual({ env: 'prod', tier: 'db' });
+  });
+
+  it('builds an empty map when no initial object is supplied', () => {
+    const g = buildFormFromSchema(mapSchema);
+    expect(Object.keys((g.get('labels') as FormGroup).controls)).toEqual([]);
+  });
+
+  it('builds a map whose value schema is a nodeGroup (round-trips nested objects)', () => {
+    const schema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      children: {
+        backends: {
+          kind: 'map',
+          name: 'backends',
+          value: {
+            kind: 'nodeGroup',
+            name: 'backend',
+            children: { port: { kind: 'leaf', type: 'number', name: 'port' } },
+          },
+        },
+      },
+    };
+    const data = { backends: { a: { port: 1 }, b: { port: 2 } } };
+    const g = buildFormFromSchema(schema, data);
+    expect((g.getRawValue() as any).backends).toEqual(data.backends);
   });
 });
