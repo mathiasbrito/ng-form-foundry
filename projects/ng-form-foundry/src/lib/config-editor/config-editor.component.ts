@@ -1,23 +1,14 @@
-import { Component, input, OnInit } from '@angular/core';
-import { AbstractControl, FormArray, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Component, input, OnDestroy, OnInit } from '@angular/core';
+import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
+import { Subscription } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTooltip } from '@angular/material/tooltip';
-import {
-  CASE_KEY,
-  Leaf,
-  LeafList,
-  NodeChoice,
-  NodeGroup,
-  NodeMap,
-  NodeType,
-} from '../types/dynamic-recursive.types';
-import { asFormArray, asFormControl } from '../core/utils';
+import { CASE_KEY, NodeChoice, NodeGroup, NodeMap, NodeType } from '../types/dynamic-recursive.types';
 import {
   addMapEntry,
   buildControl,
@@ -25,11 +16,8 @@ import {
   caseFields,
   removeMapEntry,
   renameMapEntry,
-  switchChoiceCase,
 } from '../core/dynamic-recursive-forms-builder';
-import { LeafRendererComponent } from '../dynamic-recursive-form/leaf-renderer/leaf-renderer.component';
-import { LeafListRendererComponent } from '../dynamic-recursive-form/leaf-list-renderer/leaf-list-renderer.component';
-import { NodeMapRendererComponent } from '../dynamic-recursive-form/node-map-renderer/node-map-renderer.component';
+import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form/dynamic-recursive-form.component';
 
 /** Metadata on a list-container node that lets the tree add items to its FormArray. */
 interface ListRef {
@@ -44,31 +32,40 @@ interface OptionalEntry {
   key: string;
   schema: NodeType;
   label: string;
-  /** Index in the parent schema's children iteration; keeps the menu in schema order. */
-  order: number;
 }
 
-/** A navigable node in the config tree. Groups and list items are tree nodes; leaves are their detail. */
+/** What the detail pane renders for the selected node: a schema slice bound to its FormGroup. */
+interface DetailView {
+  schema: NodeGroup;
+  group: FormGroup;
+}
+
+/**
+ * A navigable node in the config tree. Its `id` is the node's stable path from
+ * the root (`system/ntp`, `ifaces/0`, `servers/web1`), so expansion and
+ * selection survive tree rebuilds.
+ */
 interface TreeNode {
   id: string;
   label: string;
   children: TreeNode[];
-  /** Leaves editable when this node is selected. A presence leaf carries its `optional` entry so it can be removed back to the menu. */
-  leaves: { key: string; node: Leaf; optional?: OptionalEntry }[];
-  leafLists: { key: string; node: LeafList }[];
-  /** The FormGroup holding this node's leaves, or null for a list-container or map node. */
+  /** The node's own FormGroup, or null for a list-container or map node. */
   group: FormGroup | null;
+  /** The node's own schema, set on group-backed nodes (groups, list items, group-valued map entries). */
+  schema?: NodeGroup;
+  /** The node as a named child of its parent group: enough to render or remove it there. */
+  ref?: { group: FormGroup; key: string; schema: NodeType };
   /** Present on a nodeGroupList node: lets a `+` add an item. */
   list?: ListRef;
   /** Present on a list-item node: the FormArray and current index it can be removed from. */
   removable?: { array: FormArray; index: number };
-  /** Absent optional children of this node, offered by its "+ Optional field" menu. */
+  /** Absent optional children of this node, offered by its "+ Optional field" menu (schema order). */
   optionals?: OptionalEntry[];
-  /** Present on a present optional child node: drives the row's remove control; removal returns `entry` to the parent's menu. */
-  presenceRemovable?: { entry: OptionalEntry };
+  /** Present on a present optional child node: drives the row's remove control. */
+  presenceRemovable?: { key: string };
   /** Present on a choice node: the choice schema and its FormGroup (holding `__case` + the active case's fields). */
   choice?: { schema: NodeChoice; group: FormGroup };
-  /** Present on a map node. `complex` maps expand entries as child nodes; leaf-valued maps edit inline in the detail pane. */
+  /** Present on a map node. `complex` maps expand entries as child nodes. */
   map?: { schema: NodeMap; group: FormGroup; complex: boolean };
   /** Present on a complex-map entry node: addresses the entry in its map for remove/rename. */
   mapEntry?: { mapGroup: FormGroup; mapSchema: NodeMap; key: string };
@@ -76,39 +73,38 @@ interface TreeNode {
 
 /**
  * A tree/detail editor for a schema-built form: the structure (groups, lists,
- * maps, choices) is a tree on the left, and selecting a node shows that node's
- * fields for editing on the right. A `+` on a list or map node adds an entry; a
- * delete button on each item removes it. Absent optional (presence) children are
- * offered by a "+ Optional field" menu row at the end of their parent's
- * children; present ones carry a delete button that returns them to the menu.
+ * maps, choices) is a tree on the left, and selecting a node renders that
+ * node's **entire subtree** — its fields and its child sections' content — on
+ * the right through {@link DynamicRecursiveFormComponent}. The tree scopes what
+ * the detail pane shows; it adds row conveniences of its own: `+` on list and
+ * map rows, a delete control on removable rows, and a "+ Optional field" menu
+ * for absent presence children.
+ *
+ * The tree is **derived state**: any structural change to the form — made
+ * through the tree rows or through the embedded detail form — triggers a
+ * rebuild (a cheap shape signature over `valueChanges` detects it). Node ids
+ * are stable paths, so expansion and selection survive rebuilds.
  *
  * The component draws no outer container — only a divider between the tree and
- * detail panes — so the embedding client owns the surrounding chrome. The tree
- * is built once from the `schema`/`formGroup` provided at initialization.
- * An alternative to the all-in-one {@link DynamicRecursiveFormComponent} for
- * large configs.
+ * detail panes — so the embedding client owns the surrounding chrome.
  */
 @Component({
   selector: 'nff-config-editor',
   standalone: true,
   imports: [
-    ReactiveFormsModule,
     NgTemplateOutlet,
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     MatTooltip,
-    LeafRendererComponent,
-    LeafListRendererComponent,
-    NodeMapRendererComponent,
+    DynamicRecursiveFormComponent,
   ],
   templateUrl: './config-editor.component.html',
   styleUrl: './config-editor.component.scss',
 })
-export class ConfigEditorComponent implements OnInit {
+export class ConfigEditorComponent implements OnInit, OnDestroy {
   /** The form-description schema whose structure the tree renders. */
   readonly schema = input.required<NodeGroup>();
   /** The schema-built reactive group the editor binds to and mutates. */
@@ -118,35 +114,40 @@ export class ConfigEditorComponent implements OnInit {
 
   root!: TreeNode;
   selected: TreeNode | null = null;
+  /** What the detail pane renders for the current selection. */
+  detail: DetailView | null = null;
   readonly expanded = new Set<string>();
 
-  private nextId = 0;
+  private shape = '';
+  private changes?: Subscription;
 
   ngOnInit() {
-    const schema = this.schema();
-    this.root = this.buildTree(schema, this.formGroup(), schema.label ?? schema.name);
+    this.rebuild();
     this.expanded.add(this.root.id);
     this.select(this.root);
+    // The embedded detail form mutates the FormGroup directly (presence
+    // toggles, list items, map entries, case switches); a shape change there
+    // must reflect in the tree.
+    this.changes = this.formGroup().valueChanges.subscribe(() => this.syncShape());
+  }
+
+  ngOnDestroy() {
+    this.changes?.unsubscribe();
   }
 
   select(node: TreeNode) {
     this.selected = node;
-    // Reveal the node's rows in the tree as it opens on the right. Navigating
-    // also retires any pending just-added-leaf focus request.
-    this.focusLeafKey = null;
-    if (this.hasExpandableContent(node)) this.expanded.add(node.id);
-  }
-
-  /** Select a child (list item or sub-group) from the detail pane, keeping its parent expanded in the tree. */
-  open(parent: TreeNode, child: TreeNode) {
-    this.expanded.add(parent.id);
-    this.select(child);
+    this.detail = this.computeDetail(node);
+    // Reveal the selection: expand every ancestor so the row is visible, and
+    // the node itself as it opens on the right.
+    for (const crumb of this.pathTo(node)) {
+      if (crumb !== node || this.hasExpandableContent(crumb)) this.expanded.add(crumb.id);
+    }
   }
 
   /**
    * Root-to-`target` path for the detail-pane breadcrumb (inclusive of both ends),
-   * or an empty array if `target` is not in the current tree. Searched fresh each
-   * call so it stays correct after add/remove/presence mutations rebuild subtrees.
+   * or an empty array if `target` is not in the current tree.
    */
   pathTo(target: TreeNode): TreeNode[] {
     const walk = (node: TreeNode, trail: TreeNode[]): TreeNode[] | null => {
@@ -180,34 +181,23 @@ export class ConfigEditorComponent implements OnInit {
     return !!(node.group?.invalid || node.list?.array.invalid || node.map?.group.invalid);
   }
 
-  /** Append a new item to a list node's FormArray and to the tree, then select it. */
+  /** Append a new item to a list node's FormArray, then select it. */
   addItem(listNode: TreeNode) {
     const list = listNode.list;
     if (!list) return;
-    const group = buildFormFromSchema(list.itemSchema);
-    list.array.push(group);
-    const item = this.buildTree(list.itemSchema, group, list.itemLabel);
-    item.removable = { array: list.array, index: list.array.length - 1 };
-    listNode.children.push(item);
-    this.renumber(listNode);
-    this.expanded.add(listNode.id);
-    this.select(item);
+    list.array.push(buildFormFromSchema(list.itemSchema));
+    this.selectByPath(`${listNode.id}/${list.array.length - 1}`);
   }
 
-  /** Remove a list item from its FormArray and the tree (down to `minItems`). */
+  /** Remove a list item from its FormArray (down to `minItems`). */
   removeItem(listNode: TreeNode, item: TreeNode) {
     if (!listNode.list || !item.removable) return;
     if (listNode.list.array.length <= listNode.list.minItems) return;
     listNode.list.array.removeAt(item.removable.index);
-    listNode.children.splice(listNode.children.indexOf(item), 1);
-    this.renumber(listNode);
-    this.reselectIfOrphaned(listNode);
+    this.selectByPath(listNode.id);
   }
 
-  /** The key of the optional leaf the user just added; its detail-pane field grabs focus when rendered. */
-  protected focusLeafKey: string | null = null;
-
-  /** Add an absent optional child from the menu: build its control, place it in the tree, and select it. */
+  /** Add an absent optional child from the menu: build its control and select the node it lands on. */
   addOptional(node: TreeNode, entry: OptionalEntry) {
     if (!node.group || node.group.get(entry.key)) return;
     const control =
@@ -215,37 +205,16 @@ export class ConfigEditorComponent implements OnInit {
         ? buildFormFromSchema(entry.schema)
         : (buildControl(entry.schema) as AbstractControl);
     node.group.addControl(entry.key, control);
-    node.optionals = node.optionals?.filter((o) => o !== entry);
-    if (entry.schema.kind === 'leaf') {
-      node.leaves.push({ key: entry.key, node: entry.schema, optional: entry });
-      this.select(node);
-      this.focusLeafKey = entry.key;
-      return;
-    }
-    const child = this.buildChildNode(entry.schema, control, entry.label);
-    if (!child) return;
-    child.presenceRemovable = { entry };
-    node.children.push(child);
-    this.expanded.add(node.id);
-    this.select(child);
+    // A leaf renders in the parent's detail pane; complex kinds become tree nodes.
+    this.selectByPath(entry.schema.kind === 'leaf' ? node.id : this.join(node.id, entry.key));
   }
 
   /** Remove a present optional child node, returning its entry to the parent's menu. */
   removeOptional(parent: TreeNode, node: TreeNode) {
-    const entry = node.presenceRemovable?.entry;
-    if (!entry || !parent.group) return;
-    parent.group.removeControl(entry.key);
-    parent.children.splice(parent.children.indexOf(node), 1);
-    this.reinsertOptional(parent, entry);
-    this.reselectIfOrphaned(parent);
-  }
-
-  /** Remove a present optional leaf from the detail pane, returning its entry to the menu. */
-  removeOptionalLeaf(node: TreeNode, leaf: { key: string; node: Leaf; optional?: OptionalEntry }) {
-    if (!leaf.optional || !node.group) return;
-    node.group.removeControl(leaf.key);
-    node.leaves = node.leaves.filter((l) => l !== leaf);
-    this.reinsertOptional(node, leaf.optional);
+    const key = node.presenceRemovable?.key;
+    if (!key || !parent.group) return;
+    parent.group.removeControl(key);
+    this.selectByPath(parent.id);
   }
 
   /** The active case name of a choice node, or null when none is selected. */
@@ -257,26 +226,7 @@ export class ConfigEditorComponent implements OnInit {
   activeCaseLabel(node: TreeNode): string | null {
     const c = node.choice;
     const active = this.activeCase(node);
-    return c && active ? this.caseLabel(c.schema, active) : null;
-  }
-
-  /** The display label for a case: the schema's `caseLabels` entry, else the case name. */
-  caseLabel(choice: NodeChoice, caseName: string): string {
-    return choice.caseLabels?.[caseName] ?? caseName;
-  }
-
-  /** Switch a choice node's active case: swap the group's controls and rebuild the subtree in place. */
-  switchTreeCase(node: TreeNode, caseName: string) {
-    const c = node.choice;
-    if (!c) return;
-    switchChoiceCase(c.group, c.schema, caseName);
-    const rebuilt = this.buildTree(this.caseAsGroup(c.schema, caseName), c.group, node.label);
-    node.children = rebuilt.children;
-    node.leaves = rebuilt.leaves;
-    node.leafLists = rebuilt.leafLists;
-    node.optionals = rebuilt.optionals;
-    this.expanded.add(node.id);
-    this.select(node);
+    return c && active ? (c.schema.caseLabels?.[active] ?? active) : null;
   }
 
   /** Append a new entry to a complex map node under a generated unique key, then select it. */
@@ -284,32 +234,24 @@ export class ConfigEditorComponent implements OnInit {
     const m = mapNode.map;
     if (!m) return;
     const key = addMapEntry(m.group, m.schema);
-    if (key == null) return;
-    const child = this.buildChildNode(m.schema.value, m.group.get(key), key);
-    if (!child) return;
-    child.mapEntry = { mapGroup: m.group, mapSchema: m.schema, key };
-    mapNode.children.push(child);
-    this.expanded.add(mapNode.id);
-    this.select(child);
+    if (key != null) this.selectByPath(`${mapNode.id}/${key}`);
   }
 
-  /** Remove a complex map entry (down to `minEntries`) from the form group and the tree. */
+  /** Remove a complex map entry (down to `minEntries`). */
   removeTreeMapEntry(mapNode: TreeNode, entryNode: TreeNode) {
     const m = mapNode.map;
     const e = entryNode.mapEntry;
     if (!m || !e || !removeMapEntry(m.group, m.schema, e.key)) return;
-    mapNode.children.splice(mapNode.children.indexOf(entryNode), 1);
-    this.reselectIfOrphaned(mapNode);
+    this.selectByPath(mapNode.id);
   }
 
-  /** Commit a rename-on-blur of a map entry's key; on success the node is relabeled. */
+  /** Commit a rename-on-blur of a map entry's key; on success the entry is selected under its new path. */
   renameTreeMapEntry(entryNode: TreeNode, rawKey: string) {
     const e = entryNode.mapEntry;
     if (!e) return;
     if (renameMapEntry(e.mapGroup, e.mapSchema, e.key, rawKey)) {
-      const committed = rawKey.trim();
-      e.key = committed;
-      entryNode.label = committed;
+      const parentPath = entryNode.id.slice(0, entryNode.id.lastIndexOf('/'));
+      this.selectByPath(`${parentPath}/${rawKey.trim()}`);
     }
   }
 
@@ -325,84 +267,143 @@ export class ConfigEditorComponent implements OnInit {
     return !!m && m.schema.minEntries != null && Object.keys(m.group.controls).length <= m.schema.minEntries;
   }
 
-  protected readonly asFormControl = asFormControl;
-  protected readonly asFormArray = asFormArray;
-  protected readonly CASE_KEY = CASE_KEY;
+  // --- derived-tree maintenance ----------------------------------------------
 
-  objectKeys(obj: Record<string, unknown>): string[] {
-    return Object.keys(obj);
+  /** Rebuild the tree from the current form structure if its shape changed. */
+  private syncShape(): void {
+    const shape = this.shapeOf(this.formGroup());
+    if (shape === this.shape) return;
+    this.rebuild();
+    this.reconcileSelection();
   }
 
-  /** Re-index and re-label a list node's item children (just "#n") after add/remove. */
-  private renumber(listNode: TreeNode): void {
-    listNode.children.forEach((child, i) => {
-      if (child.removable) child.removable.index = i;
-      child.label = `#${i + 1}`;
-    });
+  /**
+   * A cheap structural signature of a control tree: group keys (plus the active
+   * `__case`), array lengths, leaf placeholders. Value edits don't change it;
+   * added/removed/renamed controls and case switches do.
+   */
+  private shapeOf(control: AbstractControl): string {
+    if (control instanceof FormGroup) {
+      const inner = Object.keys(control.controls)
+        .sort()
+        .map((k) => `${k}:${this.shapeOf(control.controls[k])}`)
+        .join(',');
+      const active = control.get(CASE_KEY)?.value;
+      return `{${typeof active === 'string' ? `=${active};` : ''}${inner}}`;
+    }
+    if (control instanceof FormArray) {
+      return `[${control.controls.map((c) => this.shapeOf(c)).join(',')}]`;
+    }
+    return '.';
   }
 
-  /** Select `fallback` when the current selection is no longer reachable in the tree. */
-  private reselectIfOrphaned(fallback: TreeNode): void {
-    if (this.selected && this.pathTo(this.selected).length === 0) this.select(fallback);
+  /** Rebuild the whole tree from schema + form and refresh the shape signature. */
+  private rebuild(): void {
+    const schema = this.schema();
+    this.root = this.buildTree(schema, this.formGroup(), schema.label ?? schema.name, '');
+    this.shape = this.shapeOf(this.formGroup());
   }
 
-  /** Re-insert a removed optional's entry into the node's menu, keeping schema order. */
-  private reinsertOptional(node: TreeNode, entry: OptionalEntry): void {
-    const list = (node.optionals ??= []);
-    const at = list.findIndex((o) => o.order > entry.order);
-    if (at === -1) list.push(entry);
-    else list.splice(at, 0, entry);
+  /** Re-point `selected` at the rebuilt tree: same path, else the closest surviving ancestor. */
+  private reconcileSelection(): void {
+    const path = this.selected?.id ?? '';
+    this.select(this.byPath(path) ?? this.root);
   }
 
-  /** Synthetic group over a case's normalized fields, so a case body builds like any group. */
-  private caseAsGroup(choice: NodeChoice, caseName: string): NodeGroup {
-    return {
-      kind: 'nodeGroup',
-      name: choice.name,
-      children: choice.cases[caseName] ? caseFields(choice.cases[caseName]) : {},
+  /** The node at `path` in the current tree, or null. Walks by id-prefix segments. */
+  private byPath(path: string): TreeNode | null {
+    if (path === this.root.id) return this.root;
+    const walk = (node: TreeNode): TreeNode | null => {
+      for (const child of node.children) {
+        if (child.id === path) return child;
+        if (path.startsWith(child.id + '/')) return walk(child);
+      }
+      return null;
     };
+    return walk(this.root);
   }
 
-  private buildTree(schema: NodeGroup, group: FormGroup, label: string): TreeNode {
-    const leaves: TreeNode['leaves'] = [];
-    const leafLists: TreeNode['leafLists'] = [];
+  /** Select the node at `path`, falling back through its ancestors to the root. */
+  private selectByPath(path: string): void {
+    let target = this.byPath(path);
+    let trimmed = path;
+    while (!target && trimmed.includes('/')) {
+      trimmed = trimmed.slice(0, trimmed.lastIndexOf('/'));
+      target = this.byPath(trimmed);
+    }
+    this.select(target ?? this.root);
+  }
+
+  /**
+   * The detail pane's view of a node: choice/map/list nodes render as a named
+   * child of their parent group (so their own section chrome and controls
+   * appear); group-backed nodes render their content flattened, since the
+   * breadcrumb already titles them.
+   */
+  private computeDetail(node: TreeNode): DetailView | null {
+    if (node.choice || node.map || node.list) {
+      const ref = node.ref;
+      if (!ref) return null;
+      return {
+        schema: {
+          kind: 'nodeGroup',
+          name: ref.key,
+          appearance: { flatten: true },
+          children: { [ref.key]: ref.schema },
+        },
+        group: ref.group,
+      };
+    }
+    if (node.schema && node.group) {
+      return {
+        schema: { ...node.schema, root: false, appearance: { ...node.schema.appearance, flatten: true } },
+        group: node.group,
+      };
+    }
+    return null;
+  }
+
+  // --- tree construction -----------------------------------------------------
+
+  private buildTree(schema: NodeGroup, group: FormGroup, label: string, path: string): TreeNode {
     const children: TreeNode[] = [];
     const optionals: OptionalEntry[] = [];
 
-    const keys = Object.keys(schema.children);
-    keys.forEach((key, order) => {
+    for (const key of Object.keys(schema.children)) {
       const child = schema.children[key];
-      const control = group.get(key);
-      const entry: OptionalEntry = { key, schema: child, label: this.labelOf(child, key), order };
-      if (child.kind === 'leaf') {
-        if (child.presence && !control) optionals.push(entry);
-        else if (control) leaves.push({ key, node: child, optional: child.presence ? entry : undefined });
-        return;
-      }
-      if (child.kind === 'leafList') {
-        leafLists.push({ key, node: child });
-        return;
+      if (child.kind === 'leaf' || child.kind === 'leafList') {
+        // Leaves render in the detail pane; an absent presence leaf is offered by the menu.
+        if (child.kind === 'leaf' && child.presence && !group.get(key)) {
+          optionals.push({ key, schema: child, label: this.labelOf(child, key) });
+        }
+        continue;
       }
       const presence = child.kind !== 'nodeGroupList' && child.presence;
-      if (presence && !control) {
-        optionals.push(entry);
-        return;
+      if (presence && !group.get(key)) {
+        optionals.push({ key, schema: child, label: this.labelOf(child, key) });
+        continue;
       }
-      const node = this.buildChildNode(child, control, entry.label);
-      if (!node) return;
-      if (presence) node.presenceRemovable = { entry };
+      const node = this.buildChildNode(child, group.get(key), this.labelOf(child, key), this.join(path, key));
+      if (!node) continue;
+      node.ref = { group, key, schema: child };
+      if (presence) node.presenceRemovable = { key };
       children.push(node);
-    });
+    }
 
-    const node: TreeNode = { id: String(this.nextId++), label, children, leaves, leafLists, group };
+    const node: TreeNode = { id: path, label, children, group, schema };
     if (optionals.length) node.optionals = optionals;
     return node;
   }
 
   /** Build the tree node for a single non-leaf child, dispatching on its kind. Null when its control is missing. */
-  private buildChildNode(schema: NodeType, control: AbstractControl | null, label: string): TreeNode | null {
+  private buildChildNode(
+    schema: NodeType,
+    control: AbstractControl | null,
+    label: string,
+    path: string,
+  ): TreeNode | null {
     if (schema.kind === 'nodeGroup') {
-      return control instanceof FormGroup ? this.buildTree(schema, control, label) : null;
+      return control instanceof FormGroup ? this.buildTree(schema, control, label, path) : null;
     }
     if (schema.kind === 'nodeGroupList') {
       const array = control;
@@ -414,17 +415,15 @@ export class ConfigEditorComponent implements OnInit {
               .map((item, i) => {
                 // Just "#n": the item sits under its list node, so repeating the
                 // item name (e.g. "Interface #1") only echoes the parent.
-                const node = this.buildTree(schema.type, item, `#${i + 1}`);
+                const node = this.buildTree(schema.type, item, `#${i + 1}`, `${path}/${i}`);
                 node.removable = { array, index: i };
                 return node;
               })
           : [];
       return {
-        id: String(this.nextId++),
+        id: path,
         label,
         children: items,
-        leaves: [],
-        leafLists: [],
         group: null,
         list:
           array instanceof FormArray
@@ -437,8 +436,9 @@ export class ConfigEditorComponent implements OnInit {
       const active = control.get(CASE_KEY)?.value as string | null;
       const node =
         active && schema.cases[active]
-          ? this.buildTree(this.caseAsGroup(schema, active), control, label)
-          : ({ id: String(this.nextId++), label, children: [], leaves: [], leafLists: [], group: control } as TreeNode);
+          ? this.buildTree(this.caseAsGroup(schema, active), control, label, path)
+          : ({ id: path, label, children: [], group: control } as TreeNode);
+      node.schema = undefined;
       node.choice = { schema, group: control };
       return node;
     }
@@ -452,18 +452,19 @@ export class ConfigEditorComponent implements OnInit {
       const entries = complex
         ? Object.keys(control.controls)
             .map((key) => {
-              const entryNode = this.buildChildNode(schema.value, control.get(key), key);
-              if (entryNode) entryNode.mapEntry = { mapGroup: control, mapSchema: schema, key };
+              const entryNode = this.buildChildNode(schema.value, control.get(key), key, `${path}/${key}`);
+              if (entryNode) {
+                entryNode.mapEntry = { mapGroup: control, mapSchema: schema, key };
+                entryNode.ref = { group: control, key, schema: schema.value };
+              }
               return entryNode;
             })
             .filter((n): n is TreeNode => n !== null)
         : [];
       return {
-        id: String(this.nextId++),
+        id: path,
         label,
         children: entries,
-        leaves: [],
-        leafLists: [],
         group: null,
         map: { schema, group: control, complex },
       };
@@ -471,8 +472,22 @@ export class ConfigEditorComponent implements OnInit {
     return null;
   }
 
+  /** Synthetic group over a case's normalized fields, so a case body builds like any group. */
+  private caseAsGroup(choice: NodeChoice, caseName: string): NodeGroup {
+    return {
+      kind: 'nodeGroup',
+      name: choice.name,
+      children: choice.cases[caseName] ? caseFields(choice.cases[caseName]) : {},
+    };
+  }
+
   /** A node's display label: its schema `label`, else its record key. */
   private labelOf(node: NodeType, key: string): string {
     return ('label' in node ? node.label : undefined) ?? key;
+  }
+
+  /** Join a parent path and a segment; the root's path is the empty string. */
+  private join(parent: string, segment: string): string {
+    return parent ? `${parent}/${segment}` : segment;
   }
 }
