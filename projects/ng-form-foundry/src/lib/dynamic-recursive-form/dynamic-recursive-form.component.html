@@ -5,10 +5,33 @@
         <div class="fields">
           @for (childItem of nodeGroupChildrenList; track $index) {
             @let child = childItem.value;
+            @if (child.kind == 'leaf' && !child.presence) {
+              <nff-leaf-renderer
+                [leaf_]=child
+                [control]=asFormControl(formGroup().get(child.name))
+                [removable]=false
+                [editable]="editable()"
+                [initialValue]="formGroup().get(child.name)?.value"
+              />
+            }
+          }
+          @for (childItem of nodeGroupChildrenList; track $index) {
+            @let child = childItem.value;
+            @if (child.kind == 'leafList') {
+              <nff-leaf-list-renderer
+                [leaf_]="child"
+                [editable]="editable()"
+                [formArray]="asFormArray(formGroup().get(child.name))"
+                [initialValue]="formGroup().get(child.name)?.value"
+              />
+            }
+          }
+          <!-- Presence leaves trail the regular fields so their add buttons don't
+               interrupt the field flow; an enabled one keeps its trailing spot. -->
+          @for (childItem of nodeGroupChildrenList; track $index) {
+            @let child = childItem.value;
             @if (child.kind == 'leaf' && child.presence) {
               @if (formGroup().get(childItem.key)) {
-                <!-- Present: the field takes the add button's place in the row; its
-                     remove control drops the leaf back to the unchecked state. -->
                 <nff-leaf-renderer
                   [leaf_]=child
                   [control]=asFormControl(formGroup().get(childItem.key))
@@ -28,25 +51,6 @@
                   <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
                 </button>
               }
-            } @else if (child.kind == 'leaf') {
-              <nff-leaf-renderer
-                [leaf_]=child
-                [control]=asFormControl(formGroup().get(child.name))
-                [removable]=false
-                [editable]="editable()"
-                [initialValue]="formGroup().get(child.name)?.value"
-              />
-            }
-          }
-          @for (childItem of nodeGroupChildrenList; track $index) {
-            @let child = childItem.value;
-            @if (child.kind == 'leafList') {
-              <nff-leaf-list-renderer
-                [leaf_]="child"
-                [editable]="editable()"
-                [formArray]="asFormArray(formGroup().get(child.name))"
-                [initialValue]="formGroup().get(child.name)?.value"
-              />
             }
           }
         </div>
@@ -214,10 +218,33 @@
         </button>
         @for (childItem of nodeGroupChildrenList; track $index) {
           @let child = childItem.value;
+          @if (child.kind == 'leaf' && !child.presence) {
+            <nff-leaf-renderer
+              [leaf_]=child
+              [control]=asFormControl(formGroup().get(child.name))
+              [removable]=false
+              [editable]="editable()"
+              [initialValue]="formGroup().get(child.name)?.value"
+            />
+          }
+        }
+        @for (childItem of nodeGroupChildrenList; track $index) {
+          @let child = childItem.value;
+          @if (child.kind == 'leafList') {
+            <nff-leaf-list-renderer
+              [leaf_]="child"
+              [editable]="editable()"
+              [formArray]="asFormArray(formGroup().get(child.name))"
+              [initialValue]="formGroup().get(child.name)?.value"
+            />
+          }
+        }
+        <!-- Presence leaves trail the regular fields so their add buttons don't
+             interrupt the field flow; an enabled one keeps its trailing spot. -->
+        @for (childItem of nodeGroupChildrenList; track $index) {
+          @let child = childItem.value;
           @if (child.kind == 'leaf' && child.presence) {
             @if (formGroup().get(childItem.key)) {
-              <!-- Present: the field takes the add button's place in the row; its
-                   remove control drops the leaf back to the unchecked state. -->
               <nff-leaf-renderer
                 [leaf_]=child
                 [control]=asFormControl(formGroup().get(childItem.key))
@@ -237,25 +264,6 @@
                 <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
               </button>
             }
-          } @else if (child.kind == 'leaf') {
-            <nff-leaf-renderer
-              [leaf_]=child
-              [control]=asFormControl(formGroup().get(child.name))
-              [removable]=false
-              [editable]="editable()"
-              [initialValue]="formGroup().get(child.name)?.value"
-            />
-          }
-        }
-        @for (childItem of nodeGroupChildrenList; track $index) {
-          @let child = childItem.value;
-          @if (child.kind == 'leafList') {
-            <nff-leaf-list-renderer
-              [leaf_]="child"
-              [editable]="editable()"
-              [formArray]="asFormArray(formGroup().get(child.name))"
-              [initialValue]="formGroup().get(child.name)?.value"
-            />
           }
         }
       </div>
