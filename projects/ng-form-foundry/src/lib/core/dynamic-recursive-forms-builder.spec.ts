@@ -1,10 +1,24 @@
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
 import {
+  addMapEntry,
   buildControl,
   buildFormFromSchema,
   caseFields,
+  removeMapEntry,
+  renameMapEntry,
+  switchChoiceCase,
 } from './dynamic-recursive-forms-builder';
-import { Leaf, LeafEnum, LeafList, NodeGroup, NodeGroupList, NodeType } from '../types/dynamic-recursive.types';
+import {
+  CASE_KEY,
+  Leaf,
+  LeafEnum,
+  LeafList,
+  NodeChoice,
+  NodeGroup,
+  NodeGroupList,
+  NodeMap,
+  NodeType,
+} from '../types/dynamic-recursive.types';
 
 /**
  * P0 pure-function tests for the schema -> FormGroup builder.
@@ -437,5 +451,111 @@ describe('dynamic-recursive-forms-builder', () => {
     const data = { backends: { a: { port: 1 }, b: { port: 2 } } };
     const g = buildFormFromSchema(schema, data);
     expect((g.getRawValue() as any).backends).toEqual(data.backends);
+  });
+
+  // ---- shared choice/map mutation helpers --------------------------------
+
+  describe('switchChoiceCase', () => {
+    const choice: NodeChoice = {
+      kind: 'choice',
+      name: 'transport',
+      cases: {
+        tcp: { port: { kind: 'leaf', type: 'number', name: 'port' } },
+        tls: { cert: { kind: 'leaf', type: 'string', name: 'cert', default: 'pem' } },
+      },
+    };
+
+    it('sets __case, removes the old fields, and builds the new case with defaults', () => {
+      const group = buildControl(choice, { tcp: true, port: 443 }) as FormGroup;
+      expect(group.get(CASE_KEY)!.value).toBe('tcp');
+
+      switchChoiceCase(group, choice, 'tls');
+
+      expect(group.get(CASE_KEY)!.value).toBe('tls');
+      expect(group.get('port')).toBeNull();
+      expect(group.get('cert')!.value).toBe('pem');
+    });
+
+    it('leaves only __case for an unknown case name', () => {
+      const group = buildControl(choice, { port: 80 }) as FormGroup;
+
+      switchChoiceCase(group, choice, 'udp');
+
+      expect(group.get(CASE_KEY)!.value).toBe('udp');
+      expect(Object.keys(group.controls)).toEqual([CASE_KEY]);
+    });
+  });
+
+  describe('map entry helpers', () => {
+    const map: NodeMap = {
+      kind: 'map',
+      name: 'servers',
+      keyPattern: '^[a-z][a-z0-9]*$',
+      minEntries: 1,
+      maxEntries: 3,
+      value: { kind: 'leaf', type: 'string', name: 'value' },
+    };
+
+    function mapGroup(initial: Record<string, unknown>): FormGroup {
+      return buildControl(map, initial) as FormGroup;
+    }
+
+    it('addMapEntry generates the first free keyN placeholder', () => {
+      const g = mapGroup({ key1: 'a' });
+      expect(addMapEntry(g, map)).toBe('key2');
+      expect(g.get('key2')).toBeTruthy();
+    });
+
+    it('addMapEntry with an explicit key rejects duplicates and keyPattern violations', () => {
+      const g = mapGroup({ web: 'a' });
+      expect(addMapEntry(g, map, 'web')).toBeNull();
+      expect(addMapEntry(g, map, '1bad')).toBeNull();
+      expect(addMapEntry(g, map, 'db')).toBe('db');
+    });
+
+    it('addMapEntry refuses to grow past maxEntries', () => {
+      const g = mapGroup({ a: '1', b: '2', c: '3' });
+      expect(addMapEntry(g, map)).toBeNull();
+      expect(Object.keys(g.controls).length).toBe(3);
+    });
+
+    it('renameMapEntry preserves the control instance and guards bad keys', () => {
+      const g = mapGroup({ web: 'a', db: 'b' });
+      const control = g.get('web');
+
+      expect(renameMapEntry(g, map, 'web', 'edge')).toBe(true);
+      expect(g.get('edge')).toBe(control);
+      expect(g.get('web')).toBeNull();
+
+      expect(renameMapEntry(g, map, 'edge', '')).toBe(false);
+      expect(renameMapEntry(g, map, 'edge', 'edge')).toBe(false);
+      expect(renameMapEntry(g, map, 'edge', 'db')).toBe(false);
+      expect(renameMapEntry(g, map, 'edge', 'BAD')).toBe(false);
+      expect(g.get('edge')).toBe(control);
+    });
+
+    it('removeMapEntry removes an entry but not below minEntries', () => {
+      const g = mapGroup({ web: 'a', db: 'b' });
+      expect(removeMapEntry(g, map, 'web')).toBe(true);
+      expect(removeMapEntry(g, map, 'db')).toBe(false); // at minEntries: 1
+      expect(Object.keys(g.controls)).toEqual(['db']);
+    });
+  });
+
+  it('applyPresence removes an absent presence choice from the built form', () => {
+    const schema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      children: {
+        mode: {
+          kind: 'choice',
+          name: 'mode',
+          presence: true,
+          cases: { a: { x: { kind: 'leaf', type: 'string', name: 'x' } } },
+        },
+      },
+    };
+    expect(buildFormFromSchema(schema).get('mode')).toBeNull();
+    expect(buildFormFromSchema(schema, { mode: { x: '1' } }).get('mode')).toBeInstanceOf(FormGroup);
   });
 });

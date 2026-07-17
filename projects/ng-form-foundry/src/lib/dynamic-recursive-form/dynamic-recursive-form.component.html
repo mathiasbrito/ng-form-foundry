@@ -74,30 +74,43 @@
         @else if (child.kind == 'choice') {
           @let choiceGroup = asFormGroup(formGroup().get(childItem.key));
           @let selectedCase = activeCase(childItem.key);
-          <mat-expansion-panel class="node-section" [expanded]="!child.appearance?.collapsed" togglePosition="before">
+          <mat-expansion-panel class="node-section" [expanded]="child.presence ? !!choiceGroup : !child.appearance?.collapsed" togglePosition="before">
             <mat-expansion-panel-header>
-              <mat-panel-title>{{ child.label ?? child.name }}</mat-panel-title>
+              <mat-panel-title>
+                @if (child.presence) {
+                  <mat-checkbox
+                    [checked]="!!choiceGroup"
+                    [disabled]="!editable()"
+                    (click)="$event.stopPropagation()"
+                    (change)="toggleNodePresence(childItem.key, child, $event.checked)"
+                  >{{ child.label ?? child.name }}</mat-checkbox>
+                } @else {
+                  {{ child.label ?? child.name }}
+                }
+              </mat-panel-title>
             </mat-expansion-panel-header>
-            <div class="choice-group" [formGroup]="choiceGroup">
-              <mat-form-field [appearance]="editable() ? 'fill' : 'outline'">
-                <mat-label>Selected option</mat-label>
-                <mat-select
-                  [formControlName]="CASE_KEY"
-                  (selectionChange)="switchCase(childItem.key, child, $event.value)"
-                >
-                  @for (caseName of objectKeys(child.cases); track caseName) {
-                    <mat-option [value]="caseName">{{ caseLabel(child, caseName) }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              @if (selectedCase) {
-                <nff-dynamic-recursive-form
-                  [schema]="caseAsGroup(child, selectedCase)"
-                  [formGroup]="choiceGroup"
-                  [editable]="editable()"
-                />
-              }
-            </div>
+            @if (choiceGroup) {
+              <div class="choice-group" [formGroup]="choiceGroup">
+                <mat-form-field [appearance]="editable() ? 'fill' : 'outline'">
+                  <mat-label>Selected option</mat-label>
+                  <mat-select
+                    [formControlName]="CASE_KEY"
+                    (selectionChange)="switchCase(childItem.key, child, $event.value)"
+                  >
+                    @for (caseName of objectKeys(child.cases); track caseName) {
+                      <mat-option [value]="caseName">{{ caseLabel(child, caseName) }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                @if (selectedCase) {
+                  <nff-dynamic-recursive-form
+                    [schema]="caseAsGroup(child, selectedCase)"
+                    [formGroup]="choiceGroup"
+                    [editable]="editable()"
+                  />
+                }
+              </div>
+            }
           </mat-expansion-panel>
         }
       }
@@ -116,15 +129,29 @@
       @for (childItem of nodeGroupChildrenList; track $index) {
         @let child = childItem.value;
         @if (child.kind == 'map') {
-          <mat-expansion-panel class="node-section" [expanded]="!child.appearance?.collapsed" togglePosition="before">
+          @let mapGroup = asFormGroup(formGroup().get(childItem.key));
+          <mat-expansion-panel class="node-section" [expanded]="child.presence ? !!mapGroup : !child.appearance?.collapsed" togglePosition="before">
             <mat-expansion-panel-header>
-              <mat-panel-title>{{ child.label ?? child.name }}</mat-panel-title>
+              <mat-panel-title>
+                @if (child.presence) {
+                  <mat-checkbox
+                    [checked]="!!mapGroup"
+                    [disabled]="!editable()"
+                    (click)="$event.stopPropagation()"
+                    (change)="toggleNodePresence(childItem.key, child, $event.checked)"
+                  >{{ child.label ?? child.name }}</mat-checkbox>
+                } @else {
+                  {{ child.label ?? child.name }}
+                }
+              </mat-panel-title>
             </mat-expansion-panel-header>
-            <nff-node-map-renderer
-              [nodeMap]="child"
-              [formGroup]="asFormGroup(formGroup().get(childItem.key))"
-              [editable]="editable()"
-            />
+            @if (mapGroup) {
+              <nff-node-map-renderer
+                [nodeMap]="child"
+                [formGroup]="mapGroup"
+                [editable]="editable()"
+              />
+            }
           </mat-expansion-panel>
         }
       }
@@ -226,45 +253,72 @@
       @if (child.kind == 'choice') {
         @let choiceGroup = asFormGroup(formGroup().get(childItem.key));
         @let selectedCase = activeCase(childItem.key);
-        <mat-expansion-panel class="node-section" [expanded]="!child.appearance?.collapsed" togglePosition="before">
+        <mat-expansion-panel class="node-section" [expanded]="child.presence ? !!choiceGroup : !child.appearance?.collapsed" togglePosition="before">
           <mat-expansion-panel-header>
-            <mat-panel-title>{{ child.label ?? child.name }}</mat-panel-title>
+            <mat-panel-title>
+              @if (child.presence) {
+                <mat-checkbox
+                  [checked]="!!choiceGroup"
+                  [disabled]="!editable()"
+                  (click)="$event.stopPropagation()"
+                  (change)="toggleNodePresence(childItem.key, child, $event.checked)"
+                >{{ child.label ?? child.name }}</mat-checkbox>
+              } @else {
+                {{ child.label ?? child.name }}
+              }
+            </mat-panel-title>
           </mat-expansion-panel-header>
-          <div class="choice-group" [formGroup]="choiceGroup">
-            <mat-form-field [appearance]="editable() ? 'fill' : 'outline'">
-              <mat-label>Selected option</mat-label>
-              <mat-select
-                [formControlName]="CASE_KEY"
-                (selectionChange)="switchCase(childItem.key, child, $event.value)"
-              >
-                @for (caseName of objectKeys(child.cases); track caseName) {
-                  <mat-option [value]="caseName">{{ caseLabel(child, caseName) }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            @if (selectedCase) {
-              <nff-dynamic-recursive-form
-                [schema]="caseAsGroup(child, selectedCase)"
-                [formGroup]="choiceGroup"
-                [editable]="editable()"
-              />
-            }
-          </div>
+          @if (choiceGroup) {
+            <div class="choice-group" [formGroup]="choiceGroup">
+              <mat-form-field [appearance]="editable() ? 'fill' : 'outline'">
+                <mat-label>Selected option</mat-label>
+                <mat-select
+                  [formControlName]="CASE_KEY"
+                  (selectionChange)="switchCase(childItem.key, child, $event.value)"
+                >
+                  @for (caseName of objectKeys(child.cases); track caseName) {
+                    <mat-option [value]="caseName">{{ caseLabel(child, caseName) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (selectedCase) {
+                <nff-dynamic-recursive-form
+                  [schema]="caseAsGroup(child, selectedCase)"
+                  [formGroup]="choiceGroup"
+                  [editable]="editable()"
+                />
+              }
+            </div>
+          }
         </mat-expansion-panel>
       }
     }
     @for (childItem of nodeGroupChildrenList; track $index) {
       @let child = childItem.value;
       @if (child.kind == 'map') {
-        <mat-expansion-panel class="node-section" [expanded]="!child.appearance?.collapsed" togglePosition="before">
+        @let mapGroup = asFormGroup(formGroup().get(childItem.key));
+        <mat-expansion-panel class="node-section" [expanded]="child.presence ? !!mapGroup : !child.appearance?.collapsed" togglePosition="before">
           <mat-expansion-panel-header>
-            <mat-panel-title>{{ child.label ?? child.name }}</mat-panel-title>
+            <mat-panel-title>
+              @if (child.presence) {
+                <mat-checkbox
+                  [checked]="!!mapGroup"
+                  [disabled]="!editable()"
+                  (click)="$event.stopPropagation()"
+                  (change)="toggleNodePresence(childItem.key, child, $event.checked)"
+                >{{ child.label ?? child.name }}</mat-checkbox>
+              } @else {
+                {{ child.label ?? child.name }}
+              }
+            </mat-panel-title>
           </mat-expansion-panel-header>
-          <nff-node-map-renderer
-            [nodeMap]="child"
-            [formGroup]="asFormGroup(formGroup().get(childItem.key))"
-            [editable]="editable()"
-          />
+          @if (mapGroup) {
+            <nff-node-map-renderer
+              [nodeMap]="child"
+              [formGroup]="mapGroup"
+              [editable]="editable()"
+            />
+          }
         </mat-expansion-panel>
       }
     }

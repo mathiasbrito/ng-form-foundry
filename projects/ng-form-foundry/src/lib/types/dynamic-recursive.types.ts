@@ -162,6 +162,8 @@ export type NodeChoice = {
   caseLabels?: Record<string, string>;
   default?: string;
   mandatory?: boolean;
+  /** Optional choice: rendered with an on/off toggle, omitted from the value when absent. */
+  presence?: boolean;
   appearance?: Appearance;
 };
 

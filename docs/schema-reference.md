@@ -183,7 +183,9 @@ case selector plus the selected case's fields.
 | `caseLabels` | `Record<string, string>` | {sub}`ui` | Display label per case name — for anonymous/auto-named cases. Falls back to the case name. |
 | `default` | `string` | {sub}`data` | Case selected when none is chosen and none can be inferred. |
 | `mandatory` | `boolean` | {sub}`data` | Whether a case must be selected. |
+| `presence` | `boolean` | {sub}`data` | Optional choice: on/off toggle, omitted from the value when absent. |
 | `label` | `string` | {sub}`ui` | Selector label. Falls back to `name`. |
+| `appearance` | `Appearance` | {sub}`ui` | Layout options (see [`Appearance`](#appearance)). |
 
 In the form value a choice is `{ __case: <caseName>, ...that case's fields }`.
 
@@ -258,16 +260,15 @@ a `nodeGroup` may contain a `map` child, and a map's `value` may be a `nodeGroup
 The library is at an early version. A few properties are declared on the
 model but not yet fully wired:
 
-- **`map`** renders in `nff-dynamic-recursive-form` but is **not yet shown in the
-  `nff-config-editor` tree** (same current gap as `choice`). A map `value` of kind
-  `leaf` or `nodeGroup` is rendered; other value kinds are a follow-up.
-- **`minItems` / `maxItems`** currently gate the remove control on
-  `nodeGroupList`, but are not yet enforced as `FormArray` validators, and are not
-  yet applied to `leafList`. Treat them as UI hints for now, and validate
-  cardinality yourself if it must be enforced.
-- **`description`** and **`subType`** exist on the types but are not rendered.
-  Avoid relying on them.
-
+- A **map `value` of kind `leafList`** is not supported by either renderer. In
+  `nff-dynamic-recursive-form` a map value of kind `leaf` or `nodeGroup` is
+  rendered; the `nff-config-editor` tree additionally expands `nodeGroup`-,
+  `choice`-, `map`-, and `nodeGroupList`-valued entries as child nodes.
+- A **generated map entry key** (`key1`, `key2`, …) is not checked against a
+  strict `keyPattern` — it is a placeholder meant to be renamed, and the rename
+  is where the pattern is enforced.
+- **Presence fields inside a choice case** are built present when the case is
+  activated; they do not start absent the way presence fields of a group do.
 - **`minItems` / `maxItems`** currently gate the remove control on
   `nodeGroupList`, but are not yet enforced as `FormArray` validators, and are not
   yet applied to `leafList`. Treat them as UI hints for now, and validate

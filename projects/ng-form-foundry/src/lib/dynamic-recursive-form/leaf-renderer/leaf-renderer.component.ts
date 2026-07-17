@@ -7,6 +7,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltip } from '@angular/material/tooltip';
 import { LeafEnumRendererComponent } from '../leaf-enum-renderer/leaf-enum-renderer.component';
 
 @Component({
@@ -20,6 +21,7 @@ import { LeafEnumRendererComponent } from '../leaf-enum-renderer/leaf-enum-rende
     MatSelectModule,
     MatIconModule,
     MatButtonModule,
+    MatTooltip,
     LeafEnumRendererComponent,
   ],
   templateUrl: './leaf-renderer.component.html',

@@ -84,19 +84,36 @@ values won't reach your form.
 ### `<nff-config-editor>`
 
 `ConfigEditorComponent` — a tree/detail editor for large configs. The structure
-(containers, lists, groups) is a tree on the left; selecting a node shows that
-node's leaf fields for editing on the right. Binds to the same `FormGroup` as the
+(groups, lists, maps, choices) is a tree on the left; selecting a node shows that
+node's fields for editing on the right. Binds to the same `FormGroup` as the
 form component.
 
+- **Lists and complex maps** get a `+` on their tree row to add an item/entry and
+  a delete button on each child row. A map entry's key is renamed in its detail
+  pane; a leaf-valued map is edited inline as key/value rows.
+- **Choices** show the active case next to the tree label and a "Selected option"
+  selector in the detail pane; switching the case swaps the fields.
+- **Optional (presence) children** that are absent are offered by a
+  "+ Optional field" menu row at the end of their parent's children; present ones
+  carry a delete button that returns them to the menu.
+
+The component draws **no outer container** — only a vertical divider between the
+tree and the detail pane. Wrap it in your own card or border:
+
 ```html
-<nff-config-editor [schema]="schema" [formGroup]="form" />
+<div class="my-editor-card">
+  <nff-config-editor [schema]="schema" [formGroup]="form" />
+</div>
 ```
 
 | Input | Type | Default | Description |
 | --- | --- | --- | --- |
 | `schema` | `NodeGroup` | — | **Required.** The schema to edit. |
 | `formGroup` | `FormGroup` | — | **Required.** The form from `buildFormFromSchema(schema)`. |
-| `editable` | `boolean` | `true` | Whether the detail fields are editable. |
+| `editable` | `boolean` | `true` | Whether fields accept input and structural controls (add/remove/menus) show. |
+
+The inputs are signal inputs, like the form component's. The tree is built once
+from the `schema`/`formGroup` provided at initialization.
 
 ## Types
 
@@ -113,7 +130,7 @@ property.
 | `ChoiceCase` | One case body: a field record, or a single node (a leaf-bodied case). |
 | `NodeMap` | An open, arbitrary-keyed record (`value` schema, `keyPattern`, `min`/`maxEntries`). |
 | `NodeType` | `Leaf \| LeafList \| NodeGroup \| NodeGroupList \| NodeChoice \| NodeMap`. |
-| `Appearance` | Presentation options for a `nodeGroup` (`flatten`, `noBorder`). |
+| `Appearance` | Presentation options for a `nodeGroup`, `choice`, or `map` (`flatten`, `noBorder`, `collapsed`). |
 | `CASE_KEY` | The form-value key (`'__case'`) that records a choice's active case. |
 
 ### Inferred (advanced)

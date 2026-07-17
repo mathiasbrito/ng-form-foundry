@@ -12,12 +12,16 @@
   min-height: 320px;
 }
 
+// No container of its own: the embedding client owns the surrounding chrome.
+// Only a vertical divider separates the tree from the detail pane.
+// The pane reserves a regular phone-screen width so nested labels rarely
+// truncate; when they still do, the rows carry tooltips with the full text.
 .tree {
-  flex: 0 0 260px;
+  flex: 0 0 360px;
+  min-width: 360px;
   overflow: auto;
-  border: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
-  border-radius: 8px;
-  padding: 4px 0;
+  border-right: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+  padding: 4px 12px 4px 0;
 }
 
 .tree-row {
@@ -37,6 +41,11 @@
 .tree-row.selected {
   background: var(--mat-sys-secondary-container, rgba(103, 80, 164, 0.12));
   font-weight: 600;
+}
+
+// A validation error anywhere in the node's subtree colors its row.
+.tree-row.error .tree-label {
+  color: var(--mat-sys-error, #b3261e);
 }
 
 // Drive the button size through Material's own tokens, not width/height on the
@@ -62,18 +71,47 @@
   width: 28px;
 }
 
-.presence-check {
-  flex: 0 0 auto;
-  margin-right: 2px;
-}
-
 .tree-label {
   flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.tree-label.absent {
+// A choice row's active case, shown after the label ("Deploy scope · By zone").
+.tree-sublabel {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.85em;
+  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.55));
+
+  &::before {
+    content: '· ';
+  }
+}
+
+// The "+ Optional field" menu row rendered after a node's children: a plain
+// button styled as a muted tree row.
+.optional-row {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+}
+
+.optional-icon {
+  flex: 0 0 auto;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--mat-sys-primary, #6750a4);
+}
+
+.optional-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.55));
   font-style: italic;
 }
@@ -134,6 +172,20 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+// The choice-case selector and the map-entry key editor sit above the fields.
+.case-select,
+.key-field {
+  display: block;
+  max-width: 320px;
+  margin-bottom: 8px;
+}
+
+// The detail-pane "+ Optional field" menu button, after the fields.
+.detail-optional {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .empty {

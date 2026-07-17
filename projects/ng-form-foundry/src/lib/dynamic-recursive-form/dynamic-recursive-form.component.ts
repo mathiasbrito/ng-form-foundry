@@ -1,4 +1,4 @@
-import { Component, computed, input, model, OnInit, output } from '@angular/core';
+import { Component, computed, forwardRef, input, model, OnInit, output } from '@angular/core';
 import { LeafRendererComponent } from './leaf-renderer/leaf-renderer.component';
 import { CASE_KEY, Leaf, NodeChoice, NodeGroup, NodeType } from '../types/dynamic-recursive.types';
 import {
@@ -16,7 +16,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { NgTemplateOutlet } from '@angular/common';
 import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
-import { buildControl, buildFormFromSchema, caseFields } from '../core/dynamic-recursive-forms-builder';
+import {
+  buildControl,
+  buildFormFromSchema,
+  caseFields,
+  switchChoiceCase,
+} from '../core/dynamic-recursive-forms-builder';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -25,9 +30,12 @@ import { MatSelectModule } from '@angular/material/select';
 @Component({
   imports: [
     LeafRendererComponent,
-    NodeGroupListRendererComponent,
     LeafListRendererComponent,
-    NodeMapRendererComponent,
+    // node-group-list-renderer and node-map-renderer import this component back
+    // (list items and map values may be groups); forwardRef tolerates either
+    // module-evaluation order for the cycle.
+    forwardRef(() => NodeGroupListRendererComponent),
+    forwardRef(() => NodeMapRendererComponent),
     ReactiveFormsModule,
     MatExpansionModule,
     MatIconModule,
@@ -116,6 +124,22 @@ export class DynamicRecursiveFormComponent implements OnInit {
     }
   }
 
+  /**
+   * Add or remove a presence map's or choice's control on this form. Removing it
+   * drops the node from `form.value`; adding it rebuilds the control (an empty
+   * map, or a choice group holding `__case`) from its schema.
+   */
+  toggleNodePresence(key: string, schema: NodeType, present: boolean) {
+    const group = this.formGroup();
+    if (present) {
+      if (!group.get(key)) {
+        group.addControl(key, buildControl(schema) as never);
+      }
+    } else if (group.get(key)) {
+      group.removeControl(key);
+    }
+  }
+
   protected readonly CASE_KEY = CASE_KEY;
 
   objectKeys(obj: Record<string, unknown>): string[] {
@@ -151,16 +175,9 @@ export class DynamicRecursiveFormComponent implements OnInit {
     return { ...group, appearance: { ...group.appearance, flatten: true } };
   }
 
-  /** Swap a choice's field controls when the selected case changes. */
+  /** Swap a choice's field controls when the selected case changes. Delegates to {@link switchChoiceCase}. */
   switchCase(key: string, choice: NodeChoice, caseName: string) {
-    const group = this.formGroup().get(key) as FormGroup;
-    for (const name of Object.keys(group.controls)) {
-      if (name !== CASE_KEY) group.removeControl(name);
-    }
-    const caseChildren = choice.cases[caseName] ? caseFields(choice.cases[caseName]) : {};
-    for (const name in caseChildren) {
-      group.addControl(name, buildControl(caseChildren[name]) as any);
-    }
+    switchChoiceCase(this.formGroup().get(key) as FormGroup, choice, caseName);
   }
 
   protected readonly asFormGroup = asFormGroup;

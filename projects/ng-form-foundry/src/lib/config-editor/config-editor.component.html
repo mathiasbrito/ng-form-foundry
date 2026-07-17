@@ -4,10 +4,11 @@
       <div
         class="tree-row"
         [class.selected]="node === selected"
+        [class.error]="hasError(node)"
         [style.padding-left.px]="8 + depth * 16"
         (click)="select(node)"
       >
-        @if (node.children.length) {
+        @if (hasExpandableContent(node)) {
           <button
             matIconButton
             class="twisty"
@@ -20,18 +21,12 @@
           <span class="twisty-spacer"></span>
         }
 
-        @if (node.presence) {
-          <mat-checkbox
-            class="presence-check"
-            [checked]="!!node.present"
-            [disabled]="!editable"
-            (change)="setPresence(node, $event.checked)"
-            (click)="$event.stopPropagation()"
-          ></mat-checkbox>
+        <span class="tree-label" [matTooltip]="node.label">{{ node.label }}</span>
+        @if (node.choice && activeCaseLabel(node)) {
+          <span class="tree-sublabel" [matTooltip]="activeCaseLabel(node)">{{ activeCaseLabel(node) }}</span>
         }
-        <span class="tree-label" [class.absent]="node.presence && !node.present">{{ node.label }}</span>
 
-        @if (editable && node.list) {
+        @if (editable() && node.list) {
           <button
             matIconButton
             class="row-btn add"
@@ -41,12 +36,42 @@
             <mat-icon>add</mat-icon>
           </button>
         }
-        @if (editable && node.removable) {
+        @if (editable() && node.map?.complex && !mapAtMax(node)) {
+          <button
+            matIconButton
+            class="row-btn add"
+            matTooltip="Add entry"
+            (click)="addTreeMapEntry(node); $event.stopPropagation()"
+          >
+            <mat-icon>add</mat-icon>
+          </button>
+        }
+        @if (editable() && node.removable) {
           <button
             matIconButton
             class="row-btn remove"
             matTooltip="Remove"
             (click)="removeItem(parent, node); $event.stopPropagation()"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        }
+        @if (editable() && node.presenceRemovable) {
+          <button
+            matIconButton
+            class="row-btn remove"
+            matTooltip="Remove"
+            (click)="removeOptional(parent, node); $event.stopPropagation()"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        }
+        @if (editable() && node.mapEntry && !mapAtMin(parent)) {
+          <button
+            matIconButton
+            class="row-btn remove"
+            matTooltip="Remove entry"
+            (click)="removeTreeMapEntry(parent, node); $event.stopPropagation()"
           >
             <mat-icon>delete</mat-icon>
           </button>
@@ -58,6 +83,24 @@
           <ng-container
             *ngTemplateOutlet="treeNode; context: { $implicit: child, depth: depth + 1, parent: node }"
           />
+        }
+        @if (editable() && node.optionals?.length) {
+          <button
+            type="button"
+            class="tree-row optional-row"
+            [style.padding-left.px]="8 + (depth + 1) * 16"
+            [matMenuTriggerFor]="treeOptionalsMenu"
+            (click)="$event.stopPropagation()"
+          >
+            <span class="twisty-spacer"></span>
+            <mat-icon class="optional-icon">add</mat-icon>
+            <span class="optional-label">Optional field</span>
+          </button>
+          <mat-menu #treeOptionalsMenu="matMenu">
+            @for (opt of node.optionals; track opt.key) {
+              <button mat-menu-item (click)="addOptional(node, opt)">{{ opt.label }}</button>
+            }
+          </mat-menu>
         }
       }
     </ng-template>
@@ -77,69 +120,164 @@
           }
         }
       </nav>
-    }
-    @if (selected && selected.group) {
-      <div class="group-body">
-        <div class="fields" [formGroup]="selected.group">
-          @for (leaf of selected.leaves; track leaf.key) {
-            <nff-leaf-renderer
-              [leaf_]="leaf.node"
-              [control]="asFormControl(selected.group.get(leaf.key))"
-              [editable]="editable"
-            />
-          }
-          @for (list of selected.leafLists; track list.key) {
-            <nff-leaf-list-renderer
-              [leaf_]="list.node"
-              [formArray]="asFormArray(selected.group.get(list.key))"
-              [editable]="editable"
-            />
-          }
-          @if (!selected.leaves.length && !selected.leafLists.length && !selected.children.length) {
-            <p class="empty">This node has no fields.</p>
-          }
-        </div>
-        @if (selected.children.length) {
-          <nav class="child-links">
-            <h4 class="child-links-title">Sections</h4>
-            @for (child of selected.children; track child.id) {
-              <button type="button" class="item-link child-link" (click)="open(selected, child)">
-                <mat-icon>chevron_right</mat-icon>{{ child.label }}
-              </button>
-            }
-          </nav>
+
+      @if (selected.choice; as choice) {
+        @if (editable()) {
+          <mat-form-field class="case-select" appearance="fill">
+            <mat-label>Selected option</mat-label>
+            <mat-select [value]="activeCase(selected)" (selectionChange)="switchTreeCase(selected, $event.value)">
+              @for (caseName of objectKeys(choice.schema.cases); track caseName) {
+                <mat-option [value]="caseName">{{ caseLabel(choice.schema, caseName) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        } @else {
+          <mat-form-field class="case-select" appearance="outline">
+            <mat-label>Selected option</mat-label>
+            <input matInput readonly [value]="activeCaseLabel(selected) ?? ''" />
+          </mat-form-field>
         }
-      </div>
-    } @else if (selected && selected.presence && !selected.present) {
-      <p class="empty">This optional group is off. Tick its box in the tree to add it.</p>
-    } @else if (selected && selected.list) {
-      @if (selected.children.length) {
-        <ul class="item-list">
-          @for (item of selected.children; track item.id) {
-            <li class="item-row">
-              <button type="button" class="item-link" (click)="open(selected, item)">{{ item.label }}</button>
-              @if (editable && item.removable) {
-                <button
-                  matIconButton
-                  class="row-btn remove-item"
-                  matTooltip="Remove"
-                  (click)="removeItem(selected, item)"
-                >
-                  <mat-icon>delete</mat-icon>
+      }
+
+      @if (selected.mapEntry; as entry) {
+        <mat-form-field class="key-field" [appearance]="editable() ? 'fill' : 'outline'">
+          <mat-label>{{ entry.mapSchema.keyLabel ?? 'Key' }}</mat-label>
+          <input
+            matInput
+            #entryKey
+            [readonly]="!editable()"
+            [value]="entry.key"
+            (change)="renameTreeMapEntry(selected, entryKey.value); entryKey.value = entry.key"
+          />
+        </mat-form-field>
+      }
+
+      @if (selected.map && !selected.map.complex) {
+        <nff-node-map-renderer
+          [nodeMap]="selected.map.schema"
+          [formGroup]="selected.map.group"
+          [editable]="editable()"
+        />
+      }
+
+      @if (selected.group) {
+        <div class="group-body">
+          <div class="fields" [formGroup]="selected.group">
+            @for (leaf of selected.leaves; track leaf.key) {
+              <nff-leaf-renderer
+                [leaf_]="leaf.node"
+                [control]="asFormControl(selected.group.get(leaf.key))"
+                [editable]="editable()"
+                [removable]="!!leaf.optional"
+                (remove)="removeOptionalLeaf(selected, leaf)"
+              />
+            }
+            @for (list of selected.leafLists; track list.key) {
+              <nff-leaf-list-renderer
+                [leaf_]="list.node"
+                [formArray]="asFormArray(selected.group.get(list.key))"
+                [editable]="editable()"
+              />
+            }
+            @if (editable() && selected.optionals?.length) {
+              <div class="detail-optional">
+                <button matButton [matMenuTriggerFor]="detailOptionalsMenu">
+                  <mat-icon>add</mat-icon> Optional field
+                </button>
+                <mat-menu #detailOptionalsMenu="matMenu">
+                  @for (opt of selected.optionals; track opt.key) {
+                    <button mat-menu-item (click)="addOptional(selected, opt)">{{ opt.label }}</button>
+                  }
+                </mat-menu>
+              </div>
+            }
+          </div>
+          @if (selected.children.length) {
+            <nav class="child-links">
+              <h4 class="child-links-title">Sections</h4>
+              @for (child of selected.children; track child.id) {
+                <button type="button" class="item-link child-link" [matTooltip]="child.label" (click)="open(selected, child)">
+                  <mat-icon>chevron_right</mat-icon>{{ child.label }}
                 </button>
               }
-            </li>
+            </nav>
           }
-        </ul>
-      } @else {
-        <p class="empty">No {{ selected.list.itemLabel }} items yet.</p>
-      }
-      @if (editable) {
-        <div class="list-actions">
-          <button matButton (click)="addItem(selected)">
-            <mat-icon>add</mat-icon> Add {{ selected.list.itemLabel }}
-          </button>
         </div>
+      }
+
+      @if (selected.list; as list) {
+        @if (selected.children.length) {
+          <ul class="item-list">
+            @for (item of selected.children; track item.id) {
+              <li class="item-row">
+                <button type="button" class="item-link" [matTooltip]="item.label" (click)="open(selected, item)">{{ item.label }}</button>
+                @if (editable() && item.removable) {
+                  <button
+                    matIconButton
+                    class="row-btn remove-item"
+                    matTooltip="Remove"
+                    (click)="removeItem(selected, item)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="empty">No {{ list.itemLabel }} items yet.</p>
+        }
+        @if (editable()) {
+          <div class="list-actions">
+            <button matButton (click)="addItem(selected)">
+              <mat-icon>add</mat-icon> Add {{ list.itemLabel }}
+            </button>
+          </div>
+        }
+      }
+
+      @if (selected.map && selected.map.complex) {
+        @if (selected.children.length) {
+          <ul class="item-list">
+            @for (item of selected.children; track item.id) {
+              <li class="item-row">
+                <button type="button" class="item-link" [matTooltip]="item.label" (click)="open(selected, item)">{{ item.label }}</button>
+                @if (editable() && !mapAtMin(selected)) {
+                  <button
+                    matIconButton
+                    class="row-btn remove-item"
+                    matTooltip="Remove entry"
+                    (click)="removeTreeMapEntry(selected, item)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="empty">No entries yet.</p>
+        }
+        @if (editable() && !mapAtMax(selected)) {
+          <div class="list-actions">
+            <button matButton (click)="addTreeMapEntry(selected)">
+              <mat-icon>add</mat-icon> Add entry
+            </button>
+          </div>
+        }
+      }
+
+      @if (
+        !selected.choice &&
+        !selected.mapEntry &&
+        !selected.map &&
+        !selected.list &&
+        !selected.leaves.length &&
+        !selected.leafLists.length &&
+        !selected.children.length &&
+        !(editable() && selected.optionals?.length)
+      ) {
+        <p class="empty">This node has no fields.</p>
       }
     } @else {
       <p class="empty">Select a node on the left to edit its fields.</p>

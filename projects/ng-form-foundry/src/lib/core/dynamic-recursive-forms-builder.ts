@@ -265,6 +265,70 @@ function buildChoiceControl(
 }
 
 /**
+ * Switch a choice's FormGroup to `caseName`: sets `__case`, removes every other
+ * control, and builds `caseName`'s fields (normalized via {@link caseFields})
+ * with their defaults. An unknown case name leaves only `__case`.
+ */
+export function switchChoiceCase(group: FormGroup, choice: NodeChoice, caseName: string): void {
+  group.get(CASE_KEY)?.setValue(caseName);
+  for (const name of Object.keys(group.controls)) {
+    if (name !== CASE_KEY) group.removeControl(name);
+  }
+  const caseChildren = choice.cases[caseName] ? caseFields(choice.cases[caseName]) : {};
+  for (const name in caseChildren) {
+    group.addControl(name, buildControl(caseChildren[name]) as any);
+  }
+}
+
+/**
+ * Append a map entry built from `map.value` and return its committed key, or
+ * `null` when nothing was added. With no `key`, the first free `keyN`
+ * placeholder is generated (not checked against `keyPattern` — placeholders are
+ * meant to be renamed). An explicit `key` is rejected when it duplicates an
+ * existing entry or violates `keyPattern`. Rejects when `maxEntries` is reached.
+ */
+export function addMapEntry(group: FormGroup, map: NodeMap, key?: string): string | null {
+  if (map.maxEntries != null && Object.keys(group.controls).length >= map.maxEntries) return null;
+  let committed: string;
+  if (key != null) {
+    if (group.contains(key)) return null;
+    if (map.keyPattern && !new RegExp(map.keyPattern).test(key)) return null;
+    committed = key;
+  } else {
+    let n = Object.keys(group.controls).length + 1;
+    committed = `key${n}`;
+    while (group.contains(committed)) committed = `key${++n}`;
+  }
+  group.addControl(committed, buildControl(map.value) as any);
+  return committed;
+}
+
+/**
+ * Rename entry `oldKey` to `newKey.trim()`, preserving the control instance
+ * (remove + re-add, so the value survives). Returns whether the rename was
+ * committed: an empty, unchanged, duplicate, or `keyPattern`-violating key is a
+ * no-op, leaving the entry under its current name.
+ */
+export function renameMapEntry(group: FormGroup, map: NodeMap, oldKey: string, newKey: string): boolean {
+  const committed = newKey.trim();
+  if (!committed || committed === oldKey || group.contains(committed)) return false;
+  if (map.keyPattern && !new RegExp(map.keyPattern).test(committed)) return false;
+  const control = group.get(oldKey);
+  if (!control) return false;
+  group.removeControl(oldKey);
+  group.addControl(committed, control);
+  return true;
+}
+
+/** Remove entry `key` unless the map is at `minEntries`. Returns whether it was removed. */
+export function removeMapEntry(group: FormGroup, map: NodeMap, key: string): boolean {
+  if (!group.contains(key)) return false;
+  if (map.minEntries != null && Object.keys(group.controls).length <= map.minEntries) return false;
+  group.removeControl(key);
+  return true;
+}
+
+/**
  * Build the FormGroup for a map: one control per entry, keyed by the entry key,
  * each built from the map's shared `value` schema. Because the entry keys are the
  * control names, `getRawValue()` is the map object directly. Empty when no
@@ -341,7 +405,7 @@ export function buildControl<T extends NodeType>(
 /**
  * Remove presence nodes that have no initial value so they are absent from the
  * built form (and from `form.value`) until the user toggles them on. Applies to
- * both presence groups and presence leaves. Runs on the fully-built, attached
+ * presence groups, leaves, maps, and choices. Runs on the fully-built, attached
  * tree. `removeControl` is used rather than `disable` because a disabled control
  * is still included in `FormGroup.value`.
  */
@@ -353,7 +417,7 @@ function applyPresence(
   for (const key in schema.children) {
     const child = schema.children[key];
     const childInitial = (initial as Record<string, unknown> | null | undefined)?.[key];
-    if (child.kind === 'leaf' || child.kind === 'map') {
+    if (child.kind === 'leaf' || child.kind === 'map' || child.kind === 'choice') {
       if (child.presence && childInitial == null) group.removeControl(key);
       continue;
     }

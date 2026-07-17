@@ -16,4 +16,9 @@
   } @else if (leaf_.type === 'enum') {
     <nff-leaf-enum-renderer [editable]="fieldEditable" [leafEnum]="leaf_" [control]="control"></nff-leaf-enum-renderer>
   }
+  @if (removable && editable) {
+    <button matIconButton class="remove-button small-icon-button" matTooltip="Remove" (click)="remove.emit(0)">
+      <mat-icon>delete</mat-icon>
+    </button>
+  }
 }

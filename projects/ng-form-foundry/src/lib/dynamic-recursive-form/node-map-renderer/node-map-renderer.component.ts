@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { Leaf, NodeGroup, NodeMap } from '../../types/dynamic-recursive.types';
-import { buildControl } from '../../core/dynamic-recursive-forms-builder';
+import { addMapEntry, removeMapEntry, renameMapEntry } from '../../core/dynamic-recursive-forms-builder';
 import { asFormControl, asFormGroup } from '../../core/utils';
 import { LeafRendererComponent } from '../leaf-renderer/leaf-renderer.component';
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form.component';
@@ -61,40 +61,29 @@ export class NodeMapRendererComponent implements OnInit {
     return this.nodeMap.minEntries != null && this.entryKeys.length <= this.nodeMap.minEntries;
   }
 
-  /** Append a new entry under a unique placeholder key. */
+  /** Append a new entry under a unique placeholder key. Delegates to {@link addMapEntry}. */
   addEntry(): void {
-    const key = this.uniqueKey();
-    this.formGroup.addControl(key, buildControl(this.nodeMap.value) as never);
-    this.entryKeys = [...this.entryKeys, key];
+    const key = addMapEntry(this.formGroup, this.nodeMap);
+    if (key != null) this.entryKeys = [...this.entryKeys, key];
   }
 
-  /** Drop an entry (its control leaves the group, so it drops from the value). */
+  /** Drop an entry (its control leaves the group, so it drops from the value). Delegates to {@link removeMapEntry}. */
   removeEntry(key: string): void {
-    this.formGroup.removeControl(key);
-    this.entryKeys = this.entryKeys.filter((k) => k !== key);
+    if (removeMapEntry(this.formGroup, this.nodeMap, key)) {
+      this.entryKeys = this.entryKeys.filter((k) => k !== key);
+    }
   }
 
   /**
-   * Commit an edited key by renaming its control once (remove + re-add the same
-   * instance, so the value is preserved). Ignores an empty, unchanged, duplicate,
-   * or `keyPattern`-violating key, leaving the entry under its current name.
+   * Commit an edited key by renaming its control once (the value is preserved).
+   * An empty, unchanged, duplicate, or `keyPattern`-violating key is a no-op,
+   * leaving the entry under its current name. Delegates to {@link renameMapEntry}.
    */
   renameEntry(oldKey: string, rawKey: string): void {
-    const newKey = rawKey.trim();
-    if (!newKey || newKey === oldKey || this.formGroup.contains(newKey)) return;
-    if (this.nodeMap.keyPattern && !new RegExp(this.nodeMap.keyPattern).test(newKey)) return;
-    const control = this.formGroup.get(oldKey);
-    if (!control) return;
-    this.formGroup.removeControl(oldKey);
-    this.formGroup.addControl(newKey, control);
-    this.entryKeys = this.entryKeys.map((k) => (k === oldKey ? newKey : k));
-  }
-
-  private uniqueKey(): string {
-    let n = this.entryKeys.length + 1;
-    let key = `key${n}`;
-    while (this.formGroup.contains(key)) key = `key${++n}`;
-    return key;
+    if (renameMapEntry(this.formGroup, this.nodeMap, oldKey, rawKey)) {
+      const newKey = rawKey.trim();
+      this.entryKeys = this.entryKeys.map((k) => (k === oldKey ? newKey : k));
+    }
   }
 
   protected readonly asFormControl = asFormControl;

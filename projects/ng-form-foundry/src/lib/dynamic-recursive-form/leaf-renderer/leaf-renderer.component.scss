@@ -1,7 +1,12 @@
+@use '@angular/material' as mat;
+
 :host {
   display: flex;
   flex: 1 1 0;
   min-width: 10%;
+  // Matches the anon-leaf row: breathing room between the field and the
+  // remove control when one is rendered.
+  gap: 8px;
 }
 
 mat-form-field {
@@ -9,3 +14,12 @@ mat-form-field {
   min-width: 0;
 }
 
+// The optional-leaf remove control: same treatment as the list-item remove
+// buttons (see leaf-list-renderer), pinned to the top of the field beside it.
+.remove-button {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 4px;
+  background-color: var(--mat-sys-error-container);
+  @include mat.elevation(1);
+}
