@@ -103,8 +103,22 @@ one, the form is inferred from the data's structure and value types. The exporte
 | `type: [T, "null"]` | a **nullable** leaf |
 | `const` | a read-only leaf pinned to the value |
 | `enum` | enum leaf |
-| `$ref` → `#/$defs/…` or `#/definitions/…` | resolved inline |
+| `$ref` — local (`#/$defs/…`) or **cross-file** (`/path#/$defs/…`) | resolved inline |
 | `title` / `description` / `default` | label / description / default |
+
+**Cross-file `$ref`** resolves against other documents you pass in
+`options.refDocuments`, matched by `$id`. A ref like `/a1/common#/$defs/UeId`
+resolves into the document whose `$id` ends with `/a1/common`; refs *within* that
+document then resolve against it. This is what lets an A1 policy type reference a
+shared `common` definitions file:
+
+```ts
+import { jsonSchemaToNodeGroup } from 'ng-form-foundry-transformers';
+
+const schema = jsonSchemaToNodeGroup(qosTarget, 'QoSTarget', {
+  refDocuments: [common], // the doc QoSTarget's $ref points at
+});
+```
 
 Not yet mapped: `allOf` composition, `exclusiveMinimum`/`exclusiveMaximum`, and
 `additionalProperties` *alongside* fixed `properties` (the fixed keys win). An

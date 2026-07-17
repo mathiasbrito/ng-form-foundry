@@ -155,6 +155,94 @@ test('maps enum to an enum leaf and an object-array to a nodeGroupList', () => {
   assert.equal(peers.type.children.id.integer, true);
 });
 
+test('resolves a cross-file $ref by matching the target document $id', () => {
+  const common: JsonSchema = {
+    $id: 'https://schemas.example.org/defs/common',
+    $defs: {
+      PlmnId: {
+        type: 'object',
+        required: ['mcc'],
+        properties: { mcc: { type: 'string', pattern: '^[0-9]{3}$' } },
+      },
+    },
+  };
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: { plmn: { $ref: '/defs/common#/$defs/PlmnId' } },
+  };
+  const plmn = jsonSchemaToNodeGroup(schema, '__root__', { refDocuments: [common] }).children['plmn'] as any;
+  assert.equal(plmn.kind, 'nodeGroup');
+  assert.equal(plmn.children.mcc.pattern, '^[0-9]{3}$');
+  assert.equal(plmn.children.mcc.required, true);
+});
+
+test('follows a local $ref inside a cross-referenced document', () => {
+  const common: JsonSchema = {
+    $id: 'https://schemas.example.org/defs/common',
+    $defs: {
+      SliceId: {
+        type: 'object',
+        required: ['sst'],
+        properties: { sst: { $ref: '#/$defs/Sst' }, plmnId: { $ref: '#/$defs/PlmnId' } },
+      },
+      Sst: { type: 'integer', minimum: 0, maximum: 255 },
+      PlmnId: { type: 'object', properties: { mcc: { type: 'string' } } },
+    },
+  };
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: { slice: { $ref: '/defs/common#/$defs/SliceId' } },
+  };
+  const slice = jsonSchemaToNodeGroup(schema, '__root__', { refDocuments: [common] }).children['slice'] as any;
+  assert.equal(slice.kind, 'nodeGroup');
+  assert.equal(slice.children.sst.type, 'number'); // #/$defs/Sst resolved locally in common
+  assert.equal(slice.children.sst.integer, true);
+  assert.equal(slice.children.sst.max, 255);
+  assert.equal(slice.children.plmnId.kind, 'nodeGroup'); // second-level local ref
+});
+
+test('an anyOf scope whose fields are cross-file $refs resolves each field (A1 shape)', () => {
+  const common: JsonSchema = {
+    $id: 'https://schemas.example.org/a1/common',
+    $defs: {
+      UeId: {
+        oneOf: [{ type: 'object', required: ['gnbId'], properties: { gnbId: { type: 'string' } } }],
+      },
+      QosId: {
+        type: 'object',
+        required: ['fiveQi'],
+        properties: { fiveQi: { type: 'integer', minimum: 1, maximum: 256 } },
+      },
+    },
+  };
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      scope: {
+        anyOf: [
+          {
+            type: 'object',
+            required: ['ueId', 'qosId'],
+            properties: { ueId: { $ref: '/a1/common#/$defs/UeId' }, qosId: { $ref: '/a1/common#/$defs/QosId' } },
+          },
+          {
+            type: 'object',
+            required: ['qosId'],
+            properties: { qosId: { $ref: '/a1/common#/$defs/QosId' } },
+          },
+        ],
+      },
+    },
+  };
+  const scope = jsonSchemaToNodeGroup(schema, '__root__', { refDocuments: [common] }).children['scope'] as any;
+  assert.equal(scope.kind, 'choice');
+  assert.deepEqual(Object.keys(scope.cases), ['case0', 'case1']);
+  assert.equal(scope.cases.case0.ueId.kind, 'choice'); // UeId oneOf -> nested choice
+  assert.equal(scope.cases.case0.qosId.kind, 'nodeGroup');
+  assert.equal(scope.cases.case0.qosId.children.fiveQi.integer, true);
+  assert.equal(scope.cases.case0.qosId.children.fiveQi.max, 256);
+});
+
 test('a $ref to a nested object resolves into a nodeGroup', () => {
   const schema: JsonSchema = {
     type: 'object',

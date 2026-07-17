@@ -12,7 +12,7 @@ export { TransformerRegistry } from './registry';
 // Shared schema builders — used by the YAML and JSON transformers alike.
 export { inferNodeGroup } from './infer';
 export { jsonSchemaToNodeGroup } from './json-schema';
-export type { JsonSchema } from './json-schema';
+export type { JsonSchema, JsonSchemaOptions } from './json-schema';
 
 export type {
   NodeGroup,
