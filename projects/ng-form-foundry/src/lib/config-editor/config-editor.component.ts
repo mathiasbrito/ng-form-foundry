@@ -157,6 +157,9 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   select(node: TreeNode) {
     this.selected = node;
     this.sections = this.buildSections(node, []);
+    // Navigating retires any pending just-added-leaf focus request.
+    this.focusSectionId = null;
+    this.focusLeafKey = null;
     // Reveal the selection: expand every ancestor so the row is visible, and
     // the node itself as it opens on the right.
     for (const crumb of this.pathTo(node)) {
@@ -216,6 +219,10 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     this.selectByPath(listNode.id);
   }
 
+  /** The just-added optional leaf (section path + key) whose field grabs focus when rendered. */
+  protected focusSectionId: string | null = null;
+  protected focusLeafKey: string | null = null;
+
   /** Add an absent optional child from the menu: build its control and select the node it lands on. */
   addOptional(node: TreeNode, entry: OptionalEntry) {
     if (!node.group || node.group.get(entry.key)) return;
@@ -226,6 +233,12 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     node.group.addControl(entry.key, control);
     // A leaf renders in the parent's detail pane; complex kinds become tree nodes.
     this.selectByPath(entry.schema.kind === 'leaf' ? node.id : this.join(node.id, entry.key));
+    if (entry.schema.kind === 'leaf') {
+      // Set after selection (select() retires any pending request): the new
+      // field should grab focus, like the form's own add button.
+      this.focusSectionId = node.id;
+      this.focusLeafKey = entry.key;
+    }
   }
 
   /** Remove a present optional child node, returning its entry to the parent's menu. */

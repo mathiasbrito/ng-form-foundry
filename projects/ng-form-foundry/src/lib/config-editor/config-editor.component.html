@@ -170,7 +170,12 @@
         }
 
         @if (s.schema && s.group) {
-          <nff-dynamic-recursive-form [schema]="s.schema" [formGroup]="s.group" [editable]="editable()" />
+          <nff-dynamic-recursive-form
+            [schema]="s.schema"
+            [formGroup]="s.group"
+            [editable]="editable()"
+            [focusLeaf]="s.node.id === focusSectionId ? focusLeafKey : null"
+          />
         }
 
         @if (s.node.map && !s.node.map.complex) {

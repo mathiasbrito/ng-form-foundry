@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormArray, FormGroup } from '@angular/forms';
 
 import { ConfigEditorComponent } from './config-editor.component';
@@ -228,6 +228,20 @@ describe('ConfigEditorComponent', () => {
     expect(component.selected).toBe(component.root);
     expect(component.root.optionals!.some((o) => o.key === 'note')).toBe(false);
   });
+
+  it('addOptional on a leaf focuses its field in the detail form, like the form add button does', fakeAsync(() => {
+    const entry = component.root.optionals!.find((o) => o.key === 'note')!;
+
+    component.addOptional(component.root, entry);
+    fixture.detectChanges();
+    tick(); // the leaf renderer defers its focus out of the change-detection pass
+
+    const el: HTMLElement = fixture.nativeElement;
+    const noteField = [...el.querySelectorAll('.detail mat-form-field')].find((f) =>
+      f.querySelector('mat-label')?.textContent?.includes('note'),
+    )!;
+    expect(document.activeElement).toBe(noteField.querySelector('input'));
+  }));
 
   it('addOptional on a map and a choice builds their nodes', () => {
     component.addOptional(component.root, component.root.optionals!.find((o) => o.key === 'tags')!);

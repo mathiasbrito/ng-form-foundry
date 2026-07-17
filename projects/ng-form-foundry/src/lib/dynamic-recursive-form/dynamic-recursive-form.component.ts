@@ -71,6 +71,12 @@ export class DynamicRecursiveFormComponent implements OnInit {
   readonly editable = model<boolean>(false);
   /** Invoked with {@link index} to append a new sibling form to a parent list. */
   readonly addButtonCallback = input<((index: number) => void) | null>(null);
+  /**
+   * Key of a presence leaf whose field should grab focus when it renders — lets
+   * a host that added the control itself (e.g. the tree editor's optionals
+   * menu) hand focus to the new field, like the form's own add button does.
+   */
+  readonly focusLeaf = input<string | null>(null);
 
   /** True when the schema is a root group (rendered flat, without a wrapping card). */
   readonly root = computed(() => this.schema().root ?? false);

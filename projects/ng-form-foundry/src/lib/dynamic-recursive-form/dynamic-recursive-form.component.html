@@ -38,7 +38,7 @@
                   [removable]=true
                   [editable]="editable()"
                   [initialValue]="formGroup().get(childItem.key)?.value"
-                  [autofocus]="presenceFocusKey === childItem.key"
+                  [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
                   (remove)="toggleLeafPresence(childItem.key, child, false)"
                 />
               } @else {
@@ -251,7 +251,7 @@
                 [removable]=true
                 [editable]="editable()"
                 [initialValue]="formGroup().get(childItem.key)?.value"
-                [autofocus]="presenceFocusKey === childItem.key"
+                [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
                 (remove)="toggleLeafPresence(childItem.key, child, false)"
               />
             } @else {
