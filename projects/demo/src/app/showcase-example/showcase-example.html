@@ -1,0 +1,66 @@
+<h2>ng-form-foundry 0.3.0 — features &amp; fixes</h2>
+<p class="intro">
+  One form exercising every new capability. Edit fields to see inline validation
+  errors, toggle the optional <em>Notes</em> field, switch the deploy scope, and
+  add/rename map entries — the value on the right is
+  <code>form.getRawValue()</code>, live.
+</p>
+
+<div class="layout">
+  <div class="form-col">
+    <nff-dynamic-recursive-form [schema]="schema" [formGroup]="form" [editable]="true" />
+  </div>
+
+  <aside class="side-col">
+    <section class="value-panel">
+      <h3>Live value — <code>getRawValue()</code></h3>
+      <pre>{{ value() | json }}</pre>
+      <p class="hint">
+        Form valid: <strong>{{ form.valid }}</strong>
+      </p>
+    </section>
+
+    <section class="features">
+      <h3>New in 0.3.0</h3>
+      <ul>
+        <li><strong>Validators + inline errors</strong> — hostname pattern/length, email &amp; URI formats, integer port with min/max, <code>multipleOf</code> CPU share.</li>
+        <li><strong>Optional shapes</strong> — <em>Replicas</em> is nullable; <em>Notes</em> is a presence toggle (absent until on); <em>API version</em> is a read-only constant.</li>
+        <li><strong>Choice</strong> — labeled cases; the active case is inferred from the seed data (no <code>__case</code> was supplied).</li>
+        <li><strong>Maps</strong> — open, arbitrary-keyed records you can add, remove, and rename.</li>
+      </ul>
+    </section>
+
+    <section class="fixes">
+      <h3>Round-trip fixes it also ships</h3>
+
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>R1 — non-string map keys</mat-card-title></mat-card-header>
+        <mat-card-content>
+          The <em>Port map</em> uses numeric keys (<code>80</code>, <code>443</code>).
+          They stay intact in the value above; the YAML/JSON transformers now
+          reconcile such keys on write-back instead of appending stringified
+          duplicates on a round-trip.
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>R2 — integers beyond 2^53</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <em>Ledger id</em> holds <code>9007199254740993</code> — past the safe
+          integer range. Carried as a string, it keeps full precision (a JS number
+          would round it to <code>…992</code>); the transformers re-emit it verbatim
+          as an unquoted number.
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>R3 — YANG identityref module</mat-card-title></mat-card-header>
+        <mat-card-content>
+          A derived identity is now resolved by module, not first-name match, so a
+          local-name collision (<code>modB:turbo</code>) keeps its original module
+          on write-back. Exercised in the transformer test suite.
+        </mat-card-content>
+      </mat-card>
+    </section>
+  </aside>
+</div>

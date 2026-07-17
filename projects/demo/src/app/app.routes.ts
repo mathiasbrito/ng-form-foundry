@@ -6,6 +6,7 @@ import { InitialPage } from './initial-page/initial-page';
 import { YangExample } from './yang-example/yang-example';
 import { TreeEditorExample } from './tree-editor-example/tree-editor-example';
 import { ComplexTreeExample } from './complex-tree-example/complex-tree-example';
+import { ShowcaseExample } from './showcase-example/showcase-example';
 
 export const routes: Routes = [
   {
@@ -32,6 +33,10 @@ export const routes: Routes = [
   {
     path: 'yang',
     component: YangExample
+  },
+  {
+    path: 'showcase',
+    component: ShowcaseExample
   },
   {
     path: 'tree',
