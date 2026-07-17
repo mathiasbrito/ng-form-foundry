@@ -1,6 +1,6 @@
 import { EffChoice, EffectiveModel, EffLeaf, EffNode } from './model';
 import { CASE_KEY, FormValue } from '../../core/schema';
-import { bareIdentity, qualifyIdentity, qualifiedName } from './rfc7951';
+import { qualifyIdentity, qualifiedName, wireToFormIdentity } from './rfc7951';
 
 /**
  * The round-trip between a plain form value and RFC 7951 instance data, driven
@@ -93,7 +93,7 @@ function decodeLeaf(node: EffLeaf, raw: unknown): unknown {
       return group;
     }
     case 'identityref':
-      return typeof raw === 'string' ? bareIdentity(raw) : raw;
+      return typeof raw === 'string' ? wireToFormIdentity(raw, node.module, node.type) : raw;
     default:
       return raw;
   }

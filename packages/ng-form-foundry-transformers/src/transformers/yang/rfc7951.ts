@@ -48,20 +48,60 @@ export function toFormLeafType(t: YangType): LeafType {
   return 'string';
 }
 
+type Identity = { name: string; module: string };
+
+/** True when more than one derived identity shares this local name. */
+function nameIsAmbiguous(identities: Identity[], name: string): boolean {
+  return identities.filter((i) => i.name === name).length > 1;
+}
+
+/**
+ * The token an identityref takes in the *form* (dropdown option and form value):
+ * the bare identity name, or a fully-qualified `module:name` when the bare name
+ * is ambiguous — the same local name is derived from more than one module.
+ * Keeping ambiguous identities qualified lets {@link qualifyIdentity} recover the
+ * exact identity on write-back; unambiguous ones stay bare for a clean UI.
+ */
+export function identityToken(module: string, name: string, identities: Identity[]): string {
+  return nameIsAmbiguous(identities, name) ? `${module}:${name}` : name;
+}
+
+/**
+ * Resolve an RFC 7951 identityref *wire* value to its form {@link identityToken}.
+ * A qualified `module:name` names that exact identity; a bare name is an identity
+ * in the leaf's own module (RFC 7951 §6.8).
+ */
+export function wireToFormIdentity(wire: string, leafModule: string, t: YangType): string {
+  const identities = t.identities ?? [];
+  const id = resolveIdentity(wire, leafModule, identities);
+  return id ? identityToken(id.module, id.name, identities) : splitQualified(wire).name;
+}
+
 /**
  * RFC 7951 identityref value (§6.8): `module:identity` when the identity is
  * defined in a different module than the referencing leaf, otherwise the bare
- * identity name.
+ * identity name. The incoming `token` is the form value — bare, or `module:name`
+ * when the local name is ambiguous (see {@link identityToken}) — so the exact
+ * identity is recovered even when two modules derive the same name.
  */
-export function qualifyIdentity(name: string, leafModule: string, t: YangType): string {
-  const id = t.identities?.find((i) => i.name === name);
-  return id && id.module !== leafModule ? `${id.module}:${name}` : name;
+export function qualifyIdentity(token: string, leafModule: string, t: YangType): string {
+  const identities = t.identities ?? [];
+  const { module, name } = splitQualified(token);
+  const id = resolveIdentity(token, leafModule, identities);
+  const idModule = id ? id.module : module ?? leafModule;
+  return idModule !== leafModule ? `${idModule}:${name}` : name;
 }
 
-/** The local identity name, dropping any `module:` prefix. */
-export function bareIdentity(value: string): string {
-  const i = value.indexOf(':');
-  return i === -1 ? value : value.slice(i + 1);
+/**
+ * The specific identity a bare-or-qualified reference points at: matched on
+ * module + name when qualified (or when the leaf's own module has that name),
+ * else the first identity with that local name.
+ */
+function resolveIdentity(ref: string, leafModule: string, identities: Identity[]): Identity | undefined {
+  const { module, name } = splitQualified(ref);
+  const owner = module ?? leafModule;
+  return identities.find((i) => i.name === name && i.module === owner)
+    ?? identities.find((i) => i.name === name);
 }
 
 /**

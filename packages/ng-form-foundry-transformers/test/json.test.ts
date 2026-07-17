@@ -52,6 +52,50 @@ test('compact JSON stays compact-ish (indent defaults to 2, no trailing NL)', ()
   assert.ok(!out.endsWith('\n'));
 });
 
+test('preserves integers beyond 2^53 and re-emits them unquoted', () => {
+  const source = `{
+  "id": 9007199254740993,
+  "ref": "9007199254740993",
+  "big": 18446744073709551615,
+  "name": "keep"
+}`;
+  const { initialValue, binding } = jsonTransformer.toSchema(source);
+
+  // Out-of-range integers are carried as strings (full precision); a quoted
+  // big-digit value stays a genuine string; the sibling is a normal value.
+  assert.equal((initialValue as any).id, '9007199254740993');
+  assert.equal((initialValue as any).big, '18446744073709551615');
+  assert.equal((initialValue as any).ref, '9007199254740993');
+
+  // Editing only the sibling must leave the big integers untouched: they re-emit
+  // as unquoted numbers with full precision (not rounded through a JS number).
+  const out = jsonTransformer.toSource({ ...(initialValue as object), name: 'changed' }, binding);
+  assert.match(out, /"id": 9007199254740993(,|\n)/);
+  assert.match(out, /"big": 18446744073709551615(,|\n)/);
+  assert.doesNotMatch(out, /9007199254740992/);
+  assert.match(out, /"ref": "9007199254740993"/); // still a quoted string
+  assert.match(out, /"name": "changed"/);
+});
+
+test('preserves big integers inside arrays', () => {
+  const source = '{"ids":[9007199254740993,1,18446744073709551615]}';
+  const { initialValue, binding } = jsonTransformer.toSchema(source);
+  assert.deepEqual((initialValue as any).ids, ['9007199254740993', 1, '18446744073709551615']);
+
+  const out = jsonTransformer.toSource(initialValue as any, binding);
+  assert.match(out, /9007199254740993/);
+  assert.match(out, /18446744073709551615/);
+  assert.doesNotMatch(out, /"9007199254740993"/); // unquoted
+  assert.doesNotMatch(out, /9007199254740992/); // no precision loss
+});
+
+test('writes an edited big integer back as an unquoted number', () => {
+  const { initialValue, binding } = jsonTransformer.toSchema('{"id":9007199254740993}');
+  const out = jsonTransformer.toSource({ ...(initialValue as object), id: '9007199254740994' }, binding);
+  assert.match(out, /"id": 9007199254740994/);
+  assert.doesNotMatch(out, /"9007199254740994"/); // unquoted, not a string
+});
+
 test('all three transformers register and resolve by id', () => {
   const registry = new TransformerRegistry()
     .register(jsonTransformer)

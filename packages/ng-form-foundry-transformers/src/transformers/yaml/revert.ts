@@ -1,6 +1,5 @@
-import { type Document, type Node, type YAMLMap, isMap, isScalar, isSeq } from 'yaml';
-
-type Path = (string | number)[];
+import { type Document, type Node, type Pair, type YAMLMap, type YAMLSeq, isMap, isScalar, isSeq } from 'yaml';
+import { isIntegerString } from '../../core/bigint';
 
 /**
  * Apply an edited form value onto a parsed YAML {@link Document} in place,
@@ -12,59 +11,99 @@ type Path = (string | number)[];
  * comments. Counterpart of the schema/inference in {@link import('./infer')} and
  * {@link import('./json-schema')}. Callers should clone the document first if the
  * original must be preserved.
+ *
+ * Map keys are matched by the *same string form* `doc.toJS()` produced when the
+ * form value was built, so non-string keys (a `80:` port map, a `true:` flag)
+ * reconcile against their original typed key nodes instead of being appended as
+ * duplicate string-keyed pairs.
  */
 export function applyValueToDocument(doc: Document, value: unknown): void {
   if (doc.contents == null) {
     doc.contents = doc.createNode(value) as unknown as Document['contents'];
     return;
   }
-  applyAt(doc, [], value);
+  doc.contents = applyToNode(doc, doc.contents as unknown, value) as Document['contents'];
 }
 
-function applyAt(doc: Document, path: Path, value: unknown): void {
-  const node = nodeAt(doc, path);
-
+/**
+ * Reconcile the parsed `node` at one position with its edited `value`, returning
+ * the node to store there. A scalar is mutated in place so its comments survive;
+ * a map/sequence is reconciled child-by-child; a shape change (or a brand-new
+ * position) allocates a fresh node.
+ */
+function applyToNode(doc: Document, node: unknown, value: unknown): unknown {
   if (isPlainObject(value)) {
-    if (!isMap(node)) return replaceAt(doc, path, value);
-    const keys = new Set(Object.keys(value));
-    for (const key of mapKeyStrings(node)) {
-      if (!keys.has(key)) node.delete(key);
-    }
-    for (const key of keys) applyAt(doc, [...path, key], value[key]);
-    return;
+    if (!isMap(node)) return doc.createNode(value);
+    reconcileMap(doc, node, value);
+    return node;
   }
 
   if (Array.isArray(value)) {
-    if (!isSeq(node)) return replaceAt(doc, path, value);
-    while (node.items.length > value.length) node.items.pop();
-    for (let i = 0; i < value.length; i++) {
-      if (i < node.items.length) applyAt(doc, [...path, i], value[i]);
-      else node.items.push(doc.createNode(value[i]) as Node);
-    }
-    return;
+    if (!isSeq(node)) return doc.createNode(value);
+    reconcileSeq(doc, node, value);
+    return node;
   }
 
   // scalar (string / number / boolean / null)
-  if (isScalar(node)) node.value = value;
-  else replaceAt(doc, path, value);
+  if (isScalar(node)) {
+    node.value = coerceScalarValue(value, node.value);
+    return node;
+  }
+  return doc.createNode(value);
 }
 
-/** Set the whole subtree at `path` to a fresh node (used when the shape changed). */
-function replaceAt(doc: Document, path: Path, value: unknown): void {
-  if (path.length === 0) {
-    doc.contents = doc.createNode(value) as unknown as Document['contents'];
-  } else {
-    doc.setIn(path, doc.createNode(value));
+/**
+ * Update a map node against the value object: drop pairs whose key is gone,
+ * recurse into the ones that remain (matched by their `toJS` key string, so
+ * typed keys line up), and append a fresh pair for each genuinely new key.
+ */
+function reconcileMap(doc: Document, node: YAMLMap, value: Record<string, unknown>): void {
+  node.items = node.items.filter((pair) => keyString(pair.key) in value);
+  for (const key of Object.keys(value)) {
+    const pair = node.items.find((p) => keyString(p.key) === key);
+    if (pair) {
+      pair.value = applyToNode(doc, pair.value, value[key]) as Node | null;
+    } else {
+      node.items.push(doc.createPair(key, value[key]) as Pair);
+    }
   }
 }
 
-function nodeAt(doc: Document, path: Path): unknown {
-  return path.length === 0 ? doc.contents : doc.getIn(path, true);
+/** Update a sequence node: shrink/grow to the value's length, recurse per item. */
+function reconcileSeq(doc: Document, node: YAMLSeq, value: unknown[]): void {
+  while (node.items.length > value.length) node.items.pop();
+  for (let i = 0; i < value.length; i++) {
+    if (i < node.items.length) {
+      node.items[i] = applyToNode(doc, node.items[i], value[i]) as Node;
+    } else {
+      node.items.push(doc.createNode(value[i]) as Node);
+    }
+  }
 }
 
-/** The string keys currently present in a YAML map node. */
-function mapKeyStrings(node: YAMLMap): string[] {
-  return node.items.map((pair) => (isScalar(pair.key) ? String(pair.key.value) : String(pair.key)));
+/**
+ * The value to store on a scalar node. An out-of-range integer is carried in the
+ * form value as a string (a `number` would lose precision); when the node it
+ * lands on already held a BigInt — i.e. the source had an unquoted integer there
+ * — restore the BigInt so it re-emits as a bare number rather than a quoted
+ * string. Everything else passes through unchanged (a genuine string key stays a
+ * string node, so it keeps its quotes).
+ */
+function coerceScalarValue(value: unknown, current: unknown): unknown {
+  if (typeof current === 'bigint' && typeof value === 'string' && isIntegerString(value)) {
+    return BigInt(value);
+  }
+  return value;
+}
+
+/**
+ * The string a key node takes as a JS object key, matching `doc.toJS()`: the
+ * scalar value stringified, with `null`/`undefined` collapsing to `''` (the
+ * empty key `toJS` uses for a `null:` key).
+ */
+function keyString(key: unknown): string {
+  const v = isScalar(key) ? key.value : key;
+  return v == null ? '' : String(v);
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {

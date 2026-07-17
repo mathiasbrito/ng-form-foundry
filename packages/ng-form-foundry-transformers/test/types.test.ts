@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mapToSchema } from '../src/transformers/yang/mapper';
 import { toFormValue, toYangData } from '../src/transformers/yang/revert';
+import type { EffectiveModel } from '../src/transformers/yang/model';
 import { exampleTypesModel, exampleTypesData } from './fixtures/example-types';
 
 test('maps the neglected leaf types to the right form controls', () => {
@@ -73,4 +74,47 @@ test('cross-module identityref is re-qualified; same-module stays bare', () => {
     (toYangData(form, exampleTypesModel) as any)['example-types:config'].mode,
     'fast',
   );
+});
+
+test('identityref with a local-name collision keeps the right module on round-trip', () => {
+  // Two derived identities share the local name `turbo` but live in different
+  // modules, so the bare name is ambiguous: the value must stay qualified and
+  // encode back to the module it came from, resolved by module rather than name.
+  const model: EffectiveModel = {
+    modules: [{ name: 'base', namespace: 'urn:base' }],
+    roots: [
+      {
+        kind: 'container',
+        name: 'settings',
+        module: 'base',
+        children: [
+          {
+            kind: 'leaf',
+            name: 'algo',
+            module: 'base',
+            type: {
+              base: 'identityref',
+              identities: [
+                { name: 'turbo', module: 'mod-a' },
+                { name: 'turbo', module: 'mod-b' },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  // The colliding bare name forces qualified dropdown options.
+  const algo = (mapToSchema(model).children['settings'] as any).children['algo'];
+  assert.deepEqual(algo.enum, ['mod-a:turbo', 'mod-b:turbo']);
+
+  // A mod-b value must decode to a mod-b token and re-encode to mod-b.
+  const form = toFormValue({ 'base:settings': { algo: 'mod-b:turbo' } }, model) as any;
+  assert.equal(form.settings.algo, 'mod-b:turbo');
+  assert.equal((toYangData(form, model) as any)['base:settings'].algo, 'mod-b:turbo');
+
+  // ...and mod-a stays mod-a.
+  form.settings.algo = 'mod-a:turbo';
+  assert.equal((toYangData(form, model) as any)['base:settings'].algo, 'mod-a:turbo');
 });

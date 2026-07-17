@@ -1,6 +1,6 @@
 import { EffectiveModel, EffLeaf, EffNode } from './model';
 import { Choice, Leaf, LeafList, NodeGroup, NodeGroupList, NodeType } from '../../core/schema';
-import { toFormLeafType } from './rfc7951';
+import { identityToken, toFormLeafType } from './rfc7951';
 
 /**
  * Derive the frontend `NodeGroup` schema from a resolved {@link EffectiveModel}.
@@ -42,7 +42,8 @@ function mapNode(node: EffNode): NodeType {
       const leaf: Leaf = { kind: 'leaf', name: node.name, type: toFormLeafType(node.type) };
       if (node.mandatory) leaf.required = true;
       if (node.default !== undefined) leaf.default = node.default;
-      const options = node.type.enums ?? node.type.identities?.map((i) => i.name);
+      const identities = node.type.identities;
+      const options = node.type.enums ?? identities?.map((i) => identityToken(i.module, i.name, identities));
       if (options) leaf.enum = [...options];
       return leaf;
     }
