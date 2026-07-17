@@ -6,22 +6,28 @@
           @for (childItem of nodeGroupChildrenList; track $index) {
             @let child = childItem.value;
             @if (child.kind == 'leaf' && child.presence) {
-              <div class="presence-leaf">
-                <mat-checkbox
-                  [checked]="!!formGroup().get(childItem.key)"
+              @if (formGroup().get(childItem.key)) {
+                <!-- Present: the field takes the add button's place in the row; its
+                     remove control drops the leaf back to the unchecked state. -->
+                <nff-leaf-renderer
+                  [leaf_]=child
+                  [control]=asFormControl(formGroup().get(childItem.key))
+                  [removable]=true
+                  [editable]="editable()"
+                  [initialValue]="formGroup().get(childItem.key)?.value"
+                  [autofocus]="presenceFocusKey === childItem.key"
+                  (remove)="toggleLeafPresence(childItem.key, child, false)"
+                />
+              } @else {
+                <button
+                  matButton="outlined"
+                  class="presence-leaf-add"
                   [disabled]="!editable()"
-                  (change)="toggleLeafPresence(childItem.key, child, $event.checked)"
-                >{{ child.label ?? child.name }}</mat-checkbox>
-                @if (formGroup().get(childItem.key)) {
-                  <nff-leaf-renderer
-                    [leaf_]=child
-                    [control]=asFormControl(formGroup().get(childItem.key))
-                    [removable]=false
-                    [editable]="editable()"
-                    [initialValue]="formGroup().get(childItem.key)?.value"
-                  />
-                }
-              </div>
+                  (click)="toggleLeafPresence(childItem.key, child, true)"
+                >
+                  <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
+                </button>
+              }
             } @else if (child.kind == 'leaf') {
               <nff-leaf-renderer
                 [leaf_]=child
@@ -209,22 +215,28 @@
         @for (childItem of nodeGroupChildrenList; track $index) {
           @let child = childItem.value;
           @if (child.kind == 'leaf' && child.presence) {
-            <div class="presence-leaf">
-              <mat-checkbox
-                [checked]="!!formGroup().get(childItem.key)"
+            @if (formGroup().get(childItem.key)) {
+              <!-- Present: the field takes the add button's place in the row; its
+                   remove control drops the leaf back to the unchecked state. -->
+              <nff-leaf-renderer
+                [leaf_]=child
+                [control]=asFormControl(formGroup().get(childItem.key))
+                [removable]=true
+                [editable]="editable()"
+                [initialValue]="formGroup().get(childItem.key)?.value"
+                [autofocus]="presenceFocusKey === childItem.key"
+                (remove)="toggleLeafPresence(childItem.key, child, false)"
+              />
+            } @else {
+              <button
+                matButton="outlined"
+                class="presence-leaf-add"
                 [disabled]="!editable()"
-                (change)="toggleLeafPresence(childItem.key, child, $event.checked)"
-              >{{ child.label ?? child.name }}</mat-checkbox>
-              @if (formGroup().get(childItem.key)) {
-                <nff-leaf-renderer
-                  [leaf_]=child
-                  [control]=asFormControl(formGroup().get(childItem.key))
-                  [removable]=false
-                  [editable]="editable()"
-                  [initialValue]="formGroup().get(childItem.key)?.value"
-                />
-              }
-            </div>
+                (click)="toggleLeafPresence(childItem.key, child, true)"
+              >
+                <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
+              </button>
+            }
           } @else if (child.kind == 'leaf') {
             <nff-leaf-renderer
               [leaf_]=child

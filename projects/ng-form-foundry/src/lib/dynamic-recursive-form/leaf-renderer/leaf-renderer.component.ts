@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { AnonLeaf, Leaf } from '../../types/dynamic-recursive.types';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -27,17 +27,29 @@ import { LeafEnumRendererComponent } from '../leaf-enum-renderer/leaf-enum-rende
   templateUrl: './leaf-renderer.component.html',
   styleUrl: './leaf-renderer.component.scss',
 })
-export class LeafRendererComponent implements OnInit {
+export class LeafRendererComponent implements OnInit, AfterViewInit {
   @Input() leaf_!: Leaf | AnonLeaf;
   @Input() control: FormControl = new FormControl();
   @Input() initialValue?: any;
   @Input() removable: boolean = false;
   @Input() editable = true;
+  /** Focus the field once rendered — for fields the user just added (e.g. an enabled presence leaf). */
+  @Input() autofocus = false;
   @Output() remove: EventEmitter<number> = new EventEmitter();
+
+  constructor(private readonly elementRef: ElementRef<HTMLElement>) {}
 
   ngOnInit(): void {
     if (this.initialValue) {
       this.control.patchValue(this.initialValue);
+    }
+  }
+
+  ngAfterViewInit(): void {
+    if (this.autofocus) {
+      // Deferred out of the change-detection pass: focusing flips the form
+      // field's label-float state, which would otherwise trip NG0100.
+      setTimeout(() => this.elementRef.nativeElement.querySelector<HTMLElement>('input, mat-select')?.focus());
     }
   }
 

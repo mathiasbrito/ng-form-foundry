@@ -37,14 +37,14 @@
   gap: 4px;
 }
 
-// A presence leaf sits in the `.fields` row like a normal field: its enable
-// toggle stacks above the input, and it flexes to the same basis as its peers.
-.presence-leaf {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1 1 0;
-  min-width: 10%;
+// An absent presence leaf shows only an "Add <field>" button, sitting in the
+// `.fields` row flow like a compact field, vertically centered against the
+// 56px input box of its row neighbors. Once enabled, the field itself (with
+// its remove control) takes this spot — see the leaf presence template branch.
+.presence-leaf-add {
+  flex: 0 1 auto;
+  align-self: flex-start;
+  margin-top: 8px;
 }
 
 .fields {

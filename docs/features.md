@@ -63,8 +63,11 @@ Three distinct notions, because JSON distinguishes them:
   nullable, so `null` survives `getRawValue()` and the constraint validators accept
   it. Maps JSON Schema `type: [T, 'null']`.
 - **Presence** (`presence: true`) — the key itself is data: an *absent key* vs. a
-  present one. Rendered with an on/off toggle; when off, the control is removed
-  from the group so it drops from the value entirely, and re-added when toggled on.
+  present one. An absent presence leaf renders as an "Add *field*" button sitting
+  in the field flow; clicking it builds the control and focuses the field, which
+  carries a remove button that drops the key again. When absent, the control is
+  removed from the group so it drops from the value entirely. Presence groups,
+  maps, and choices render with an on/off toggle on their section panel.
 
 ```ts
 children: {

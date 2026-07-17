@@ -131,7 +131,9 @@ export class ConfigEditorComponent implements OnInit {
 
   select(node: TreeNode) {
     this.selected = node;
-    // Reveal the node's rows in the tree as it opens on the right.
+    // Reveal the node's rows in the tree as it opens on the right. Navigating
+    // also retires any pending just-added-leaf focus request.
+    this.focusLeafKey = null;
     if (this.hasExpandableContent(node)) this.expanded.add(node.id);
   }
 
@@ -202,6 +204,9 @@ export class ConfigEditorComponent implements OnInit {
     this.reselectIfOrphaned(listNode);
   }
 
+  /** The key of the optional leaf the user just added; its detail-pane field grabs focus when rendered. */
+  protected focusLeafKey: string | null = null;
+
   /** Add an absent optional child from the menu: build its control, place it in the tree, and select it. */
   addOptional(node: TreeNode, entry: OptionalEntry) {
     if (!node.group || node.group.get(entry.key)) return;
@@ -214,6 +219,7 @@ export class ConfigEditorComponent implements OnInit {
     if (entry.schema.kind === 'leaf') {
       node.leaves.push({ key: entry.key, node: entry.schema, optional: entry });
       this.select(node);
+      this.focusLeafKey = entry.key;
       return;
     }
     const child = this.buildChildNode(entry.schema, control, entry.label);

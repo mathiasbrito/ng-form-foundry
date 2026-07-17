@@ -169,6 +169,7 @@
                 [control]="asFormControl(selected.group.get(leaf.key))"
                 [editable]="editable()"
                 [removable]="!!leaf.optional"
+                [autofocus]="leaf.key === focusLeafKey"
                 (remove)="removeOptionalLeaf(selected, leaf)"
               />
             }

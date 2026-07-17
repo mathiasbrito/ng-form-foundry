@@ -109,18 +109,24 @@ export class DynamicRecursiveFormComponent implements OnInit {
     }
   }
 
+  /** The key of the presence leaf the user just enabled; its field grabs focus when rendered. */
+  protected presenceFocusKey: string | null = null;
+
   /**
    * Add or remove a presence leaf's control on this form. Removing it drops the
-   * leaf from `form.value`; adding it rebuilds the control from its schema.
+   * leaf from `form.value`; adding it rebuilds the control from its schema and
+   * focuses the rendered field.
    */
   toggleLeafPresence(key: string, schema: Leaf, present: boolean) {
     const group = this.formGroup();
     if (present) {
       if (!group.get(key)) {
         group.addControl(key, buildControl(schema) as never);
+        this.presenceFocusKey = key;
       }
     } else if (group.get(key)) {
       group.removeControl(key);
+      if (this.presenceFocusKey === key) this.presenceFocusKey = null;
     }
   }
 
