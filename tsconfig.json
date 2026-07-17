@@ -11,6 +11,9 @@
     "paths": {
       "ng-form-foundry": [
         "./projects/ng-form-foundry/src/public-api.ts"
+      ],
+      "ng-form-foundry-transformers": [
+        "./packages/ng-form-foundry-transformers/src/core/index.ts"
       ]
     },
     "noFallthroughCasesInSwitch": true,

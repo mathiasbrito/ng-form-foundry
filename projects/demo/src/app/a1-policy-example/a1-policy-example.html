@@ -1,0 +1,41 @@
+<h2>A1 policy from JSON Schema — the consumer's flow</h2>
+<p class="intro">
+  This form was built <strong>at runtime</strong> by
+  <code>jsonSchemaToNodeGroup()</code> from the draft&nbsp;2020-12 JSON Schema on
+  the right — the same path the airpuls A1 console uses. It checks the consumer's
+  asks against 0.3.0: constraint validators, the <code>anyOf</code>
+  <em>scope</em> rendered as a choice, cross-file <code>$ref</code> into a shared
+  <em>common</em> document, and the active case <em>inferred</em> from seed data
+  that carries no <code>__case</code>.
+</p>
+
+<div class="layout">
+  <div class="form-col">
+    <nff-dynamic-recursive-form [schema]="schema" [formGroup]="form" [editable]="true" />
+  </div>
+
+  <aside class="side-col">
+    <section>
+      <h3>What this verifies</h3>
+      <ul>
+        <li><strong>anyOf → choice</strong> — <em>Scope</em> is a 3-way selector; the seed had a <code>sliceId</code>, so <em>By slice + QoS</em> is pre-selected by inference.</li>
+        <li><strong>cross-file <code>$ref</code></strong> — <code>ueId</code>/<code>cellId</code>/<code>sliceId</code>/<code>qosId</code> resolve into the common doc; nested <code>oneOf</code> (UE id, QoS id) become inner choices.</li>
+        <li><strong>constraints</strong> — <code>sst</code> integer 0–255, <code>sd</code> hex pattern, <code>5QI</code> 1–256, integer <code>gfbr</code>/<code>mfbr</code> — all inline-validated.</li>
+      </ul>
+    </section>
+
+    <section class="value-panel">
+      <h3>Live value — <code>getRawValue()</code></h3>
+      <pre>{{ value() | json }}</pre>
+      <p class="hint">Form valid: <strong>{{ form.valid }}</strong></p>
+    </section>
+
+    <section>
+      <h3>Source JSON Schema</h3>
+      <details>
+        <summary>QoS Target policy (draft 2020-12)</summary>
+        <pre class="source">{{ sourceJson }}</pre>
+      </details>
+    </section>
+  </aside>
+</div>

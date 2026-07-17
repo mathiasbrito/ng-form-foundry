@@ -1,0 +1,69 @@
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.intro {
+  max-width: 74ch;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.form-col {
+  flex: 1 1 560px;
+  min-width: 0;
+}
+
+.side-col {
+  flex: 1 1 360px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.side-col ul {
+  padding-left: 18px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.side-col li {
+  margin-bottom: 6px;
+}
+
+pre {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.value-panel pre {
+  max-height: 300px;
+}
+
+.source {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+code {
+  background: var(--mat-sys-surface-container-high);
+  padding: 0 4px;
+  border-radius: 4px;
+}
