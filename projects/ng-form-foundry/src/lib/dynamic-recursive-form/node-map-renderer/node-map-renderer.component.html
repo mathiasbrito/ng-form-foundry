@@ -1,8 +1,5 @@
 @if (formGroup && nodeMap) {
   <div class="map-node">
-    @if (nodeMap.label) {
-      <div class="map-title">{{ nodeMap.label }}</div>
-    }
     @for (key of entryKeys; track key) {
       <div class="map-entry">
         <mat-form-field class="key-field" [appearance]="editable ? 'fill' : 'outline'">

@@ -142,6 +142,15 @@ export class DynamicRecursiveFormComponent implements OnInit {
     return choice.caseLabels?.[caseName] ?? caseName;
   }
 
+  /**
+   * A copy of a group flagged to render its fields inline (no inner panel). Used
+   * for a presence group's body, whose container is the presence panel itself, so
+   * the group's own section panel would be a redundant second box.
+   */
+  flatGroup(group: NodeGroup): NodeGroup {
+    return { ...group, appearance: { ...group.appearance, flatten: true } };
+  }
+
   /** Swap a choice's field controls when the selected case changes. */
   switchCase(key: string, choice: NodeChoice, caseName: string) {
     const group = this.formGroup().get(key) as FormGroup;
