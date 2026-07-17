@@ -181,10 +181,21 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.3.0` — data-integrity release plus JSON Schema draft 2020-12. Fixes three
+round-trip corruption bugs shipped in 0.2.1 (YAML maps with non-string keys
+duplicated entries; integers beyond 2^53 lost precision — now carried
+losslessly as strings, mirroring the YANG uint64 strategy; YANG identityref
+resolved to the wrong module on a local-name collision). `jsonSchemaToNodeGroup`
+grew from a draft-07 subset to draft 2020-12: `$ref`/`$defs`, cross-file `$ref`
+by `$id` (`refDocuments` option), `anyOf`/`oneOf` → choice, `type: [T, 'null']`
+→ nullable, `const` → read-only, `additionalProperties`/`patternProperties` →
+map, and string/number constraints as validators.
+
 `0.2.1` — first release under this name (formerly `yang-form-foundry`),
 restructured into a transformer catalog. YANG, YAML, and JSON transformers are
 complete; YAML and JSON share the format-agnostic form builders in `core` and are
-JSON-Schema-driven or inferred.
+JSON-Schema-driven or inferred. **Deprecated: contains the round-trip corruption
+bugs fixed in 0.3.0.**
 
 ## License
 
