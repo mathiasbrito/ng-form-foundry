@@ -115,12 +115,15 @@ describe('ConfigEditorComponent', () => {
   });
 
   it('selecting a node flattens its subtree into breadcrumb-separated sections, pre-order', () => {
-    // Root selection: one section per node, the selected node first.
-    expect(component.sections.map((s) => s.node.id)).toEqual([
-      '', 'system', 'ifaces', 'ifaces/0', 'ifaces/1', 'scope', 'scope/ports', 'labels', 'servers', 'servers/s1',
+    // Root selection, pre-order. A non-empty list's / complex map's own section
+    // would hold only its heading, so it is dropped; its add control trails the
+    // items as a headingless footer (same node id, footer flag).
+    expect(component.sections.map((s) => (s.footer ? `${s.node.id}:footer` : s.node.id))).toEqual([
+      '', 'system', 'ifaces/0', 'ifaces/1', 'ifaces:footer', 'scope', 'scope/ports', 'labels', 'servers/s1', 'servers:footer',
     ]);
     // Section trails run from the selected node to the section's node.
-    expect(component.sections[3].trail.map((n) => n.label)).toEqual(['device', 'ifaces', '#1']);
+    const item0 = component.sections.find((s) => s.node.id === 'ifaces/0')!;
+    expect(item0.trail.map((n) => n.label)).toEqual(['device', 'ifaces', '#1']);
 
     const system = node('system');
     component.select(system);
@@ -150,7 +153,8 @@ describe('ConfigEditorComponent', () => {
     expect(el.querySelector('.child-links')).toBeNull();
     expect(el.querySelector('.detail mat-expansion-panel')).toBeNull();
     const headings = [...el.querySelectorAll<HTMLElement>('.detail .section-heading')];
-    expect(headings.length).toBe(component.sections.length - 1); // every section but the first
+    // Every section but the first carries a heading — footers never do.
+    expect(headings.length).toBe(component.sections.filter((s) => !s.footer).length - 1);
     // Assert the heading's structure, not its collapsed text: ancestor links, then the current segment.
     const links = [...headings[0].querySelectorAll('.crumb-link')].map((a) => a.textContent!.trim());
     expect(links).toEqual(['device']);

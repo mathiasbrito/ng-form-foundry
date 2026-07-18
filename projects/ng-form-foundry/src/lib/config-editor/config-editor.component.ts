@@ -53,6 +53,8 @@ interface DetailSection {
   schema: NodeGroup | null;
   /** The group `schema` binds to (the node's group; for a choice, the choice group). */
   group: FormGroup | null;
+  /** A trailing add-control section of a list / complex map: renders after the last item, with no heading. */
+  footer?: boolean;
 }
 
 /**
@@ -564,6 +566,11 @@ export class ConfigEditorComponent implements OnDestroy {
     const here = [...trail, node];
     const list: DetailSection[] = [{ node, trail: here, ...this.sectionContent(node) }];
     for (const child of node.children) list.push(...this.buildSections(child, here));
+    // A list's / complex map's add control trails its items — appending
+    // belongs after the last member, not under the container's heading.
+    if (node.list || node.map?.complex) {
+      list.push({ node, trail: here, schema: null, group: null, footer: true });
+    }
     return list;
   }
 
@@ -574,8 +581,19 @@ export class ConfigEditorComponent implements OnDestroy {
    * dropped from the flat list — a divider with nothing under it is clutter.
    */
   private sectionHasContent(s: DetailSection): boolean {
+    if (s.footer) return true;
     const n = s.node;
-    return !!(s.schema || n.choice || n.list || n.map || n.mapEntry || this.presentRangeHint(s));
+    // A non-empty list / complex map's leading section would hold only its
+    // heading (the add control lives in the footer): drop it — the items'
+    // trails carry the container in their breadcrumbs.
+    return !!(
+      s.schema ||
+      n.choice ||
+      n.mapEntry ||
+      (n.map && !n.map.complex) ||
+      this.emptySectionHint(s) ||
+      this.presentRangeHint(s)
+    );
   }
 
   /** A section's own renderable fields: a leaf-only schema slice and the group it binds to. */

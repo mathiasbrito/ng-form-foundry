@@ -142,8 +142,8 @@
       <!-- The selected subtree as a flat section list: each descendant's fields
            under a breadcrumb heading — the headings, not nesting, mark the
            boundary between one child and the next. -->
-      @for (s of sections; track s.node.id) {
-        @if (s.trail.length > 1) {
+      @for (s of sections; track s.node.id + (s.footer ? ':footer' : '')) {
+        @if (s.trail.length > 1 && !s.footer) {
           <!-- A heading, not a nav landmark: dozens of identical "Section"
                landmarks would flood the assistive-tech landmark list. Its
                accessible name is the trail itself. -->
@@ -207,22 +207,22 @@
           />
         }
 
-        @if (editable() && s.node.map?.complex && !mapAtMax(s.node)) {
+        @if (s.footer && editable() && s.node.map?.complex && !mapAtMax(s.node)) {
           <div class="section-actions">
             <button matButton (click)="addTreeMapEntry(s.node, true)"><mat-icon>add</mat-icon> Add entry</button>
           </div>
         }
-        @if (editable() && s.node.list && !listAtMax(s.node)) {
+        @if (s.footer && editable() && s.node.list && !listAtMax(s.node)) {
           <div class="section-actions">
             <button matButton (click)="addItem(s.node, true)">
               <mat-icon>add</mat-icon> Add {{ s.node.list.itemLabel }}
             </button>
           </div>
         }
-        @if (emptySectionHint(s); as hint) {
+        @if (!s.footer && emptySectionHint(s); as hint) {
           <p class="empty">{{ hint }}</p>
         }
-        @if (presentRangeHint(s); as hint) {
+        @if (!s.footer && presentRangeHint(s); as hint) {
           <p class="section-error" role="alert">{{ hint }}</p>
         }
       }
