@@ -93,7 +93,14 @@ this.form.valid;         // validity from the schema's constraint validators
 If the schema contains `choice` nodes, `getRawValue()` carries their `__case`
 discriminators; `serializeForm(schema, form)` returns the value with them
 stripped — the inline wire encoding, which `buildFormFromSchema` accepts back
-as `initial`.
+as `initial` (the active case is re-inferred from which fields are present and
+required).
+
+Validity mirrors what would go on the wire: `presence` fields are absent until
+enabled and required while enabled (unless `nullable`), a `mandatory` or
+enabled-presence `choice` errors until a case is picked, and lists start empty
+rather than seeding a placeholder entry. A valid form serializes to a value
+that satisfies the schema's own constraints.
 
 ## Documentation
 

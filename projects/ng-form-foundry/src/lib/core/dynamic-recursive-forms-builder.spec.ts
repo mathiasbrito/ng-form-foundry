@@ -225,6 +225,18 @@ describe('dynamic-recursive-forms-builder', () => {
     expect(arr.getRawValue()).toEqual(['a']);
   });
 
+  it('seeds an empty array when a nodeGroupList has no initial data', () => {
+    const list: NodeGroupList = {
+      kind: 'nodeGroupList',
+      name: 'items',
+      type: { kind: 'nodeGroup', name: 'item', children: { x: { kind: 'leaf', type: 'string', name: 'x' } } },
+    };
+    const arr = buildControl(list) as FormArray;
+    // A phantom all-null group would put an invalid member on the wire.
+    expect(arr.length).toBe(0);
+    expect(arr.getRawValue()).toEqual([]);
+  });
+
   it('BUG: leafList child controls are nullable, contradicting the non-null typed model', () => {
     const arr = buildControl(
       { kind: 'leafList', type: 'string', name: 'tags' } as LeafList,

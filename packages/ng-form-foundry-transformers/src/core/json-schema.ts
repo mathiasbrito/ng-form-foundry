@@ -68,7 +68,7 @@ export interface JsonSchemaOptions {
    * which is what `required` + `additionalProperties: false` schemas demand —
    * an untouched optional materialized as `null` fails validation against the
    * very schema the form came from. Set `false` to materialize every property
-   * unconditionally, as versions before 0.3.3 did.
+   * unconditionally.
    */
   optionalPresence?: boolean;
 }

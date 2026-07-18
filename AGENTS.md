@@ -53,12 +53,18 @@ Distinctions agents get wrong:
   key is always there; `nullable: true` = `null` is a valid value; `presence:
   true` = the *key itself* is data (control removed when absent, "Add *field*"
   button / optionals menu in the UIs). `leaf`, `nodeGroup`, `map`, and `choice`
-  all support `presence`.
+  all support `presence` — but not the two list kinds. An *enabled* presence
+  leaf is required unless `nullable` (materialized means the key serializes);
+  a `mandatory` or enabled-presence choice errors `caseRequired` until a case
+  is picked.
 - **`map` vs `nodeGroup`** — known keys at authoring time → `nodeGroup`; open
   keys → `map`. They compose.
 - **Choice case inference** — wire data carries no `__case`; when seeding from
-  data the active case is inferred by best field overlap
-  (`resolveChoiceCase`). Cases may be anonymous (`case0`, …) with `caseLabels`.
+  data the active case is the best-ranked candidate (`resolveChoiceCase`):
+  fewest data keys the case cannot hold, then fewest non-`presence` fields the
+  data lacks (so `{qosId}` picks the branch requiring only `qosId`, not the one
+  also requiring `ueId`), then most matched fields, then declaration order.
+  Cases may be anonymous (`case0`, …) with `caseLabels`.
 
 **Typing gotcha:** author schemas with `defineSchema({...})` (or `satisfies
 NodeGroup`). Annotating a constant `: NodeGroup` widens the literal type and

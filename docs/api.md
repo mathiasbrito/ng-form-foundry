@@ -57,7 +57,7 @@ programmatically.
 /** Normalize a case body to a field record (a leaf-bodied case becomes a one-field record). */
 function caseFields(body: ChoiceCase): Record<string, NodeType>;
 
-/** The active case: explicit `__case`, else inferred from the data shape, else the schema default. */
+/** The active case: explicit `__case`, else the best-ranked case for the data shape (fewest uncovered data keys, then fewest non-presence fields the data lacks), else the schema default. */
 function resolveChoiceCase(choice: NodeChoice, initial?: Record<string, unknown> | null): string | undefined;
 
 /** Switch a choice group to `caseName`: sets `__case`, swaps the field controls. */

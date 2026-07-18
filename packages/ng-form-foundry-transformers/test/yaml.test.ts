@@ -193,3 +193,17 @@ test('schemaOptions ride through toSchema: optionalPresence opt-out and refDocum
   });
   assert.equal((unmarked.schema.children['port'] as any).presence, undefined);
 });
+
+test('a missing optional key stays absent through the schema-driven round-trip', () => {
+  const jsonSchema: JsonSchema = {
+    type: 'object',
+    required: ['host'],
+    properties: { host: { type: 'string' }, port: { type: 'integer' } },
+  };
+  const { schema, binding, initialValue } = yamlTransformer.toSchema('host: prod # keep\n', { schema: jsonSchema });
+  assert.equal((schema.children['port'] as any).presence, true);
+  assert.deepEqual(initialValue, { host: 'prod' }); // no port key to seed a control from
+  // An untouched form round-trips the initial value; port must not appear as null.
+  const out = yamlTransformer.toSource(initialValue!, binding);
+  assert.equal(out, 'host: prod # keep\n');
+});
