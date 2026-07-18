@@ -280,11 +280,7 @@ export class ConfigEditorComponent implements OnDestroy {
   /** Add an absent optional child from the menu: build its control and select the node it lands on. */
   addOptional(node: TreeNode, entry: OptionalEntry) {
     if (!node.group || node.group.get(entry.key)) return;
-    const control =
-      entry.schema.kind === 'nodeGroup'
-        ? buildFormFromSchema(entry.schema)
-        : (buildControl(entry.schema) as AbstractControl);
-    node.group.addControl(entry.key, control);
+    node.group.addControl(entry.key, buildControl(entry.schema) as AbstractControl);
     // A leaf renders in the parent's detail pane; complex kinds become tree nodes.
     this.selectByPath(entry.schema.kind === 'leaf' ? node.id : this.join(node.id, entry.key));
     if (entry.schema.kind === 'leaf') {

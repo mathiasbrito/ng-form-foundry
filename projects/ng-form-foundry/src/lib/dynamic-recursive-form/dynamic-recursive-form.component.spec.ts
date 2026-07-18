@@ -27,7 +27,7 @@ describe('DynamicRecursiveFormComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('togglePresence adds then removes a presence child control', () => {
+  it('toggleNodePresence adds then removes a presence group control', () => {
     const ntp: NodeGroup = {
       kind: 'nodeGroup',
       name: 'ntp',
@@ -35,10 +35,10 @@ describe('DynamicRecursiveFormComponent', () => {
       children: { server: { kind: 'leaf', type: 'string', name: 'server' } },
     };
 
-    component.togglePresence('ntp', ntp, true);
+    component.toggleNodePresence('ntp', ntp, true);
     expect(component.formGroup().get('ntp')).not.toBeNull();
 
-    component.togglePresence('ntp', ntp, false);
+    component.toggleNodePresence('ntp', ntp, false);
     expect(component.formGroup().get('ntp')).toBeNull();
   });
 

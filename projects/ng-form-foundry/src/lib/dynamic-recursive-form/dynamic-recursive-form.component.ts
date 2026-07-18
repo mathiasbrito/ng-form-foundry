@@ -11,12 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { NgTemplateOutlet } from '@angular/common';
 import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
-import {
-  buildControl,
-  buildFormFromSchema,
-  caseFields,
-  switchChoiceCase,
-} from '../core/dynamic-recursive-forms-builder';
+import { buildControl, caseFields, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -95,46 +90,14 @@ export class DynamicRecursiveFormComponent implements OnInit {
     this.remove.emit();
   }
 
-  /**
-   * Add or remove a presence group's control on this form. Removing it drops the
-   * group from `form.value`; adding it rebuilds the sub-group from its schema.
-   */
-  togglePresence(key: string, schema: NodeGroup, present: boolean) {
-    const group = this.formGroup();
-    if (present) {
-      if (!group.get(key)) {
-        group.addControl(key, buildFormFromSchema(schema));
-      }
-    } else if (group.get(key)) {
-      group.removeControl(key);
-    }
-  }
-
   /** The key of the presence leaf the user just enabled; its field grabs focus when rendered. */
   protected presenceFocusKey: string | null = null;
 
   /**
-   * Add or remove a presence leaf's control on this form. Removing it drops the
-   * leaf from `form.value`; adding it rebuilds the control from its schema and
-   * focuses the rendered field.
-   */
-  toggleLeafPresence(key: string, schema: Leaf, present: boolean) {
-    const group = this.formGroup();
-    if (present) {
-      if (!group.get(key)) {
-        group.addControl(key, buildControl(schema) as never);
-        this.presenceFocusKey = key;
-      }
-    } else if (group.get(key)) {
-      group.removeControl(key);
-      if (this.presenceFocusKey === key) this.presenceFocusKey = null;
-    }
-  }
-
-  /**
-   * Add or remove a presence map's or choice's control on this form. Removing it
-   * drops the node from `form.value`; adding it rebuilds the control (an empty
-   * map, or a choice group holding `__case`) from its schema.
+   * Add or remove a presence node's control on this form — any presence kind:
+   * group, leaf, map, or choice. Removing it drops the key from `form.value`;
+   * adding it builds the control fresh from its schema (nested presence
+   * children start absent).
    */
   toggleNodePresence(key: string, schema: NodeType, present: boolean) {
     const group = this.formGroup();
@@ -145,6 +108,17 @@ export class DynamicRecursiveFormComponent implements OnInit {
     } else if (group.get(key)) {
       group.removeControl(key);
     }
+  }
+
+  /**
+   * {@link toggleNodePresence} for a presence leaf, additionally focusing the
+   * rendered field when the toggle just created it.
+   */
+  toggleLeafPresence(key: string, schema: Leaf, present: boolean) {
+    const had = !!this.formGroup().get(key);
+    this.toggleNodePresence(key, schema, present);
+    if (present && !had) this.presenceFocusKey = key;
+    if (!present && this.presenceFocusKey === key) this.presenceFocusKey = null;
   }
 
   protected readonly CASE_KEY = CASE_KEY;

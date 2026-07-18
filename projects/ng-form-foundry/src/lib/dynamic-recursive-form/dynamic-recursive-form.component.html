@@ -62,7 +62,7 @@
             <mat-checkbox
               [checked]="!!formGroup().get(childItem.key)"
               [disabled]="!editable()"
-              (change)="togglePresence(childItem.key, child, $event.checked)"
+              (change)="toggleNodePresence(childItem.key, child, $event.checked)"
             >{{ child.label ?? child.name }}</mat-checkbox>
             @if (formGroup().get(childItem.key)) {
               <nff-dynamic-recursive-form
@@ -351,7 +351,7 @@
                 [checked]="!!formGroup().get(childItem.key)"
                 [disabled]="!editable()"
                 (click)="$event.stopPropagation()"
-                (change)="togglePresence(childItem.key, child, $event.checked)"
+                (change)="toggleNodePresence(childItem.key, child, $event.checked)"
               >{{ child.label ?? child.name }}</mat-checkbox>
             </mat-panel-title>
           </mat-expansion-panel-header>
