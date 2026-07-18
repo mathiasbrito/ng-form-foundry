@@ -96,7 +96,10 @@ export interface Choice {
   /** Display labels for cases, keyed by case name. */
   caseLabels?: Record<string, string>;
   default?: string;
+  /** A case must be selected for the form to be valid (a required property). */
   mandatory?: boolean;
+  /** Optional choice whose presence is itself data (mirrors {@link NodeGroup.presence}). */
+  presence?: boolean;
 }
 
 /**

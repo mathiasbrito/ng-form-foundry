@@ -2,7 +2,7 @@ import { type Document, parseDocument } from 'yaml';
 import type { FormValue } from '../../core/schema';
 import type { Transformer, TransformResult } from '../../core/transformer';
 import { inferNodeGroup } from '../../core/infer';
-import { type JsonSchema, jsonSchemaToNodeGroup } from '../../core/json-schema';
+import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '../../core/json-schema';
 import { isUnsafeBigInt } from '../../core/bigint';
 import { applyValueToDocument } from './revert';
 
@@ -16,6 +16,8 @@ export interface YamlOptions {
   schema?: JsonSchema;
   /** Name for the root node group. Defaults to `__root__`. */
   rootName?: string;
+  /** Options forwarded to `jsonSchemaToNodeGroup` (`refDocuments`, `optionalPresence`). */
+  schemaOptions?: JsonSchemaOptions;
 }
 
 /**
@@ -40,7 +42,7 @@ export const yamlTransformer = {
     const doc = parseDocument(source, { intAsBigInt: true });
     const data = (normalizeBigInts(doc.toJS()) ?? {}) as FormValue;
     const schema = options?.schema
-      ? jsonSchemaToNodeGroup(options.schema, options.rootName)
+      ? jsonSchemaToNodeGroup(options.schema, options.rootName, options.schemaOptions)
       : inferNodeGroup(data, options?.rootName);
     return { schema, binding: doc, initialValue: data };
   },

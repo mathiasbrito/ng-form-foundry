@@ -80,9 +80,13 @@ covers **draft 2020-12** (back-compatible with draft-07): `object` → nodeGroup
 a `map` for `additionalProperties`/`patternProperties`), `array` → nodeGroupList /
 leafList, `anyOf`/`oneOf` → choice (or a nullable leaf for `[T, null]`), `$ref` →
 `$defs`/`definitions` resolved inline (local **or cross-file** via
-`options.refDocuments`, matched by `$id`), `const` → a read-only leaf, and the string /
-number constraints (`pattern`, `minLength`, `minimum`, `multipleOf`, `format`, …)
-carried onto the leaves as validators.
+`schemaOptions.refDocuments`, matched by `$id`), `const` → a read-only leaf, and the
+string / number constraints (`pattern`, `minLength`, `minimum`, `multipleOf`,
+`format`, …) carried onto the leaves as validators. Non-`required` properties
+become **`presence` nodes** — absent from the form and the serialized value until
+enabled, so the output validates against the source schema (opt out with
+`schemaOptions: { optionalPresence: false }`); a required property mapping to a
+choice is marked `mandatory`.
 
 ## JSON transformer
 

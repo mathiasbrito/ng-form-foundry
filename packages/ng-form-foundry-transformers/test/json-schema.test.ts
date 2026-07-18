@@ -264,3 +264,109 @@ test('a $ref to a nested object resolves into a nodeGroup', () => {
   assert.equal(qos.children.gfbr.required, true);
   assert.equal(qos.children.pdb.min, 0);
 });
+
+// --- optionalPresence: non-required properties become presence nodes ----------
+
+test('optional properties of every presence-capable kind are marked presence: true', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    required: ['name'],
+    properties: {
+      name: { type: 'string' },
+      note: { type: 'string' },
+      filter: { type: 'object', required: ['id'], properties: { id: { type: 'integer' } } },
+      mode: { oneOf: [{ type: 'object', properties: { a: { type: 'string' } } }, { type: 'object', properties: { b: { type: 'string' } } }] },
+      labels: { type: 'object', additionalProperties: { type: 'string' } },
+    },
+  };
+  const g = jsonSchemaToNodeGroup(schema);
+  assert.equal((g.children['name'] as any).presence, undefined); // required — never marked
+  assert.equal((g.children['note'] as any).presence, true); // leaf
+  assert.equal((g.children['filter'] as any).presence, true); // nodeGroup
+  assert.equal((g.children['mode'] as any).presence, true); // choice
+  assert.equal((g.children['labels'] as any).presence, true); // map
+  // Inside the optional object, its own required child is untouched.
+  assert.equal((g.children['filter'] as any).children.id.presence, undefined);
+  assert.equal((g.children['filter'] as any).children.id.required, true);
+});
+
+test('a required property mapping to a choice keeps presence off and gains mandatory', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    required: ['scope'],
+    properties: {
+      scope: { oneOf: [
+        { type: 'object', required: ['ueId'], properties: { ueId: { type: 'integer' } } },
+        { type: 'object', required: ['qosId'], properties: { qosId: { type: 'integer' } } },
+      ] },
+    },
+  };
+  const scope = jsonSchemaToNodeGroup(schema).children['scope'] as any;
+  assert.equal(scope.kind, 'choice');
+  assert.equal(scope.presence, undefined);
+  assert.equal(scope.mandatory, true);
+});
+
+test('optional fields inside oneOf branches are marked; required branch fields are not', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      scope: { oneOf: [
+        { type: 'object', required: ['shared'], properties: { shared: { type: 'integer' }, opt: { type: 'string' } } },
+      ] },
+    },
+  };
+  const scope = jsonSchemaToNodeGroup(schema).children['scope'] as any;
+  assert.equal(scope.cases.case0.shared.presence, undefined);
+  assert.equal(scope.cases.case0.shared.required, true);
+  assert.equal(scope.cases.case0.opt.presence, true);
+});
+
+test('non-property positions are never marked: map values, array items, leaf-bodied cases', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      labels: { type: 'object', additionalProperties: { type: 'string' } },
+      peers: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' } } } },
+      limit: { oneOf: [{ type: 'string' }, { type: 'integer' }] },
+    },
+  };
+  const g = jsonSchemaToNodeGroup(schema);
+  const labels = g.children['labels'] as any;
+  assert.equal(labels.presence, true); // the optional map property itself
+  assert.equal(labels.value.presence, undefined); // its value template — never
+
+  const peers = g.children['peers'] as any;
+  assert.equal(peers.presence, undefined); // lists cannot carry presence
+  assert.equal(peers.type.presence, undefined); // the item group — never
+  assert.equal(peers.type.children.id.presence, true); // an optional property INSIDE an item is a property
+
+  const limit = g.children['limit'] as any;
+  assert.equal(limit.presence, true); // the optional choice property itself
+  for (const name of Object.keys(limit.cases)) {
+    assert.equal(limit.cases[name].presence, undefined); // leaf-bodied case nodes — never
+  }
+});
+
+test('optionalPresence: false restores unconditional materialization', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      note: { type: 'string' },
+      filter: { type: 'object', properties: { id: { type: 'integer' } } },
+    },
+  };
+  const g = jsonSchemaToNodeGroup(schema, 'body', { optionalPresence: false });
+  assert.equal((g.children['note'] as any).presence, undefined);
+  assert.equal((g.children['filter'] as any).presence, undefined);
+});
+
+test('an optional leaf with a default is still presence (the default seeds it when enabled)', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: { port: { type: 'integer', default: 80 } },
+  };
+  const port = jsonSchemaToNodeGroup(schema).children['port'] as any;
+  assert.equal(port.presence, true);
+  assert.equal(port.default, 80);
+});

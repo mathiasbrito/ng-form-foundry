@@ -1,7 +1,7 @@
 import type { FormValue } from '../../core/schema';
 import type { Transformer, TransformResult } from '../../core/transformer';
 import { inferNodeGroup } from '../../core/infer';
-import { type JsonSchema, jsonSchemaToNodeGroup } from '../../core/json-schema';
+import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '../../core/json-schema';
 import { isIntegerString, isUnsafeIntegerString } from '../../core/bigint';
 
 /** Options for {@link jsonTransformer}'s `toSchema`. */
@@ -13,6 +13,8 @@ export interface JsonOptions {
   schema?: JsonSchema;
   /** Name for the root node group. Defaults to `__root__`. */
   rootName?: string;
+  /** Options forwarded to `jsonSchemaToNodeGroup` (`refDocuments`, `optionalPresence`). */
+  schemaOptions?: JsonSchemaOptions;
 }
 
 /** How the source was formatted, so `toSource` re-emits it the same way. */
@@ -54,7 +56,7 @@ export const jsonTransformer = {
     const parsed = JSON.parse(source, bigIntReviver);
     const data = collectBigInts(parsed ?? {}, [], bigInts) as FormValue;
     const schema = options?.schema
-      ? jsonSchemaToNodeGroup(options.schema, options.rootName)
+      ? jsonSchemaToNodeGroup(options.schema, options.rootName, options.schemaOptions)
       : inferNodeGroup(data, options?.rootName);
     const binding: JsonFormat = {
       indent: detectIndent(source),

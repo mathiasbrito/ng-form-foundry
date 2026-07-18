@@ -164,3 +164,32 @@ test('yaml transformer registers and is retrievable by id', () => {
   assert.deepEqual(registry.ids(), ['yaml']);
   assert.equal(registry.require('yaml').id, 'yaml');
 });
+
+test('schemaOptions ride through toSchema: optionalPresence opt-out and refDocuments', () => {
+  const jsonSchema: JsonSchema = {
+    type: 'object',
+    required: ['host'],
+    properties: {
+      host: { type: 'string' },
+      port: { type: 'integer' },
+      ue: { $ref: '/jsonschemas/common#/$defs/UeId' },
+    },
+  };
+  const common: JsonSchema = {
+    $id: 'https://example.org/jsonschemas/common',
+    $defs: { UeId: { type: 'string', pattern: '^[0-9a-f]+$' } },
+  };
+
+  const marked = yamlTransformer.toSchema('host: h', {
+    schema: jsonSchema,
+    schemaOptions: { refDocuments: [common] },
+  });
+  assert.equal((marked.schema.children['port'] as any).presence, true); // default on
+  assert.equal((marked.schema.children['ue'] as any).pattern, '^[0-9a-f]+$'); // cross-file $ref resolved
+
+  const unmarked = yamlTransformer.toSchema('host: h', {
+    schema: jsonSchema,
+    schemaOptions: { refDocuments: [common], optionalPresence: false },
+  });
+  assert.equal((unmarked.schema.children['port'] as any).presence, undefined);
+});

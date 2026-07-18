@@ -104,3 +104,19 @@ test('all three transformers register and resolve by id', () => {
   assert.deepEqual(registry.ids().sort(), ['json', 'yaml', 'yang']);
   assert.equal(registry.require('json').id, 'json');
 });
+
+test('schemaOptions ride through jsonTransformer.toSchema', () => {
+  const jsonSchema: JsonSchema = {
+    type: 'object',
+    required: ['host'],
+    properties: { host: { type: 'string' }, note: { type: 'string' } },
+  };
+  const on = jsonTransformer.toSchema('{"host":"h"}', { schema: jsonSchema });
+  assert.equal((on.schema.children['note'] as any).presence, true);
+
+  const off = jsonTransformer.toSchema('{"host":"h"}', {
+    schema: jsonSchema,
+    schemaOptions: { optionalPresence: false },
+  });
+  assert.equal((off.schema.children['note'] as any).presence, undefined);
+});

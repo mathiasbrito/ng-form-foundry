@@ -113,8 +113,11 @@ Mapping highlights: `anyOf`/`oneOf` → `choice` (auto-named cases, `title` →
 `caseLabels`); `type: [T, 'null']` → nullable leaf (not a choice); `const` →
 read-only leaf; `additionalProperties`/`patternProperties` → `map`;
 string/number constraints and `type: "integer"` → validators; `required` →
-`required: true` on leaves. Not mapped: `allOf`, exclusive bounds; optional
-properties do **not** auto-become `presence` (hand-author that intent).
+`required: true` on leaves, `mandatory: true` on choices; optional
+(non-`required`) properties auto-become `presence` nodes — absent until enabled,
+so the serialized value validates against the source schema (opt out with
+`schemaOptions: { optionalPresence: false }`). Not mapped: `allOf`, exclusive
+bounds, presence for optional *arrays* (lists can't carry it).
 
 ### YAML / JSON config round-trip
 

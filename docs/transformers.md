@@ -120,10 +120,20 @@ const schema = jsonSchemaToNodeGroup(qosTarget, 'QoSTarget', {
 });
 ```
 
-Not yet mapped: `allOf` composition, `exclusiveMinimum`/`exclusiveMaximum`, and
-`additionalProperties` *alongside* fixed `properties` (the fixed keys win). An
-optional (non-`required`) property maps to a non-required field — author
-`presence` by hand when an *absent key* must round-trip.
+**Optional properties become `presence` nodes.** A property not in `required`
+maps to `presence: true` (leaf, group, choice, or map): absent from the form
+value until the user enables it. That is what schemas with typed properties and
+`additionalProperties: false` demand — materializing an untouched optional as
+`null` fails validation against the very schema the form came from. A required
+property that maps to a choice is marked `mandatory` instead. Opt out with
+`{ optionalPresence: false }` to materialize every property unconditionally.
+When calling through the YAML/JSON transformers, pass these flags (and
+`refDocuments`) as `options.schemaOptions`.
+
+Not yet mapped: `allOf` composition, `exclusiveMinimum`/`exclusiveMaximum`,
+`minProperties` on closed objects, and `additionalProperties` *alongside* fixed
+`properties` (the fixed keys win). Optional **arrays** cannot carry `presence`
+(lists don't support it yet) and are always materialized.
 
 ## YANG
 

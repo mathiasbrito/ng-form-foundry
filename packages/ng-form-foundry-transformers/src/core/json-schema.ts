@@ -62,6 +62,15 @@ export interface JsonSchemaOptions {
    * document then resolve against it.
    */
   refDocuments?: JsonSchema[];
+  /**
+   * Map non-required properties to `presence: true` nodes (default `true`):
+   * absent from the form and the serialized value until the user enables them,
+   * which is what `required` + `additionalProperties: false` schemas demand —
+   * an untouched optional materialized as `null` fails validation against the
+   * very schema the form came from. Set `false` to materialize every property
+   * unconditionally, as versions before 0.3.3 did.
+   */
+  optionalPresence?: boolean;
 }
 
 type JsonSchemaType = 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null';
@@ -77,16 +86,42 @@ const ROOT = '__root__';
  * `additionalProperties`/`patternProperties`); `anyOf`/`oneOf` → a {@link Choice}
  * (or a nullable leaf for the `[T, null]` shape); `array` → nodeGroupList or
  * leafList; a scalar (with `enum`, `const`, `type: [T, 'null']`, and the string /
- * number constraints) → a typed leaf. `required` marks child leaves, `title`
- * becomes the label, `default`/`const` carry a scalar value.
+ * number constraints) → a typed leaf. `required` marks leaves required and a
+ * choice `mandatory`; a property *not* in `required` becomes a `presence` node
+ * — absent from the form value until enabled — unless
+ * {@link JsonSchemaOptions.optionalPresence} is `false`. `title` becomes the
+ * label, `default`/`const` carry a scalar value.
  */
 export function jsonSchemaToNodeGroup(schema: JsonSchema, name: string = ROOT, options?: JsonSchemaOptions): NodeGroup {
   const documents = [schema, ...(options?.refDocuments ?? [])];
   const resolver = new RefResolver(schema, documents);
+  const ctx: BuildContext = { optionalPresence: options?.optionalPresence ?? true };
   const { schema: root, scope } = resolver.resolve(schema);
-  const group = objectToNodeGroup(root, name, scope, root.title);
+  const group = objectToNodeGroup(root, name, scope, ctx, root.title);
   group.root = true;
   return group;
+}
+
+/** Flags threaded through the whole mapping walk. */
+interface BuildContext {
+  /** See {@link JsonSchemaOptions.optionalPresence}. */
+  optionalPresence: boolean;
+}
+
+/**
+ * Apply {@link JsonSchemaOptions.optionalPresence} to one *property* node: a
+ * non-required property becomes a presence node, so it stays absent from the
+ * form value until enabled. Only called at property positions
+ * ({@link objectToNodeGroup} children and {@link branchToCase} fields) — a map's
+ * `value` template, an array's item type, and a leaf-bodied case are not
+ * properties and must never be marked. Lists cannot carry `presence`.
+ */
+function markOptionalProperty(node: NodeType, required: boolean, ctx: BuildContext): NodeType {
+  if (!ctx.optionalPresence || required) return node;
+  if (node.kind === 'leaf' || node.kind === 'nodeGroup' || node.kind === 'choice' || node.kind === 'map') {
+    node.presence = true;
+  }
+  return node;
 }
 
 // --- $ref resolution ----------------------------------------------------------
@@ -155,11 +190,12 @@ function resolveFragment(doc: JsonSchema, fragment: string): JsonSchema | undefi
 
 // --- objects / maps -----------------------------------------------------------
 
-function objectToNodeGroup(schema: JsonSchema, name: string, resolver: RefResolver, label?: string): NodeGroup {
+function objectToNodeGroup(schema: JsonSchema, name: string, resolver: RefResolver, ctx: BuildContext, label?: string): NodeGroup {
   const required = new Set(schema.required ?? []);
   const children: Record<string, NodeType> = {};
   for (const [key, propSchema] of Object.entries(schema.properties ?? {})) {
-    children[key] = schemaToNode(key, propSchema, required.has(key), resolver);
+    const node = schemaToNode(key, propSchema, required.has(key), resolver, ctx);
+    children[key] = markOptionalProperty(node, required.has(key), ctx);
   }
   const group: NodeGroup = { kind: 'nodeGroup', name, children };
   if (label) group.label = label;
@@ -175,7 +211,7 @@ function isOpenMap(schema: JsonSchema): boolean {
   return additionalIsSchema || hasPattern;
 }
 
-function objectToMap(name: string, schema: JsonSchema, resolver: RefResolver): NodeMap {
+function objectToMap(name: string, schema: JsonSchema, resolver: RefResolver, ctx: BuildContext): NodeMap {
   let valueSchema: JsonSchema = {};
   let keyPattern: string | undefined;
   const pattern = schema.patternProperties && Object.entries(schema.patternProperties)[0];
@@ -184,7 +220,7 @@ function objectToMap(name: string, schema: JsonSchema, resolver: RefResolver): N
   } else if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
     valueSchema = schema.additionalProperties;
   }
-  const node: NodeMap = { kind: 'map', name, value: schemaToNode('value', valueSchema, false, resolver) };
+  const node: NodeMap = { kind: 'map', name, value: schemaToNode('value', valueSchema, false, resolver, ctx) };
   if (schema.title) node.label = schema.title;
   if (keyPattern) node.keyPattern = keyPattern;
   if (typeof schema.minProperties === 'number') node.minEntries = schema.minProperties;
@@ -195,7 +231,7 @@ function objectToMap(name: string, schema: JsonSchema, resolver: RefResolver): N
 // --- anyOf / oneOf → choice ---------------------------------------------------
 
 /** The `anyOf`/`oneOf` `[T, null]` shape collapses to a nullable leaf; anything else is a choice. */
-function branchesToNode(name: string, schema: JsonSchema, rawBranches: JsonSchema[], required: boolean, resolver: RefResolver): NodeType {
+function branchesToNode(name: string, schema: JsonSchema, rawBranches: JsonSchema[], required: boolean, resolver: RefResolver, ctx: BuildContext): NodeType {
   const branches = rawBranches.map((b) => resolver.resolve(b));
   const nonNull = branches.filter((b) => b.schema.type !== 'null');
   const sole = nonNull.length === 1 ? nonNull[0] : undefined;
@@ -209,43 +245,45 @@ function branchesToNode(name: string, schema: JsonSchema, rawBranches: JsonSchem
   const caseLabels: Record<string, string> = {};
   branches.forEach(({ schema: branch, scope }, index) => {
     const caseName = `case${index}`;
-    cases[caseName] = branchToCase(branch, scope);
+    cases[caseName] = branchToCase(branch, scope, ctx);
     if (branch.title) caseLabels[caseName] = branch.title;
   });
   const choice: Choice = { kind: 'choice', name, cases };
+  if (required) choice.mandatory = true;
   if (schema.title) choice.label = schema.title;
   if (Object.keys(caseLabels).length) choice.caseLabels = caseLabels;
   return choice;
 }
 
 /** A resolved branch → a case body: a field record for an object branch, else a single node. */
-function branchToCase(branch: JsonSchema, scope: RefResolver): ChoiceCase {
+function branchToCase(branch: JsonSchema, scope: RefResolver, ctx: BuildContext): ChoiceCase {
   if (primaryType(branch) === 'object' && branch.properties) {
     const required = new Set(branch.required ?? []);
     const fields: Record<string, NodeType> = {};
     for (const [key, propSchema] of Object.entries(branch.properties)) {
-      fields[key] = schemaToNode(key, propSchema, required.has(key), scope);
+      const node = schemaToNode(key, propSchema, required.has(key), scope, ctx);
+      fields[key] = markOptionalProperty(node, required.has(key), ctx);
     }
     return fields;
   }
-  return schemaToNode('value', branch, false, scope);
+  return schemaToNode('value', branch, false, scope, ctx);
 }
 
 // --- dispatch -----------------------------------------------------------------
 
-function schemaToNode(name: string, rawSchema: JsonSchema, required: boolean, resolver: RefResolver): NodeType {
+function schemaToNode(name: string, rawSchema: JsonSchema, required: boolean, resolver: RefResolver, ctx: BuildContext): NodeType {
   const { schema, scope } = resolver.resolve(rawSchema);
 
   const branches = schema.anyOf ?? schema.oneOf;
   if (branches && branches.length) {
-    return branchesToNode(name, schema, branches, required, scope);
+    return branchesToNode(name, schema, branches, required, scope, ctx);
   }
 
   const type = primaryType(schema);
 
   if (type === 'object' || (type === undefined && (schema.properties || isOpenMap(schema)))) {
-    if (isOpenMap(schema)) return objectToMap(name, schema, scope);
-    return objectToNodeGroup(schema, name, scope, schema.title);
+    if (isOpenMap(schema)) return objectToMap(name, schema, scope, ctx);
+    return objectToNodeGroup(schema, name, scope, ctx, schema.title);
   }
 
   if (type === 'array') {
@@ -254,7 +292,7 @@ function schemaToNode(name: string, rawSchema: JsonSchema, required: boolean, re
       const node: NodeGroupList = {
         kind: 'nodeGroupList',
         name,
-        type: objectToNodeGroup(items, name, itemScope, items.title),
+        type: objectToNodeGroup(items, name, itemScope, ctx, items.title),
       };
       if (schema.title) node.label = schema.title;
       if (typeof schema.minItems === 'number') node.minItems = schema.minItems;
