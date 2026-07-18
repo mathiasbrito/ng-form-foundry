@@ -145,6 +145,11 @@
   }
 }
 
+// The root row's editor-wide toggles (edit on/off, expand/collapse all).
+.root-toggle {
+  color: var(--mat-sys-on-surface-variant);
+}
+
 // The add (+) on a list or map row stays visible for discoverability; remove
 // shows on hover, selection, or focus within the row.
 .row-btn.add {

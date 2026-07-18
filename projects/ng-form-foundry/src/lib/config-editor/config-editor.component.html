@@ -32,6 +32,27 @@
         @if (node.choice && activeCaseLabel(node)) {
           <span class="tree-sublabel" [matTooltip]="activeCaseLabel(node)">{{ activeCaseLabel(node) }}</span>
         }
+        @if (node === root) {
+          <button
+            matIconButton
+            class="row-btn root-toggle"
+            [matTooltip]="editable() ? 'Stop editing' : 'Edit'"
+            [attr.aria-label]="editable() ? 'Stop editing' : 'Edit'"
+            [attr.aria-pressed]="editable()"
+            (click)="editable.set(!editable()); $event.stopPropagation()"
+          >
+            <mat-icon>{{ editable() ? 'edit_off' : 'edit' }}</mat-icon>
+          </button>
+          <button
+            matIconButton
+            class="row-btn root-toggle"
+            [matTooltip]="allExpanded() ? 'Collapse all' : 'Expand all'"
+            [attr.aria-label]="allExpanded() ? 'Collapse all' : 'Expand all'"
+            (click)="toggleExpandAll(); $event.stopPropagation()"
+          >
+            <mat-icon>{{ allExpanded() ? 'unfold_less' : 'unfold_more' }}</mat-icon>
+          </button>
+        }
         @if (hasError(node)) {
           <!-- A non-color error signal beside the red row text. -->
           <mat-icon class="row-error-icon" aria-hidden="false" role="img" aria-label="Has validation errors"

@@ -1,4 +1,4 @@
-import { Component, effect, ElementRef, inject, input, OnDestroy, untracked } from '@angular/core';
+import { Component, effect, ElementRef, inject, input, model, OnDestroy, untracked } from '@angular/core';
 import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { Subscription } from 'rxjs';
@@ -134,8 +134,12 @@ export class ConfigEditorComponent implements OnDestroy {
   readonly schema = input.required<NodeGroup>();
   /** The schema-built reactive group the editor binds to and mutates. */
   readonly formGroup = input.required<FormGroup>();
-  /** Whether fields accept input and structural controls (add/remove/menus) show. */
-  readonly editable = input<boolean>(true);
+  /**
+   * Whether fields accept input and structural controls (add/remove/menus)
+   * show. Two-way bindable: the root tree row carries a toggle, so the editor
+   * can flip it itself and the host observes the change.
+   */
+  readonly editable = model<boolean>(true);
 
   root!: TreeNode;
   selected: TreeNode | null = null;
@@ -608,6 +612,35 @@ export class ConfigEditorComponent implements OnDestroy {
       this.emptySectionHint(s) ||
       this.presentRangeHint(s)
     );
+  }
+
+  /** Every expandable node currently expanded — drives the root row's expand/collapse-all toggle. */
+  protected allExpanded(): boolean {
+    let all = true;
+    const walk = (node: TreeNode): void => {
+      if (!all) return;
+      if (this.hasExpandableContent(node) && !this.expanded.has(node.id)) all = false;
+      for (const child of node.children) walk(child);
+    };
+    walk(this.root);
+    return all;
+  }
+
+  /**
+   * Expand every expandable node, or collapse back when all are open. The
+   * collapse keeps the root open — a tree reduced to one row reads as empty.
+   */
+  protected toggleExpandAll(): void {
+    if (this.allExpanded()) {
+      this.expanded.clear();
+      this.expanded.add(this.root.id);
+      return;
+    }
+    const walk = (node: TreeNode): void => {
+      if (this.hasExpandableContent(node)) this.expanded.add(node.id);
+      for (const child of node.children) walk(child);
+    };
+    walk(this.root);
   }
 
   /** The section node's container (list / map), for member controls in its heading. */

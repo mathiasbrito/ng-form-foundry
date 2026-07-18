@@ -339,6 +339,38 @@ describe('ConfigEditorComponent', () => {
     expect(Object.keys(group.controls).length).toBe(3);
   });
 
+  it('the root row toggles edit mode, hiding the structural controls', () => {
+    fixture.detectChanges();
+    const toggles = fixture.nativeElement.querySelectorAll('.root-toggle');
+    expect(toggles.length).toBe(2);
+    expect(fixture.nativeElement.querySelector('.row-btn.add')).toBeTruthy();
+
+    (toggles[0] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.editable()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.row-btn.add')).toBeNull();
+
+    (toggles[0] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.editable()).toBe(true);
+  });
+
+  it('the root row expands all expandable nodes, then collapses everything', () => {
+    fixture.detectChanges();
+    const toggle = fixture.nativeElement.querySelectorAll('.root-toggle')[1] as HTMLButtonElement;
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(component.expanded.has('ifaces')).toBe(true);
+    expect(component.expanded.has('servers')).toBe(true);
+    expect(component['allExpanded']()).toBe(true);
+
+    toggle.click();
+    fixture.detectChanges();
+    // Collapse-all keeps the root open, so the first level stays visible.
+    expect([...component.expanded]).toEqual(['']);
+  });
+
   it('detail-pane adds keep the current selection; tree-row adds move it', () => {
     // Detail add from the root view: item and entry appear as new sections,
     // the root stays selected.
@@ -519,7 +551,9 @@ describe('ConfigEditorComponent', () => {
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelectorAll('.tree .row-btn').length).toBe(0); // no add/remove rows
+    // No add/remove rows — the root's own toggles stay (the edit toggle is the way back in).
+    expect(el.querySelectorAll('.tree .row-btn:not(.root-toggle)').length).toBe(0);
+    expect(el.querySelectorAll('.tree .root-toggle').length).toBe(2);
     expect(el.querySelector('.optional-row')).toBeNull(); // no optionals menu
     const keyInput: HTMLInputElement = el.querySelector('.detail .key-field input')!;
     expect(keyInput.readOnly).toBe(true);
