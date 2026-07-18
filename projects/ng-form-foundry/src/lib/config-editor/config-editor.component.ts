@@ -1,4 +1,4 @@
-import { Component, effect, input, OnDestroy, untracked } from '@angular/core';
+import { Component, effect, ElementRef, inject, input, OnDestroy, untracked } from '@angular/core';
 import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { Subscription } from 'rxjs';
@@ -141,6 +141,7 @@ export class ConfigEditorComponent implements OnDestroy {
 
   private shape = '';
   private changes?: Subscription;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   constructor() {
     // Rebind whenever the schema or form inputs change (a host loading another
@@ -311,13 +312,20 @@ export class ConfigEditorComponent implements OnDestroy {
     this.selectByPath(mapNode.id);
   }
 
-  /** Commit a rename-on-blur of a map entry's key; on success the entry is selected under its new path. */
+  /**
+   * Commit a rename-on-blur of a map entry's key; on success the entry is
+   * selected under its new path and its fresh key field regains focus (the
+   * rename re-renders the section under a new id, destroying the input that
+   * held focus).
+   */
   renameTreeMapEntry(entryNode: TreeNode, rawKey: string) {
     const e = entryNode.mapEntry;
     if (!e) return;
     if (renameMapEntry(e.mapGroup, e.mapSchema, e.key, rawKey)) {
       const parentPath = entryNode.id.slice(0, entryNode.id.lastIndexOf('/'));
       this.selectByPath(`${parentPath}/${rawKey.trim()}`);
+      // Deferred so the rebuilt section's key field exists before focusing.
+      setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.detail .key-field input')?.focus());
     }
   }
 

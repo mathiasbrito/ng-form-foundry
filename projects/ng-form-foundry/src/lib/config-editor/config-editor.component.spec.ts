@@ -317,6 +317,19 @@ describe('ConfigEditorComponent', () => {
     expect(component.selected!.id).toBe('servers/web1');
   });
 
+  it('a committed rename hands focus to the renamed section&apos;s fresh key field', fakeAsync(() => {
+    component.select(node('servers').children[0]);
+    fixture.detectChanges();
+
+    component.renameTreeMapEntry(node('servers').children[0], 'web1');
+    fixture.detectChanges();
+    tick(); // the refocus is deferred until the rebuilt section exists
+
+    const keyInput: HTMLInputElement = fixture.nativeElement.querySelector('.detail .key-field input');
+    expect(keyInput.value).toBe('web1');
+    expect(document.activeElement).toBe(keyInput);
+  }));
+
   it('renameTreeMapEntry ignores an empty, duplicate, or pattern-violating key', () => {
     component.addTreeMapEntry(node('servers')); // adds 'key2'
     const entry = node('servers').children[0];
