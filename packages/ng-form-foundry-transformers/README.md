@@ -294,6 +294,13 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.3.5` — the **thesaurus**: every `toSchema` and `jsonSchemaToNodeGroup`
+accept identifier → `{ label, description }` display metadata, with variants
+scoped by ancestor names (`under`) for identifiers that mean different things
+at different depths; choice cases are titled from their labeled discriminating
+field. Adversarially battle-tested (51-agent panel); the paired library
+release guarantees unique case-selector labels.
+
 `0.3.4` — the **libconfig transformer debuts as a beta** (one-time console
 warning on first use; lossless span-splicing round-trip with scalar types
 preserved — see [`docs/libconfig.md`](docs/libconfig.md)), and
