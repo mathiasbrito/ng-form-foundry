@@ -191,6 +191,15 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.3.3` — schema-valid round-trips for JSON-Schema-driven forms. Non-`required`
+properties now map to `presence` nodes (absent until enabled; opt out with
+`schemaOptions: { optionalPresence: false }`), a required property mapping to a
+choice is flagged `mandatory`, and the YAML/JSON transformers gained
+`options.schemaOptions` — which also makes `refDocuments` (cross-file `$ref`)
+reachable through them for the first time. Pairs with the library's
+required-aware choice-case inference, empty list seeding, and
+materialized-validity rules.
+
 `0.3.2` — documentation release alongside the library's `serializeForm`: the
 YAML/JSON `toSource` examples now take the wire value (choice `__case`
 discriminators stripped); no transformer code changes.
