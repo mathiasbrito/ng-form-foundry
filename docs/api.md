@@ -160,7 +160,9 @@ tree and the detail pane. Wrap it in your own card or border:
 | `formGroup` | `FormGroup` | — | **Required.** The form from `buildFormFromSchema(schema)`. |
 | `editable` | `boolean` | `true` | Whether fields accept input and structural controls (add/remove/menus) show. |
 
-The inputs are signal inputs, like the form component's.
+The inputs are signal inputs, like the form component's. Swapping `schema` or
+`formGroup` rebinds the editor to the new pair (a host loading another config
+document); expansion and selection reset to the new root.
 
 ## Types
 

@@ -361,6 +361,21 @@ describe('ConfigEditorComponent', () => {
     expect(component.selected!.id).toBe('servers');
   });
 
+  it('swapping the formGroup input rebinds the editor to the new document', () => {
+    const replacement: FormGroup = buildFormFromSchema(schema, { ifaces: [{ nm: 'swap0' }] });
+    fixture.componentRef.setInput('formGroup', replacement);
+    fixture.detectChanges();
+
+    expect(component.selected).toBe(component.root);
+    expect(node('ifaces').children.length).toBe(1);
+
+    // The new group drives the tree; the old one is detached.
+    replacement.removeControl('system');
+    expect(component.root.children.some((c) => c.id === 'system')).toBe(false);
+    form.removeControl('labels');
+    expect(component.root.children.some((c) => c.id === 'labels')).toBe(true);
+  });
+
   // --- rendering -------------------------------------------------------------
 
   it('renders the "+ Optional field" row after the children, and hides it when not editable', () => {

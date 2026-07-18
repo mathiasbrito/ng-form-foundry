@@ -31,6 +31,12 @@ describe('NodeMapRendererComponent', () => {
     expect(component.entryKeys).toEqual(['alpha']);
   });
 
+  it('re-syncs the entry keys when the bound group is swapped', () => {
+    fixture.componentRef.setInput('formGroup', new FormGroup({ beta: new FormControl('b') }));
+    fixture.detectChanges();
+    expect(component.entryKeys).toEqual(['beta']);
+  });
+
   it('addEntry appends a uniquely-keyed control', () => {
     component.addEntry();
     expect(component.entryKeys.length).toBe(2);

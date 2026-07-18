@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, OnInit } from '@angular/core';
+import { Component, forwardRef, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,7 +33,7 @@ import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form.compone
   templateUrl: './node-map-renderer.component.html',
   styleUrl: './node-map-renderer.component.scss',
 })
-export class NodeMapRendererComponent implements OnInit {
+export class NodeMapRendererComponent implements OnChanges {
   @Input() nodeMap!: NodeMap;
   @Input() formGroup = new FormGroup<any>({});
   @Input() editable = true;
@@ -41,8 +41,11 @@ export class NodeMapRendererComponent implements OnInit {
   /** Ordered view of entry keys, kept stable across renames (`addControl` appends). */
   entryKeys: string[] = [];
 
-  ngOnInit(): void {
-    this.entryKeys = Object.keys(this.formGroup.controls);
+  ngOnChanges(changes: SimpleChanges): void {
+    // Re-sync whenever the bound group changes: a host may rebind the renderer
+    // to another map (e.g. the tree editor swapping documents) while this
+    // component instance survives.
+    if (changes['formGroup']) this.entryKeys = Object.keys(this.formGroup.controls);
   }
 
   /** The value schema as a leaf (used when `value.kind === 'leaf'`). */

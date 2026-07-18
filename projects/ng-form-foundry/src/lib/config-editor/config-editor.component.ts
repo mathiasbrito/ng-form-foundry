@@ -1,4 +1,4 @@
-import { Component, input, OnDestroy, OnInit } from '@angular/core';
+import { Component, effect, input, OnDestroy, untracked } from '@angular/core';
 import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { Subscription } from 'rxjs';
@@ -100,7 +100,9 @@ interface TreeNode {
  * The tree is **derived state**: any structural change to the form — made
  * through the tree rows or through the detail sections — triggers a rebuild (a
  * cheap shape signature over `valueChanges` detects it). Node ids are stable
- * paths, so expansion and selection survive rebuilds.
+ * paths, so expansion and selection survive rebuilds. Swapping the `schema` or
+ * `formGroup` input rebinds the editor to the new pair, resetting expansion
+ * and selection.
  *
  * The component draws no outer container — only a divider between the tree and
  * detail panes — so the embedding client owns the surrounding chrome.
@@ -123,7 +125,7 @@ interface TreeNode {
   templateUrl: './config-editor.component.html',
   styleUrl: './config-editor.component.scss',
 })
-export class ConfigEditorComponent implements OnInit, OnDestroy {
+export class ConfigEditorComponent implements OnDestroy {
   /** The form-description schema whose structure the tree renders. */
   readonly schema = input.required<NodeGroup>();
   /** The schema-built reactive group the editor binds to and mutates. */
@@ -140,18 +142,33 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   private shape = '';
   private changes?: Subscription;
 
-  ngOnInit() {
-    this.rebuild();
-    this.expanded.add(this.root.id);
-    this.select(this.root);
-    // The embedded detail form mutates the FormGroup directly (presence
-    // toggles, list items, map entries, case switches); a shape change there
-    // must reflect in the tree.
-    this.changes = this.formGroup().valueChanges.subscribe(() => this.syncShape());
+  constructor() {
+    // Rebind whenever the schema or form inputs change (a host loading another
+    // config document): derived state resets against the new pair. Wrapped in
+    // untracked so only the two inputs re-trigger the effect.
+    effect(() => {
+      const schema = this.schema();
+      const group = this.formGroup();
+      untracked(() => this.attach(schema, group));
+    });
   }
 
   ngOnDestroy() {
     this.changes?.unsubscribe();
+  }
+
+  /** Bind the editor to a schema/form pair: fresh tree, root selection, and shape-sync subscription. */
+  private attach(schema: NodeGroup, group: FormGroup): void {
+    this.changes?.unsubscribe();
+    this.expanded.clear();
+    this.root = this.buildTree(schema, group, schema.label ?? schema.name, '');
+    this.shape = this.shapeOf(group);
+    this.expanded.add(this.root.id);
+    this.select(this.root);
+    // The detail sections mutate the FormGroup directly (presence toggles,
+    // list items, map entries, case switches); a shape change there must
+    // reflect in the tree.
+    this.changes = group.valueChanges.subscribe(() => this.syncShape());
   }
 
   select(node: TreeNode) {
