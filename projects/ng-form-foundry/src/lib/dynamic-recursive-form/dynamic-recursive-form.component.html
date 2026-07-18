@@ -11,7 +11,6 @@
                 [control]=asFormControl(formGroup().get(child.name))
                 [removable]=false
                 [editable]="editable()"
-                [initialValue]="formGroup().get(child.name)?.value"
               />
             }
           }
@@ -37,7 +36,6 @@
                   [control]=asFormControl(formGroup().get(childItem.key))
                   [removable]=true
                   [editable]="editable()"
-                  [initialValue]="formGroup().get(childItem.key)?.value"
                   [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
                   (remove)="toggleLeafPresence(childItem.key, child, false)"
                 />
@@ -224,7 +222,6 @@
               [control]=asFormControl(formGroup().get(child.name))
               [removable]=false
               [editable]="editable()"
-              [initialValue]="formGroup().get(child.name)?.value"
             />
           }
         }
@@ -250,7 +247,6 @@
                 [control]=asFormControl(formGroup().get(childItem.key))
                 [removable]=true
                 [editable]="editable()"
-                [initialValue]="formGroup().get(childItem.key)?.value"
                 [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
                 (remove)="toggleLeafPresence(childItem.key, child, false)"
               />

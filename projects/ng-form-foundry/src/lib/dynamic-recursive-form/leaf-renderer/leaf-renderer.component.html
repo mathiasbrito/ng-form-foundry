@@ -24,7 +24,7 @@
     <nff-leaf-enum-renderer [editable]="fieldEditable" [leafEnum]="leaf_" [control]="control"></nff-leaf-enum-renderer>
   }
   @if (removable && editable) {
-    <button matIconButton class="remove-button small-icon-button" matTooltip="Remove" [attr.aria-label]="'Remove ' + ('label' in leaf_ && leaf_.label ? leaf_.label : 'name' in leaf_ ? leaf_.name : 'field')" (click)="remove.emit(0)">
+    <button matIconButton class="remove-button small-icon-button" matTooltip="Remove" [attr.aria-label]="'Remove ' + ('label' in leaf_ && leaf_.label ? leaf_.label : 'name' in leaf_ ? leaf_.name : 'field')" (click)="remove.emit()">
       <mat-icon>delete</mat-icon>
     </button>
   }
