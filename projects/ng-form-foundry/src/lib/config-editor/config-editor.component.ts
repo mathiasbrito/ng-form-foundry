@@ -207,6 +207,31 @@ export class ConfigEditorComponent implements OnDestroy {
     else this.expanded.add(node.id);
   }
 
+  /** Keyboard access for tree rows: Enter/Space selects, ArrowRight expands, ArrowLeft collapses. */
+  onRowKeydown(event: KeyboardEvent, node: TreeNode) {
+    // Keys pressed on the row's inner buttons keep their own meaning.
+    if (event.target !== event.currentTarget) return;
+    switch (event.key) {
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        this.select(node);
+        break;
+      case 'ArrowRight':
+        if (this.hasExpandableContent(node) && !this.expanded.has(node.id)) {
+          event.preventDefault();
+          this.expanded.add(node.id);
+        }
+        break;
+      case 'ArrowLeft':
+        if (this.expanded.has(node.id)) {
+          event.preventDefault();
+          this.expanded.delete(node.id);
+        }
+        break;
+    }
+  }
+
   /** Whether the row shows an expand twisty: it has child rows to reveal (children or an optionals menu row). */
   hasExpandableContent(node: TreeNode): boolean {
     return node.children.length > 0 || (this.editable() && !!node.optionals?.length);

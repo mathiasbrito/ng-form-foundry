@@ -43,9 +43,25 @@
   font-weight: 600;
 }
 
-// A validation error anywhere in the node's subtree colors its row.
+// A validation error anywhere in the node's subtree colors its row; the icon
+// beside the label carries the same signal without relying on color.
 .tree-row.error .tree-label {
   color: var(--mat-sys-error, #b3261e);
+}
+
+.row-error-icon {
+  flex: 0 0 auto;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--mat-sys-error, #b3261e);
+}
+
+// Keyboard support: rows are focusable tree items; the reveal-on-hover remove
+// buttons must also reveal when focus is inside the row.
+.tree-row:focus-visible {
+  outline: 2px solid var(--mat-sys-primary, #6750a4);
+  outline-offset: -2px;
 }
 
 // Drive the button size through Material's own tokens, not width/height on the
@@ -134,7 +150,8 @@
 }
 
 .tree-row:hover .row-btn.remove,
-.tree-row.selected .row-btn.remove {
+.tree-row.selected .row-btn.remove,
+.tree-row:focus-within .row-btn.remove {
   visibility: visible;
 }
 

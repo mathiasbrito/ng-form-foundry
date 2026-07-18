@@ -172,12 +172,12 @@
     <ng-container *ngTemplateOutlet="formRender"></ng-container>
       <div class="flattened-actions">
         @if (editable() && index() != null && addButtonCallback() != null) {
-          <button matIconButton  matTooltip="+ Add new {{ schema().label ?? schema().name }}" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!)">
+          <button matIconButton  matTooltip="+ Add new {{ schema().label ?? schema().name }}" [attr.aria-label]="'Add new ' + (schema().label ?? schema().name)" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!)">
             <mat-icon>add</mat-icon>
           </button>
         }
         @if (editable() && removable()) {
-          <button matIconButton  class="remove-button small-icon-button" (click)="emitRemoveEvent(); $event.stopPropagation()">
+          <button matIconButton  class="remove-button small-icon-button" [attr.aria-label]="'Remove ' + (schema().label ?? schema().name)" (click)="emitRemoveEvent(); $event.stopPropagation()">
             <mat-icon>delete</mat-icon>
           </button>
         }
@@ -191,16 +191,16 @@
         {{ title() ?? schema().label ?? schema().name }}
       </mat-panel-title>
       <mat-panel-description class="section-actions">
-        <button matIconButton class="small-icon-button" [class]="{ 'edit-icon': !editable() }" (click)="editable.set(!editable()); $event.stopPropagation()">
+        <button matIconButton class="small-icon-button" [class]="{ 'edit-icon': !editable() }" [attr.aria-label]="editable() ? 'Stop editing' : 'Edit'" (click)="editable.set(!editable()); $event.stopPropagation()">
           <mat-icon>edit</mat-icon>
         </button>
         @if (editable() && index() != null && addButtonCallback() != null) {
-          <button matIconButton matTooltip="+ Add new {{ schema().label ?? schema().name }}" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!); $event.stopPropagation()">
+          <button matIconButton matTooltip="+ Add new {{ schema().label ?? schema().name }}" [attr.aria-label]="'Add new ' + (schema().label ?? schema().name)" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!); $event.stopPropagation()">
             <mat-icon>add</mat-icon>
           </button>
         }
         @if (editable() && removable()) {
-          <button matIconButton class="remove-button small-icon-button" (click)="emitRemoveEvent(); $event.stopPropagation()">
+          <button matIconButton class="remove-button small-icon-button" [attr.aria-label]="'Remove ' + (schema().label ?? schema().name)" (click)="emitRemoveEvent(); $event.stopPropagation()">
             <mat-icon>delete</mat-icon>
           </button>
         }
@@ -213,7 +213,7 @@
   <div class="form-content" [formGroup]="formGroup()">
     <div class="leafs-container">
       <div class="fields">
-        <button matIconButton class="small-icon-button"  [class]="{ 'edit-icon': !editable() }"  (click)="editable.set(!editable())">
+        <button matIconButton class="small-icon-button"  [class]="{ 'edit-icon': !editable() }"  [attr.aria-label]="editable() ? 'Stop editing' : 'Edit'" (click)="editable.set(!editable())">
           <mat-icon>edit</mat-icon>
         </button>
         @for (childItem of nodeGroupChildrenList; track $index) {

@@ -12,12 +12,12 @@
         @if (editable) {
           <div class="actions">
             @if (formArray.length > minItems) {
-              <button class="remove-button small-icon-button" matIconButton (click)="removeItem($index)">
+              <button class="remove-button small-icon-button" matIconButton [attr.aria-label]="'Remove ' + (leaf_.label ?? leaf_.name) + ' item'" (click)="removeItem($index)">
                 <mat-icon matPrefix>delete</mat-icon>
               </button>
             }
             @if ($last) {
-              <button class="add-button small-icon-button" matIconButton (click)="addItem()">
+              <button class="add-button small-icon-button" matIconButton [attr.aria-label]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" (click)="addItem()">
                 <mat-icon matPrefix>add</mat-icon>
               </button>
             }

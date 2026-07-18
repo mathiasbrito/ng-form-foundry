@@ -1,17 +1,24 @@
 <div class="editor">
-  <nav class="tree">
+  <nav class="tree" role="tree" aria-label="Configuration structure">
     <ng-template #treeNode let-node let-depth="depth" let-parent="parent">
       <div
         class="tree-row"
+        role="treeitem"
+        tabindex="0"
         [class.selected]="node === selected"
         [class.error]="hasError(node)"
+        [attr.aria-selected]="node === selected"
+        [attr.aria-expanded]="hasExpandableContent(node) ? expanded.has(node.id) : null"
+        [attr.aria-level]="depth + 1"
         [style.padding-left.px]="8 + depth * 16"
         (click)="select(node)"
+        (keydown)="onRowKeydown($event, node)"
       >
         @if (hasExpandableContent(node)) {
           <button
             matIconButton
             class="twisty"
+            tabindex="-1"
             (click)="toggle(node); $event.stopPropagation()"
             [attr.aria-label]="expanded.has(node.id) ? 'Collapse' : 'Expand'"
           >
@@ -25,12 +32,19 @@
         @if (node.choice && activeCaseLabel(node)) {
           <span class="tree-sublabel" [matTooltip]="activeCaseLabel(node)">{{ activeCaseLabel(node) }}</span>
         }
+        @if (hasError(node)) {
+          <!-- A non-color error signal beside the red row text. -->
+          <mat-icon class="row-error-icon" aria-hidden="false" role="img" aria-label="Has validation errors"
+            >error_outline</mat-icon
+          >
+        }
 
         @if (editable() && node.list) {
           <button
             matIconButton
             class="row-btn add"
             [matTooltip]="'Add ' + node.list.itemLabel"
+            [attr.aria-label]="'Add ' + node.list.itemLabel"
             (click)="addItem(node); $event.stopPropagation()"
           >
             <mat-icon>add</mat-icon>
@@ -41,6 +55,7 @@
             matIconButton
             class="row-btn add"
             matTooltip="Add entry"
+            [attr.aria-label]="'Add ' + node.label + ' entry'"
             (click)="addTreeMapEntry(node); $event.stopPropagation()"
           >
             <mat-icon>add</mat-icon>
@@ -51,6 +66,7 @@
             matIconButton
             class="row-btn remove"
             matTooltip="Remove"
+            [attr.aria-label]="'Remove ' + node.label"
             (click)="removeItem(parent, node); $event.stopPropagation()"
           >
             <mat-icon>delete</mat-icon>
@@ -61,6 +77,7 @@
             matIconButton
             class="row-btn remove"
             matTooltip="Remove"
+            [attr.aria-label]="'Remove ' + node.label"
             (click)="removeOptional(parent, node); $event.stopPropagation()"
           >
             <mat-icon>delete</mat-icon>
@@ -71,6 +88,7 @@
             matIconButton
             class="row-btn remove"
             matTooltip="Remove entry"
+            [attr.aria-label]="'Remove ' + node.label + ' entry'"
             (click)="removeTreeMapEntry(parent, node); $event.stopPropagation()"
           >
             <mat-icon>delete</mat-icon>

@@ -401,6 +401,44 @@ describe('ConfigEditorComponent', () => {
     expect(fixture.nativeElement.querySelector('.optional-row')).toBeNull();
   });
 
+  // --- accessibility ---------------------------------------------------------
+
+  it('tree rows are focusable tree items and Enter selects them', () => {
+    const rows: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.tree [role="treeitem"]')];
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.getAttribute('tabindex') === '0')).toBe(true);
+
+    const system = rows.find((r) => r.textContent!.includes('system'))!;
+    system.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(component.selected!.id).toBe('system');
+    expect(system.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('ArrowRight expands and ArrowLeft collapses a row from the keyboard', () => {
+    const rows: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.tree [role="treeitem"]')];
+    const row = rows.find((r) => r.textContent!.includes('ifaces'))!;
+
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(component.expanded.has('ifaces')).toBe(true);
+    expect(row.getAttribute('aria-expanded')).withContext('before CD').toBeDefined();
+
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(component.expanded.has('ifaces')).toBe(false);
+  });
+
+  it('every icon-only button in the tree carries an accessible name', () => {
+    component.expanded.add('ifaces');
+    component.expanded.add('servers');
+    fixture.detectChanges();
+
+    const buttons: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.tree button.mat-mdc-icon-button')];
+    expect(buttons.length).toBeGreaterThan(2); // twisties + add/remove row controls
+    const unnamed = buttons.filter((b) => !(b.getAttribute('aria-label') ?? '').trim());
+    expect(unnamed.map((b) => b.outerHTML.slice(0, 80))).toEqual([]);
+  });
+
   it('draws no border box around the tree (the divider is the only chrome)', () => {
     const tree: HTMLElement = fixture.nativeElement.querySelector('.tree');
     const style = getComputedStyle(tree);
