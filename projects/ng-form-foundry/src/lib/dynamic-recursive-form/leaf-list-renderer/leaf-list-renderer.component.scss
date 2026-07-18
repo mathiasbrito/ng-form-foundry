@@ -1,4 +1,5 @@
 @use '@angular/material' as mat;
+@use '../../styles/small-icon-button' as nff;
 
 :host {
   display: flex;
@@ -66,3 +67,5 @@ nff-anon-leaf-renderer {
   align-items: center;
 }
 
+
+@include nff.small-icon-button;

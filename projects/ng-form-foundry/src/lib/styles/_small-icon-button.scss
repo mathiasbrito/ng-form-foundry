@@ -1,0 +1,31 @@
+// The compact 24px icon button used by the renderers' inline add/remove/edit
+// controls. Every component whose template renders `.small-icon-button`
+// includes this mixin, so the library looks right in a consumer app with no
+// global CSS beyond a Material theme. Sizing of the button's internal spans
+// (state layer, touch target) goes through Material tokens — CSS custom
+// properties inherit into elements the icon-button directive creates at
+// runtime, which encapsulated selectors cannot reach.
+@mixin small-icon-button {
+  .small-icon-button {
+    --mdc-icon-button-state-layer-size: 24px;
+    --mdc-icon-button-icon-size: 16px;
+    --mat-icon-button-touch-target-display: none;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    > [role='img'] {
+      width: 16px;
+      height: 16px;
+      font-size: 16px;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+}

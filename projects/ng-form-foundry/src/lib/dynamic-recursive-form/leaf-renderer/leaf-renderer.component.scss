@@ -1,4 +1,5 @@
 @use '@angular/material' as mat;
+@use '../../styles/small-icon-button' as nff;
 
 :host {
   display: flex;
@@ -23,3 +24,5 @@ mat-form-field {
   background-color: var(--mat-sys-error-container);
   @include mat.elevation(1);
 }
+
+@include nff.small-icon-button;

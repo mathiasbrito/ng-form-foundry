@@ -168,79 +168,8 @@ mat-card.top-level-config-card {
   border: 0;
 }
 
-.delete-icon-button {
-  background-color: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
-  opacity: 0.2;
-  align-self: flex-start;
-}
-
-.delete-icon-button:hover {
-  opacity: 1;
-  animation: glow-up 0.5s;
-}
-
-.add-icon-button {
-  background-color: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
-  opacity: 0.2;
-  align-self: flex-start;
-
-}
-
-.add-icon-button:hover {
-  opacity: 1;
-  animation: glow-up 0.5s;
-}
-
-.small-icon-button {
-  width: 24px !important;
-  height: 24px !important;
-  padding: 0 !important;
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-
-  & > *[role=img] {
-    width: 16px;
-    height: 16px;
-    font-size: 16px;
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  .mat-mdc-button-touch-target {
-    width: 24px !important;
-    height: 24px !important;
-  }
-}
-
-.add-button {
-  background-color: var(--mat-sys-primary-container);
-  @include mat.elevation(1);
-}
-
-// ANIMATIONS
-
-@keyframes glow-up {
-  0% {
-    opacity: 0.1;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes glow-down {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.1;
-  }
-}
+// The library ships its own control styling (e.g. the compact icon buttons);
+// this file intentionally carries no nff-* / library-facing rules, so the demo
+// renders the library exactly as any consumer app would.
 
 

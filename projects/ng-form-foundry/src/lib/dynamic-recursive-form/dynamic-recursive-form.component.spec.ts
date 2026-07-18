@@ -270,6 +270,29 @@ describe('DynamicRecursiveFormComponent', () => {
     expect(t.get('udp-port')).not.toBeNull();
   });
 
+  it('ships the compact icon-button sizing itself — no app-global CSS required', () => {
+    // Consumers get only the component styles; a stock 48px Material icon
+    // button here means the sizing leaked back into a demo-app stylesheet.
+    const withPresence: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      root: true,
+      children: { note: { kind: 'leaf', type: 'string', name: 'note', presence: true } },
+    };
+    const local = TestBed.createComponent(DynamicRecursiveFormComponent);
+    local.componentRef.setInput('schema', withPresence);
+    local.componentRef.setInput('formGroup', buildFormFromSchema(withPresence, { note: 'x' }));
+    local.componentRef.setInput('editable', true);
+    local.detectChanges();
+
+    const btn: HTMLElement | null = local.nativeElement.querySelector('.small-icon-button');
+    expect(btn).toBeTruthy();
+    const style = getComputedStyle(btn!);
+    expect(style.width).toBe('24px');
+    expect(style.height).toBe('24px');
+    expect(style.getPropertyValue('--mat-icon-button-touch-target-display').trim()).toBe('none');
+  });
+
   it('caseLabel returns the labeled name, falling back to the case key', () => {
     const scope: NodeChoice = {
       kind: 'choice',
