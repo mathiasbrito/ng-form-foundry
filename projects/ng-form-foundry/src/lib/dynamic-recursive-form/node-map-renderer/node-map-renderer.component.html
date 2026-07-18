@@ -4,12 +4,15 @@
       <div class="map-entry">
         <mat-form-field class="key-field" [appearance]="editable ? 'fill' : 'outline'">
           <mat-label>{{ nodeMap.keyLabel ?? 'Key' }}</mat-label>
+          <!-- On a rejected rename (empty, duplicate, keyPattern violation) the
+               input snaps back to the committed key, so the display never
+               disagrees with the key getRawValue() will emit. -->
           <input
             matInput
             #keyInput
             [readonly]="!editable"
             [value]="key"
-            (change)="renameEntry(key, keyInput.value)"
+            (change)="renameEntry(key, keyInput.value); keyInput.value = key"
           >
         </mat-form-field>
 

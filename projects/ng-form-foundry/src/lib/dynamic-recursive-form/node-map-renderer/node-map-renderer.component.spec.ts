@@ -37,6 +37,22 @@ describe('NodeMapRendererComponent', () => {
     expect(component.entryKeys).toEqual(['beta']);
   });
 
+  it('a rejected rename snaps the key input back to the committed key', () => {
+    fixture.componentRef.setInput(
+      'formGroup',
+      new FormGroup({ alpha: new FormControl('a'), beta: new FormControl('b') }),
+    );
+    fixture.detectChanges();
+
+    const keyInput: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    keyInput.value = 'beta'; // duplicate of the sibling entry — rejected
+    keyInput.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(component.entryKeys).toEqual(['alpha', 'beta']);
+    expect(keyInput.value).toBe('alpha'); // display matches the key the value will emit
+  });
+
   it('addEntry appends a uniquely-keyed control', () => {
     component.addEntry();
     expect(component.entryKeys.length).toBe(2);
