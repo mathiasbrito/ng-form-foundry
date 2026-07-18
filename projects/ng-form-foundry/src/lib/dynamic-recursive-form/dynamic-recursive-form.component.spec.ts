@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 
 import { DynamicRecursiveFormComponent } from './dynamic-recursive-form.component';
-import { Leaf, NodeChoice, NodeGroup } from '../types/dynamic-recursive.types';
+import { CASE_KEY, Leaf, NodeChoice, NodeGroup, NodeMap } from '../types/dynamic-recursive.types';
 
 describe('DynamicRecursiveFormComponent', () => {
   let component: DynamicRecursiveFormComponent;
@@ -49,6 +49,75 @@ describe('DynamicRecursiveFormComponent', () => {
 
     component.toggleLeafPresence('note', note, false);
     expect(component.formGroup().get('note')).toBeNull();
+  });
+
+  it('toggleNodePresence enables a presence choice as a group holding only __case', () => {
+    const mode: NodeChoice = {
+      kind: 'choice',
+      name: 'mode',
+      presence: true,
+      cases: { a: { x: { kind: 'leaf', type: 'string', name: 'x' } } },
+    };
+
+    component.toggleNodePresence('mode', mode, true);
+    const group = component.formGroup().get('mode') as FormGroup;
+    expect(group).toBeInstanceOf(FormGroup);
+    expect(Object.keys(group.controls)).toEqual([CASE_KEY]);
+    expect(group.get(CASE_KEY)!.value).toBeNull();
+
+    component.toggleNodePresence('mode', mode, false);
+    expect(component.formGroup().get('mode')).toBeNull();
+    expect('mode' in component.formGroup().getRawValue()).toBe(false);
+  });
+
+  it('toggleNodePresence enables a presence map as an empty group and drops it again', () => {
+    const tags: NodeMap = {
+      kind: 'map',
+      name: 'tags',
+      presence: true,
+      value: { kind: 'leaf', type: 'string', name: 'value' },
+    };
+
+    component.toggleNodePresence('tags', tags, true);
+    const group = component.formGroup().get('tags') as FormGroup;
+    expect(group).toBeInstanceOf(FormGroup);
+    expect(Object.keys(group.controls)).toEqual([]);
+
+    component.toggleNodePresence('tags', tags, true); // idempotent while present
+    expect(component.formGroup().get('tags')).toBe(group);
+
+    component.toggleNodePresence('tags', tags, false);
+    expect(component.formGroup().get('tags')).toBeNull();
+  });
+
+  it('renders a presence choice panel with an unchecked toggle and no body while absent', () => {
+    const presenceChoiceSchema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      children: {
+        mode: {
+          kind: 'choice',
+          name: 'mode',
+          label: 'Mode',
+          presence: true,
+          cases: { a: { x: { kind: 'leaf', type: 'string', name: 'x' } } },
+        },
+      },
+    };
+    fixture.componentRef.setInput('schema', presenceChoiceSchema);
+    fixture.componentRef.setInput('formGroup', new FormGroup({})); // absent: no 'mode' control
+    fixture.componentRef.setInput('editable', true);
+    fixture.detectChanges();
+
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('mat-expansion-panel mat-checkbox input');
+    expect(checkbox.checked).toBe(false);
+    expect(fixture.nativeElement.querySelector('.choice-group')).toBeNull(); // no null-group body rendered
+
+    checkbox.click();
+    fixture.detectChanges();
+
+    expect(component.formGroup().get('mode')).toBeInstanceOf(FormGroup);
+    expect(fixture.nativeElement.querySelector('.choice-group')).toBeTruthy();
   });
 
   it('switchCase swaps a choice group field controls', () => {
