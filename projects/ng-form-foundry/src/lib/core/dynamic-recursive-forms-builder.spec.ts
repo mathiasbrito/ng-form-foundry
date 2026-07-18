@@ -519,6 +519,18 @@ describe('dynamic-recursive-forms-builder', () => {
       expect(Object.keys(g.controls).length).toBe(3);
     });
 
+    it('renameMapEntry keeps the renamed entry at its position in the key order', () => {
+      const g = mapGroup({ web: 'a', db: 'b', cache: 'c' });
+      let emissions = 0;
+      g.valueChanges.subscribe(() => emissions++);
+
+      expect(renameMapEntry(g, map, 'db', 'store')).toBe(true);
+
+      expect(Object.keys(g.controls)).toEqual(['web', 'store', 'cache']);
+      expect(Object.keys(g.getRawValue() as Record<string, unknown>)).toEqual(['web', 'store', 'cache']);
+      expect(emissions).toBe(1); // one value change for the whole rename
+    });
+
     it('renameMapEntry preserves the control instance and guards bad keys', () => {
       const g = mapGroup({ web: 'a', db: 'b' });
       const control = g.get('web');

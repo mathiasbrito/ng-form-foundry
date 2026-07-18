@@ -333,11 +333,13 @@ export function addMapEntry(group: FormGroup, map: NodeMap, key?: string): strin
 
 /**
  * Rename entry `oldKey` to `newKey.trim()`, preserving the control instance
- * (remove + re-add, so the value survives). Returns whether the rename was
- * committed: an empty, unchanged, duplicate, or `keyPattern`-violating key is a
- * no-op, leaving the entry under its current name. Entry keys are looked up
- * verbatim — never via `AbstractControl.get`, which would split keys like
- * `10.0.0.1` into dot-delimited paths.
+ * (so the value survives) and the entry's position in the group's key order —
+ * the order `getRawValue()` serializes and the tree editor renders. Returns
+ * whether the rename was committed: an empty, reserved (`__case`), unchanged,
+ * duplicate, or `keyPattern`-violating key is a no-op, leaving the entry under
+ * its current name. Entry keys are looked up verbatim — never via
+ * `AbstractControl.get`, which would split keys like `10.0.0.1` into
+ * dot-delimited paths. Emits a single value change.
  */
 export function renameMapEntry(group: FormGroup, map: NodeMap, oldKey: string, newKey: string): boolean {
   const committed = newKey.trim();
@@ -345,8 +347,18 @@ export function renameMapEntry(group: FormGroup, map: NodeMap, oldKey: string, n
   if (map.keyPattern && !new RegExp(map.keyPattern).test(committed)) return false;
   const control = group.controls[oldKey];
   if (!control) return false;
-  group.removeControl(oldKey);
-  group.addControl(committed, control);
+  // Re-key in place: swap the name, then re-append every key that followed so
+  // the renamed entry does not jump to the end of the key order.
+  const following = Object.keys(group.controls);
+  following.splice(0, following.indexOf(oldKey) + 1);
+  group.removeControl(oldKey, { emitEvent: false });
+  group.addControl(committed, control, { emitEvent: false });
+  for (const key of following) {
+    const sibling = group.controls[key];
+    group.removeControl(key, { emitEvent: false });
+    group.addControl(key, sibling, { emitEvent: false });
+  }
+  group.updateValueAndValidity();
   return true;
 }
 

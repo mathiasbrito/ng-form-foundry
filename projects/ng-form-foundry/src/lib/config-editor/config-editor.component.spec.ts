@@ -330,6 +330,15 @@ describe('ConfigEditorComponent', () => {
     expect(document.activeElement).toBe(keyInput);
   }));
 
+  it('a renamed entry keeps its position among the map node&apos;s children', () => {
+    component.addTreeMapEntry(node('servers')); // key2
+    component.addTreeMapEntry(node('servers')); // key3
+
+    component.renameTreeMapEntry(node('servers').children[1], 'mid');
+
+    expect(node('servers').children.map((c) => c.id)).toEqual(['servers/s1', 'servers/mid', 'servers/key3']);
+  });
+
   it('renameTreeMapEntry ignores an empty, duplicate, or pattern-violating key', () => {
     component.addTreeMapEntry(node('servers')); // adds 'key2'
     const entry = node('servers').children[0];
