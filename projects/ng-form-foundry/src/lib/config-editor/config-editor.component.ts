@@ -379,7 +379,9 @@ export class ConfigEditorComponent implements OnDestroy {
   /**
    * A cheap structural signature of a control tree: group keys (plus the active
    * `__case`), array lengths, leaf placeholders. Value edits don't change it;
-   * added/removed/renamed controls and case switches do.
+   * added/removed/renamed controls and case switches do. Reading `__case` from
+   * any group is safe because the name is reserved (the builder rejects it as a
+   * case field name or map entry key), so only choice groups carry it.
    */
   private shapeOf(control: AbstractControl): string {
     if (control instanceof FormGroup) {

@@ -188,6 +188,8 @@ case selector plus the selected case's fields.
 | `appearance` | `Appearance` | {sub}`ui` | Layout options (see [`Appearance`](#appearance)). |
 
 In the form value a choice is `{ __case: <caseName>, ...that case's fields }`.
+The name `__case` is **reserved**: it cannot be used as a case field name (the
+builder throws) or as a map entry key (the entry helpers reject it).
 
 ### Anonymous cases, `__case` inference, and leaf-bodied cases
 

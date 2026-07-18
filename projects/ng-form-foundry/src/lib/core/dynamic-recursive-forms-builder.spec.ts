@@ -541,6 +541,13 @@ describe('dynamic-recursive-forms-builder', () => {
       expect(Object.keys(g.controls)).toEqual(['db']);
     });
 
+    it('rejects the reserved __case name as an entry key (add and rename)', () => {
+      const g = mapGroup({ web: 'a' });
+      expect(addMapEntry(g, map, CASE_KEY)).toBeNull();
+      expect(renameMapEntry(g, map, 'web', CASE_KEY)).toBe(false);
+      expect(Object.keys(g.controls)).toEqual(['web']);
+    });
+
     it('treats dotted keys as verbatim entry names, never as dot-delimited control paths', () => {
       const openMap: NodeMap = { kind: 'map', name: 'endpoints', value: { kind: 'leaf', type: 'string', name: 'value' } };
       const g = buildControl(openMap, { '10.0.0.1': 'edge', 'web.example.com': 'www' }) as FormGroup;
@@ -552,6 +559,16 @@ describe('dynamic-recursive-forms-builder', () => {
       expect(removeMapEntry(g, openMap, 'web.example.com')).toBe(true);
       expect((g.getRawValue() as Record<string, unknown>)).toEqual({ 'gateway.local': 'edge' });
     });
+  });
+
+  it('throws when a case field uses the reserved __case name instead of clobbering the discriminator', () => {
+    const bad: NodeChoice = {
+      kind: 'choice',
+      name: 'mode',
+      cases: { a: { [CASE_KEY]: { kind: 'leaf', type: 'string', name: CASE_KEY } } },
+    };
+    expect(() => caseFields(bad.cases['a'])).toThrowError(/reserved/);
+    expect(() => buildControl(bad, { [CASE_KEY]: 'a' })).toThrowError(/reserved/);
   });
 
   it('never builds a control for an absent presence choice', () => {

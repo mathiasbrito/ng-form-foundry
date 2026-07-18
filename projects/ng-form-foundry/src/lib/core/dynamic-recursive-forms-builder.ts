@@ -216,11 +216,20 @@ function buildNodeGroupListControl<GL extends NodeGroupList>(
  * as-is; a single node (a leaf-bodied case, e.g. a scalar `anyOf` branch) becomes
  * a one-field record keyed by the node's `name`. The discriminant is a top-level
  * `kind` string, which a field record never has (its keys are field names).
+ *
+ * Throws when a case field is keyed `__case`: that name is reserved for the
+ * choice discriminator ({@link CASE_KEY}) and a field under it would silently
+ * clobber the active-case control.
  */
 export function caseFields(body: ChoiceCase): Record<string, NodeType> {
-  return typeof (body as { kind?: unknown }).kind === 'string'
-    ? { [(body as NodeType).name]: body as NodeType }
-    : (body as Record<string, NodeType>);
+  const fields =
+    typeof (body as { kind?: unknown }).kind === 'string'
+      ? { [(body as NodeType).name]: body as NodeType }
+      : (body as Record<string, NodeType>);
+  if (CASE_KEY in fields) {
+    throw new Error(`"${CASE_KEY}" is reserved for the choice discriminator and cannot name a case field`);
+  }
+  return fields;
 }
 
 /**
@@ -308,7 +317,9 @@ export function addMapEntry(group: FormGroup, map: NodeMap, key?: string): strin
   if (map.maxEntries != null && Object.keys(group.controls).length >= map.maxEntries) return null;
   let committed: string;
   if (key != null) {
-    if (group.contains(key)) return null;
+    // `__case` is reserved for the choice discriminator; as an entry key it
+    // would make the map group indistinguishable from a choice group.
+    if (key === CASE_KEY || group.contains(key)) return null;
     if (map.keyPattern && !new RegExp(map.keyPattern).test(key)) return null;
     committed = key;
   } else {
@@ -330,7 +341,7 @@ export function addMapEntry(group: FormGroup, map: NodeMap, key?: string): strin
  */
 export function renameMapEntry(group: FormGroup, map: NodeMap, oldKey: string, newKey: string): boolean {
   const committed = newKey.trim();
-  if (!committed || committed === oldKey || group.contains(committed)) return false;
+  if (!committed || committed === CASE_KEY || committed === oldKey || group.contains(committed)) return false;
   if (map.keyPattern && !new RegExp(map.keyPattern).test(committed)) return false;
   const control = group.controls[oldKey];
   if (!control) return false;

@@ -167,7 +167,11 @@ export type NodeChoice = {
   appearance?: Appearance;
 };
 
-/** The control name that records which case of a {@link NodeChoice} is active. */
+/**
+ * The control name that records which case of a {@link NodeChoice} is active.
+ * The name is reserved: it cannot be used as a case field name (the builder
+ * throws) or as a map entry key (the entry helpers reject it).
+ */
 export const CASE_KEY = '__case';
 
 /**
