@@ -483,7 +483,14 @@ describe('ConfigEditorComponent with dotted map keys', () => {
         value: {
           kind: 'nodeGroup',
           name: 'endpoint',
-          children: { url: { kind: 'leaf', type: 'string', name: 'url' } },
+          children: {
+            url: { kind: 'leaf', type: 'string', name: 'url' },
+            tls: {
+              kind: 'nodeGroup',
+              name: 'tls',
+              children: { cert: { kind: 'leaf', type: 'string', name: 'cert' } },
+            },
+          },
         },
       },
     },
@@ -516,8 +523,32 @@ describe('ConfigEditorComponent with dotted map keys', () => {
 
     const group = form.get('endpoints') as FormGroup;
     expect(group.contains('10.0.0.1')).toBe(false);
-    expect((group.controls['gateway.local'] as FormGroup).getRawValue()).toEqual({ url: 'http://edge' });
+    expect((group.controls['gateway.local'] as FormGroup).getRawValue() as Record<string, unknown>).toEqual({
+      url: 'http://edge',
+      tls: { cert: null },
+    });
     expect(component.root.children.find((c) => c.id === 'endpoints')!.children[0].label).toBe('gateway.local');
+  });
+
+  it('keys containing the path separator get escaped ids, so entries and their subtrees stay addressable', () => {
+    component.renameTreeMapEntry(component.root.children.find((c) => c.id === 'endpoints')!.children[0], 'edge/gw');
+
+    const entry = component.root.children.find((c) => c.id === 'endpoints')!.children[0];
+    expect(entry.label).toBe('edge/gw'); // display stays raw
+    expect(entry.id).toBe('endpoints/edge%2Fgw'); // identity encodes the separator
+    expect(entry.children[0].id).toBe('endpoints/edge%2Fgw/tls');
+    expect(component.selected!.id).toBe(entry.id);
+  });
+
+  it('a rename carries the descendants&apos; expansion state to the new identity', () => {
+    const entry = component.root.children.find((c) => c.id === 'endpoints')!.children[0];
+    component.select(entry); // expands the entry itself
+    expect(component.expanded.has('endpoints/10.0.0.1')).toBe(true);
+
+    component.renameTreeMapEntry(entry, 'web1');
+
+    expect(component.expanded.has('endpoints/web1')).toBe(true);
+    expect([...component.expanded].some((id) => id.includes('10.0.0.1'))).toBe(false);
   });
 });
 

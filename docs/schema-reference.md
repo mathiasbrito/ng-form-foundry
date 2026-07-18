@@ -270,9 +270,6 @@ model but not yet fully wired:
   violates a strict `keyPattern` — it is a placeholder meant to be renamed. The
   map's validator flags it until the rename, so the form reports invalid rather
   than shipping the placeholder silently.
-- **Map entry keys containing `/`** are not yet safe in the `nff-config-editor`
-  tree, whose node identities are `/`-separated paths. Keys with `.` are fully
-  supported everywhere.
 - **`minItems` / `maxItems`** currently gate the remove control on
   `nodeGroupList`, but are not yet enforced as `FormArray` validators, and are not
   yet applied to `leafList`. Treat them as UI hints for now, and validate

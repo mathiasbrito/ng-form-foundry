@@ -57,7 +57,8 @@ interface DetailSection {
 /**
  * A navigable node in the config tree. Its `id` is the node's stable path from
  * the root (`system/ntp`, `ifaces/0`, `servers/web1`), so expansion and
- * selection survive tree rebuilds.
+ * selection survive tree rebuilds. Segments are `%`/`/`-escaped, since map
+ * entry keys are arbitrary runtime data; list-item identity is positional.
  */
 interface TreeNode {
   id: string;
@@ -338,7 +339,7 @@ export class ConfigEditorComponent implements OnDestroy {
     const m = mapNode.map;
     if (!m) return;
     const key = addMapEntry(m.group, m.schema);
-    if (key != null) this.selectByPath(`${mapNode.id}/${key}`);
+    if (key != null) this.selectByPath(this.join(mapNode.id, key));
   }
 
   /** Remove a complex map entry (down to `minEntries`). */
@@ -360,7 +361,15 @@ export class ConfigEditorComponent implements OnDestroy {
     if (!e) return;
     if (renameMapEntry(e.mapGroup, e.mapSchema, e.key, rawKey)) {
       const parentPath = entryNode.id.slice(0, entryNode.id.lastIndexOf('/'));
-      this.selectByPath(`${parentPath}/${rawKey.trim()}`);
+      const newId = this.join(parentPath, rawKey.trim());
+      // The entry's descendants keep their expansion under the new identity.
+      for (const id of [...this.expanded]) {
+        if (id === entryNode.id || id.startsWith(`${entryNode.id}/`)) {
+          this.expanded.delete(id);
+          this.expanded.add(newId + id.slice(entryNode.id.length));
+        }
+      }
+      this.selectByPath(newId);
       // Deferred so the rebuilt section's key field exists before focusing.
       setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.detail .key-field input')?.focus());
     }
@@ -543,7 +552,7 @@ export class ConfigEditorComponent implements OnDestroy {
               .map((item, i) => {
                 // Just "#n": the item sits under its list node, so repeating the
                 // item name (e.g. "Interface #1") only echoes the parent.
-                const node = this.buildTree(schema.type, item, `#${i + 1}`, `${path}/${i}`);
+                const node = this.buildTree(schema.type, item, `#${i + 1}`, this.join(path, String(i)));
                 node.removable = { index: i };
                 return node;
               })
@@ -582,7 +591,7 @@ export class ConfigEditorComponent implements OnDestroy {
             .map((key) => {
               // Index access, not .get(): entry keys are arbitrary runtime data
               // and .get() would split a key like '10.0.0.1' into a dotted path.
-              const entryNode = this.buildChildNode(schema.value, control.controls[key], key, `${path}/${key}`);
+              const entryNode = this.buildChildNode(schema.value, control.controls[key], key, this.join(path, key));
               if (entryNode) {
                 entryNode.mapEntry = { mapGroup: control, mapSchema: schema, key };
               }
@@ -617,6 +626,16 @@ export class ConfigEditorComponent implements OnDestroy {
 
   /** Join a parent path and a segment; the root's path is the empty string. */
   private join(parent: string, segment: string): string {
-    return parent ? `${parent}/${segment}` : segment;
+    const seg = this.escapeSeg(segment);
+    return parent ? `${parent}/${seg}` : seg;
+  }
+
+  /**
+   * Escape a path segment: `/` is the id separator, and map entry keys are
+   * arbitrary runtime data that may contain it. Labels stay unescaped — only
+   * node identities encode.
+   */
+  private escapeSeg(segment: string): string {
+    return segment.replace(/%/g, '%25').replace(/\//g, '%2F');
   }
 }
