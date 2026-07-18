@@ -52,6 +52,36 @@ describe('DrfLeafRendererComponent', () => {
     expect(component.errorText).toContain('^[0-9]{3}$');
   });
 
+  it('a boolean leaf is display-only when not editable: clicking cannot change the wire value', () => {
+    const flag: Leaf = { kind: 'leaf', type: 'boolean', name: 'flag' };
+    const ctrl = new FormControl(false);
+    fixture.componentRef.setInput('leaf_', flag);
+    fixture.componentRef.setInput('control', ctrl);
+    fixture.componentRef.setInput('editable', false);
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('mat-checkbox input');
+    expect(input.disabled).toBe(true);
+    input.click();
+    fixture.detectChanges();
+    expect(ctrl.value).toBe(false);
+    // The control itself stays enabled — a disabled control would leave the form value.
+    expect(ctrl.disabled).toBe(false);
+  });
+
+  it('an enum leaf is display-only when not editable', () => {
+    const level: Leaf = { kind: 'leaf', type: 'enum', name: 'level', enum: ['low', 'high'] } as Leaf;
+    const ctrl = new FormControl('low');
+    fixture.componentRef.setInput('leaf_', level);
+    fixture.componentRef.setInput('control', ctrl);
+    fixture.componentRef.setInput('editable', false);
+    fixture.detectChanges();
+
+    const select: HTMLElement = fixture.nativeElement.querySelector('mat-select');
+    expect(select.getAttribute('aria-disabled')).toBe('true');
+    expect(ctrl.disabled).toBe(false);
+  });
+
   it('renders a readOnly leaf as a read-only input even when the form is editable', () => {
     const constant: Leaf = { kind: 'leaf', type: 'string', name: 'kind', default: 'A1', readOnly: true } as Leaf;
     fixture.componentRef.setInput('leaf_', constant);

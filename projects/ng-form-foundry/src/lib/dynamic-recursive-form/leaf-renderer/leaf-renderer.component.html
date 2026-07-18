@@ -12,7 +12,14 @@
       <mat-error>{{ errorText }}</mat-error>
     </mat-form-field>
   } @else if (leaf_.type === 'boolean') {
-    <mat-checkbox [formControl]="control">{{ leaf_.label ?? leaf_.name }}</mat-checkbox>
+    @if (fieldEditable) {
+      <mat-checkbox [formControl]="control">{{ leaf_.label ?? leaf_.name }}</mat-checkbox>
+    } @else {
+      <!-- Display-only: no formControl binding, so the wire value cannot change.
+           The control itself is never disable()d — a disabled control would
+           still appear in the form value with different semantics. -->
+      <mat-checkbox [checked]="control.value === true" disabled>{{ leaf_.label ?? leaf_.name }}</mat-checkbox>
+    }
   } @else if (leaf_.type === 'enum') {
     <nff-leaf-enum-renderer [editable]="fieldEditable" [leafEnum]="leaf_" [control]="control"></nff-leaf-enum-renderer>
   }

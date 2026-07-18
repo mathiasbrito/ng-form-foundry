@@ -16,16 +16,29 @@
            matInput type="number">
   </mat-form-field>
 } @else if (AnonLeaf.type === 'boolean') {
-  <mat-checkbox [disabled]="!editable" [formControl]="control">value</mat-checkbox>
+  @if (editable) {
+    <mat-checkbox [formControl]="control">value</mat-checkbox>
+  } @else {
+    <!-- Display-only: no formControl binding, so the wire value cannot change. -->
+    <mat-checkbox [checked]="control.value === true" disabled>value</mat-checkbox>
+  }
 }
  @else if (AnonLeaf.type === 'enum' && 'enum' in AnonLeaf) {
-  <mat-form-field>
+  <mat-form-field [appearance]="editable ? 'fill' : 'outline'">
     <mat-label>{{ label }} #{{ index + 1}}</mat-label>
-    <mat-select [formControl]="control">
-      @for (option of (AnonLeaf.type === 'enum' ? AnonLeaf.enum : []); track $index) {
-        <mat-option [value]="option">{{ option }}</mat-option>
-      }
-    </mat-select>
+    @if (editable) {
+      <mat-select [formControl]="control">
+        @for (option of (AnonLeaf.type === 'enum' ? AnonLeaf.enum : []); track $index) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    } @else {
+      <mat-select [value]="control.value" disabled>
+        @for (option of (AnonLeaf.type === 'enum' ? AnonLeaf.enum : []); track $index) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    }
   </mat-form-field>
 }
 </div>
