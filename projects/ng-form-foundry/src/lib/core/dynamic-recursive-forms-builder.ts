@@ -165,12 +165,14 @@ function buildLeafControl<L extends Leaf>(
   }) as FormControl<LeafRuntimeType<L['type']>>;
 }
 
+// The list value with no seed data is the empty array: a phantom null entry
+// would fail validation of the serialized value against typed item schemas,
+// and an empty list is the honest wire shape (renderers offer the add row).
 function buildLeafListControl<L extends LeafList>(
   list: L,
   initial: LeafRuntimeType<L['type']>[] | null,
 ): FormArray<FormControl<LeafRuntimeType<LeafList['type']> | null>> {
-  const values = (Array.isArray(initial) ? initial : undefined) ??
-    list.default ?? [null];
+  const values = (Array.isArray(initial) ? initial : undefined) ?? list.default ?? [];
   return new FormArray(values.map((v) => new FormControl(v)));
 }
 
@@ -201,9 +203,10 @@ function buildNodeGroupListControl<GL extends NodeGroupList>(
   list: GL,
   initial: unknown[] | null = null,
 ): FormArray<DFormGroup<GL['type']>> {
-  // `initial` is the runtime data array — one group per element. Fall back to a
-  // single empty group only when no initial data is supplied.
-  const values = Array.isArray(initial) ? initial : [null];
+  // `initial` is the runtime data array — one group per element. With no data
+  // the list is empty: seeding a phantom all-null group would put an invalid
+  // member on the wire (see buildLeafListControl).
+  const values = Array.isArray(initial) ? initial : [];
   return new FormArray(
     values.map((v) =>
       buildNodeGroupControl(list.type, v as Record<string, unknown> | null),

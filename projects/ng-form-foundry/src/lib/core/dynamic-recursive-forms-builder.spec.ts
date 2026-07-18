@@ -26,11 +26,12 @@ import {
 /**
  * P0 pure-function tests for the schema -> FormGroup builder.
  *
- * The initial-value and list-truncation bugs are FIXED, and the round-trip
- * tests below assert the corrected behaviour. A few `// BUG:` blocks remain:
- * they pin known, still-open issues (spurious [null] seed, nullable leafList
- * controls, ignored minItems, and the record-key vs node.name mismatch) so the
- * suite documents current reality until those are addressed separately.
+ * The initial-value, list-truncation, and phantom-[null]-seed bugs are FIXED,
+ * and the round-trip tests below assert the corrected behaviour. A few
+ * `// BUG:` blocks remain: they pin known, still-open issues (nullable
+ * leafList controls, no minItems validator, and the record-key vs node.name
+ * mismatch) so the suite documents current reality until those are addressed
+ * separately.
  */
 describe('dynamic-recursive-forms-builder', () => {
   // ---- fixtures ----------------------------------------------------------
@@ -208,14 +209,20 @@ describe('dynamic-recursive-forms-builder', () => {
     expect(arr.getRawValue()).toEqual(['a', 'b', 'c']);
   });
 
-  it('BUG: seeds a spurious [null] entry when a leafList has no initial and no default', () => {
+  it('seeds an empty array when a leafList has no initial and no default', () => {
     const arr = buildControl(
       { kind: 'leafList', type: 'string', name: 'tags' } as LeafList,
     ) as FormArray;
-    // pins current buggy behaviour: one null control instead of an empty array
-    expect(arr.length).toBe(1);
-    expect(arr.at(0).value).toBeNull();
-    // CORRECT behaviour would be: expect(arr.length).toBe(0);
+    // A phantom [null] entry would fail wire validation against typed items.
+    expect(arr.length).toBe(0);
+    expect(arr.getRawValue()).toEqual([]);
+  });
+
+  it('a leafList default still seeds the initial entries', () => {
+    const arr = buildControl(
+      { kind: 'leafList', type: 'string', name: 'tags', default: ['a'] } as LeafList,
+    ) as FormArray;
+    expect(arr.getRawValue()).toEqual(['a']);
   });
 
   it('BUG: leafList child controls are nullable, contradicting the non-null typed model', () => {
@@ -227,11 +234,12 @@ describe('dynamic-recursive-forms-builder', () => {
     expect(arr.at(0).value).toBeNull();
   });
 
-  it('BUG: leafList ignores minItems (should pre-seed minItems empty controls)', () => {
+  it('BUG: leafList carries no minItems validator (an under-filled list reports valid)', () => {
     const arr = buildControl(
       { kind: 'leafList', type: 'string', name: 'tags', minItems: 3 } as LeafList,
     ) as FormArray;
-    expect(arr.length).toBe(1); // pins bug; CORRECT would be 3
+    expect(arr.length).toBe(0); // empty seed — entries are user-added
+    expect(arr.valid).toBe(true); // pins the gap: nothing flags length < minItems
   });
 
   // ---- buildControl: node group list ------------------------------------
