@@ -1,4 +1,5 @@
-import type { FormValue } from '../../core/schema';
+import type { FormValue, Thesaurus } from '../../core/schema';
+import { applyThesaurus } from '../../core/thesaurus';
 import type { Transformer, TransformResult } from '../../core/transformer';
 import { inferNodeGroup } from '../../core/infer';
 import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '../../core/json-schema';
@@ -15,6 +16,13 @@ export interface JsonOptions {
   rootName?: string;
   /** Options forwarded to `jsonSchemaToNodeGroup` (`refDocuments`, `optionalPresence`). */
   schemaOptions?: JsonSchemaOptions;
+  /**
+   * Display metadata (`label`/`description`/choice `caseLabels`) injected into
+   * the produced schema, schema-driven or inferred alike — see
+   * `applyThesaurus`. Keys are plain identifier names, matched
+   * case-insensitively; never paths.
+   */
+  thesaurus?: Thesaurus;
 }
 
 /** How the source was formatted, so `toSource` re-emits it the same way. */
@@ -58,12 +66,13 @@ export const jsonTransformer = {
     const schema = options?.schema
       ? jsonSchemaToNodeGroup(options.schema, options.rootName, options.schemaOptions)
       : inferNodeGroup(data, options?.rootName);
+    const labeled = options?.thesaurus ? applyThesaurus(schema, options.thesaurus) : schema;
     const binding: JsonFormat = {
       indent: detectIndent(source),
       trailingNewline: source.endsWith('\n'),
       bigInts,
     };
-    return { schema, binding, initialValue: data };
+    return { schema: labeled, binding, initialValue: data };
   },
 
   toSource(value: FormValue, binding: JsonFormat): string {

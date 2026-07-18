@@ -12,7 +12,8 @@
  * are then shown read-only. A JSON Schema in the options unlocks typed empty
  * collections, presence toggles for optional settings, enums, and ranges.
  */
-import type { FormValue } from '../../core/schema';
+import type { FormValue, Thesaurus } from '../../core/schema';
+import { applyThesaurus } from '../../core/thesaurus';
 import type { Transformer, TransformResult } from '../../core/transformer';
 import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '../../core/json-schema';
 import { type CfgGroup, parseLibconfig } from './parser';
@@ -37,6 +38,13 @@ export interface LibconfigOptions {
    * line verbatim and edits only this file's own settings.
    */
   includes?: 'reject' | 'opaque';
+  /**
+   * Display metadata (`label`/`description`/choice `caseLabels`) injected into
+   * the produced schema, schema-driven or inferred alike — see
+   * `applyThesaurus`. Keys are plain identifier names, matched
+   * case-insensitively; never paths.
+   */
+  thesaurus?: Thesaurus;
 }
 
 /** The revert context: the original text and its positioned AST. */
@@ -70,8 +78,9 @@ export const libconfigTransformer = {
     const schema = options?.schema
       ? jsonSchemaToNodeGroup(options.schema, options.rootName, options.schemaOptions)
       : libconfigToNodeGroup(root, source, options?.rootName ?? '__root__');
+    const labeled = options?.thesaurus ? applyThesaurus(schema, options.thesaurus) : schema;
     const initialValue = extractValue(root, source, options?.schema != null) as FormValue;
-    return { schema, binding: { source, root }, initialValue };
+    return { schema: labeled, binding: { source, root }, initialValue };
   },
 
   toSource(value: FormValue, binding: LibconfigBinding): string {

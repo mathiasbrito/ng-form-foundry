@@ -50,6 +50,32 @@ the library's `serializeForm(schema, form)`, which strips the `__case`
 discriminators from `getRawValue()`. The YANG adapter is the exception: its
 `toYangData` consumes the form value and flattens `__case` itself.
 
+## Thesaurus — display metadata for machine schemas
+
+Machine schemas (O-RAN A1 policy types, inferred configs) ship without titles,
+so forms fall back to raw attribute names (`guRanUeId`, `mcc`). Every
+`toSchema` accepts a **thesaurus** — identifier → `{ label, description }` —
+injected into the produced schema, JSON-Schema-driven or inferred alike:
+
+```ts
+const thesaurus = {
+  ueId: { label: 'UE ID', description: 'UE identifier.' },
+  mcc: { label: 'MCC', description: 'Mobile Country Code (3 digits).' },
+};
+yamlTransformer.toSchema(text, { thesaurus });          // also json / libconfig
+jsonSchemaToNodeGroup(schema, 'body', { thesaurus });   // or standalone
+applyThesaurus(nodeGroup, thesaurus);                   // post-process anything
+```
+
+Keys are **plain identifier names**, matched **case-insensitively** against
+each node's property/setting name — one entry covers the identifier wherever
+it appears. Keys are never paths: no separator exists, so a `.` in a key is a
+literal character of the name. The thesaurus fills gaps only — schema-authored
+`title`/`description` always win. Unlabeled choice cases are titled from their
+discriminating required field; when sibling cases collide (identical required
+sets), the library's case selectors disambiguate them by each case's
+distinguishing fields.
+
 ## YAML transformer
 
 Edit a **YAML config file**: turn it into a form, then write the edited value

@@ -27,3 +27,5 @@ export type {
   FormValue,
 } from './schema';
 export { CASE_KEY } from './schema';
+export type { Thesaurus, ThesaurusEntry } from './schema';
+export { applyThesaurus } from './thesaurus';

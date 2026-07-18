@@ -138,6 +138,18 @@ Not yet mapped: `allOf` composition, `exclusiveMinimum`/`exclusiveMaximum`, and
 Optional **arrays** cannot carry `presence` (lists don't support it yet) and are
 always materialized.
 
+### Thesaurus — display metadata injection
+
+Every `toSchema` (and `jsonSchemaToNodeGroup` itself) accepts a `thesaurus`:
+identifier → `{ label, description }`, injected into the produced schema —
+schema-driven or inferred alike. Keys are plain identifier names matched
+case-insensitively against property/setting names, **never paths** (a `.` in a
+key is a literal character). Authored `title`/`description` always win;
+unlabeled choice cases are titled from their discriminating required field,
+and colliding sibling labels are disambiguated by the library's case
+selectors. `applyThesaurus(nodeGroup, thesaurus)` is exported for
+post-processing any schema.
+
 ## libconfig (beta)
 
 `libconfigTransformer` edits **libconfig documents** — the `.cfg`/`.conf`

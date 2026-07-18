@@ -73,6 +73,7 @@ export interface NodeGroup {
    */
   minPresent?: number;
   maxPresent?: number;
+  description?: string;
   children: Record<string, NodeType>;
 }
 
@@ -136,3 +137,17 @@ export const CASE_KEY = '__case';
 
 /** A plain, nested value object produced/consumed by a rendered form. */
 export type FormValue = Record<string, unknown>;
+
+/** Display metadata for one schema identifier (see {@link Thesaurus}). */
+export interface ThesaurusEntry {
+  label?: string;
+  description?: string;
+}
+
+/**
+ * Identifier → display metadata, injected into a generated {@link NodeGroup}
+ * by `applyThesaurus`. Keys are **plain identifier names** matched
+ * **case-insensitively** against node record keys — never paths: no separator
+ * exists, so a `.` (or any character) in a key is a literal part of the name.
+ */
+export type Thesaurus = Record<string, ThesaurusEntry>;

@@ -126,7 +126,10 @@ string/number constraints and `type: "integer"` → validators;
 (non-`required`) properties auto-become `presence` nodes — absent until enabled,
 so the serialized value validates against the source schema (opt out with
 `schemaOptions: { optionalPresence: false }`). Not mapped: `allOf`, exclusive
-bounds, presence for optional *arrays* (lists can't carry it).
+bounds, presence for optional *arrays* (lists can't carry it). All `toSchema`
+entry points accept `thesaurus` (identifier → label/description, plain
+case-insensitive names — never paths) to inject display metadata into
+title-less machine schemas; `applyThesaurus` is the standalone export.
 
 ### libconfig round-trip (beta)
 

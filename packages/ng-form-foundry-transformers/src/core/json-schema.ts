@@ -1,3 +1,4 @@
+import { applyThesaurus } from './thesaurus';
 import type {
   Choice,
   ChoiceCase,
@@ -8,6 +9,7 @@ import type {
   NodeGroupList,
   NodeMap,
   NodeType,
+  Thesaurus,
 } from './schema';
 
 /**
@@ -71,6 +73,12 @@ export interface JsonSchemaOptions {
    * unconditionally.
    */
   optionalPresence?: boolean;
+  /**
+   * Display metadata injected into the produced schema (`label`,
+   * `description`, choice `caseLabels`) — see {@link applyThesaurus}. Fills
+   * gaps only; schema-authored `title`/`description` always win.
+   */
+  thesaurus?: Thesaurus;
 }
 
 type JsonSchemaType = 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null';
@@ -99,7 +107,7 @@ export function jsonSchemaToNodeGroup(schema: JsonSchema, name: string = ROOT, o
   const { schema: root, scope } = resolver.resolve(schema);
   const group = objectToNodeGroup(root, name, scope, ctx, root.title);
   group.root = true;
-  return group;
+  return options?.thesaurus ? applyThesaurus(group, options.thesaurus) : group;
 }
 
 /** Flags threaded through the whole mapping walk. */

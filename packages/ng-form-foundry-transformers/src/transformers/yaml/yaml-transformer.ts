@@ -1,5 +1,6 @@
 import { type Document, parseDocument } from 'yaml';
-import type { FormValue } from '../../core/schema';
+import type { FormValue, Thesaurus } from '../../core/schema';
+import { applyThesaurus } from '../../core/thesaurus';
 import type { Transformer, TransformResult } from '../../core/transformer';
 import { inferNodeGroup } from '../../core/infer';
 import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '../../core/json-schema';
@@ -18,6 +19,13 @@ export interface YamlOptions {
   rootName?: string;
   /** Options forwarded to `jsonSchemaToNodeGroup` (`refDocuments`, `optionalPresence`). */
   schemaOptions?: JsonSchemaOptions;
+  /**
+   * Display metadata (`label`/`description`/choice `caseLabels`) injected into
+   * the produced schema, schema-driven or inferred alike — see
+   * `applyThesaurus`. Keys are plain identifier names, matched
+   * case-insensitively; never paths.
+   */
+  thesaurus?: Thesaurus;
 }
 
 /**
@@ -44,7 +52,8 @@ export const yamlTransformer = {
     const schema = options?.schema
       ? jsonSchemaToNodeGroup(options.schema, options.rootName, options.schemaOptions)
       : inferNodeGroup(data, options?.rootName);
-    return { schema, binding: doc, initialValue: data };
+    const labeled = options?.thesaurus ? applyThesaurus(schema, options.thesaurus) : schema;
+    return { schema: labeled, binding: doc, initialValue: data };
   },
 
   toSource(value: FormValue, binding: Document): string {
