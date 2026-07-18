@@ -98,7 +98,9 @@ const ROOT = '__root__';
  * choice `mandatory`; a property *not* in `required` becomes a `presence` node
  * — absent from the form value until enabled — unless
  * {@link JsonSchemaOptions.optionalPresence} is `false`. `title` becomes the
- * label, `default`/`const` carry a scalar value.
+ * label, `default`/`const` carry a scalar value, and
+ * {@link JsonSchemaOptions.thesaurus} fills labels/descriptions the schema
+ * does not author.
  */
 export function jsonSchemaToNodeGroup(schema: JsonSchema, name: string = ROOT, options?: JsonSchemaOptions): NodeGroup {
   const documents = [schema, ...(options?.refDocuments ?? [])];

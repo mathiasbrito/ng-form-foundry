@@ -166,6 +166,8 @@ export type NodeChoice = {
   /**
    * Display labels for cases, keyed by case name — for anonymous/auto-named
    * branches whose keys are not human-friendly. Falls back to the case name.
+   * Selectors render these through `caseDisplayLabels`, which disambiguates
+   * colliding entries by each case's distinguishing fields.
    */
   caseLabels?: Record<string, string>;
   default?: string;

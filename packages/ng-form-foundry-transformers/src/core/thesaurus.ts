@@ -25,9 +25,9 @@ import type { ChoiceCase, NodeGroup, NodeType, Thesaurus, ThesaurusEntry } from 
  * fields, map value templates, choice case fields). A choice case with no
  * label is titled from its discriminating field — the first `required` field
  * (else the first field) that has a thesaurus entry. Sibling cases may end up
- * with the same label when their required sets coincide; the library's case
- * selectors disambiguate colliding labels by each case's distinguishing
- * fields.
+ * with the same label when their required sets coincide; the library's
+ * `caseDisplayLabels` disambiguates colliding labels in the selectors by each
+ * case's distinguishing fields, using the field labels injected here.
  */
 export function applyThesaurus<G extends NodeGroup>(schema: G, thesaurus: Thesaurus): G {
   const lookup = new Map<string, ThesaurusEntry>();
