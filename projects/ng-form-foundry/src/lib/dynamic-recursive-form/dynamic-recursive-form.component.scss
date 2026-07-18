@@ -4,8 +4,6 @@
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  @include mat.expansion-overrides((
-  ));
   width: 100%;
   margin: 4px 0;
 }
@@ -27,14 +25,6 @@
 .node-section {
   width: 100%;
   margin: 4px 0;
-}
-
-// The per-group edit / add / remove controls live in the panel header, pushed to
-// the right and kept from toggling the panel (handled by stopPropagation).
-.section-actions {
-  justify-content: flex-end;
-  align-items: center;
-  gap: 4px;
 }
 
 // An absent presence leaf shows only an "Add <field>" button, sitting in the
@@ -69,13 +59,6 @@ nff-leaf-list-renderer {
 }
 
 
-.mat-expansion-panel-content:hover {
-  display: flex;
-  flex-direction: row;
-  gap: 16px;
-}
-
-
 .form-content {
   display: flex;
   flex-direction: column;
@@ -95,40 +78,15 @@ mat-panel-description {
   flex-direction: row;
 }
 
-.node-groups-container {
-  display: flex;
-  flex-direction: column;
-  flex-basis: 100%;
-}
-
+// The per-group edit / add / remove controls live in the panel header, pushed to
+// the right and kept from toggling the panel (handled by stopPropagation).
 .section-actions {
   display: flex;
   flex-direction: row;
+  align-items: center;
   gap: 8px;
   justify-content: flex-end;
   width: 100%;
-}
-
-mat-card {
-  padding: 0;
-  width: 100%;
-}
-
-.mat-card-no-broder {
-  border: 0;
-}
-
-mat-card-content {
-  box-sizing: border-box;
-  padding: 16px;
-}
-
-mat-card-header {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  padding: 16px 16px;
-  gap: 16px;
 }
 
 .edit-icon {
@@ -138,18 +96,7 @@ mat-card-header {
 
 .edit-icon:hover {
   opacity: 1;
-  animation: icon-transition 0.5s;
-}
-
-// Add/remove buttons for list items — same colored pills as the leaf-list
-// renderer, so leaf arrays and group arrays share one look and feel. Laid out
-// horizontally beside the card title (vertical stacking is only for the buttons
-// that sit right after an input field, in the leaf-list renderer).
-.card-actions {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
+  animation: icon-hovered 0.5s;
 }
 
 // A flattened list item has no card header — its add/remove buttons sit right
@@ -180,14 +127,6 @@ mat-card-header {
   // Same field-to-buttons gap the leaf-list uses (its .field-item), so the
   // action column doesn't touch the last input field.
   gap: 4px;
-}
-
-.flattened-style-actions {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  justify-content: flex-end;
-  align-items: flex-start;
 }
 
 @keyframes icon-hovered {

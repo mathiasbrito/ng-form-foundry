@@ -71,8 +71,8 @@ interface TreeNode {
   ref?: { group: FormGroup; key: string; schema: NodeType };
   /** Present on a nodeGroupList node: lets a `+` add an item. */
   list?: ListRef;
-  /** Present on a list-item node: the FormArray and current index it can be removed from. */
-  removable?: { array: FormArray; index: number };
+  /** Present on a list-item node: its current index in the parent list (removal goes through the parent list array). */
+  removable?: { index: number };
   /** Absent optional children of this node, offered by its "+ Optional field" menu (schema order). */
   optionals?: OptionalEntry[];
   /** Present on a present optional child node: drives the row's remove control. */
@@ -202,13 +202,13 @@ export class ConfigEditorComponent implements OnDestroy {
     return this.root ? (walk(this.root, []) ?? []) : [];
   }
 
-  toggle(node: TreeNode) {
+  protected toggle(node: TreeNode) {
     if (this.expanded.has(node.id)) this.expanded.delete(node.id);
     else this.expanded.add(node.id);
   }
 
   /** Keyboard access for tree rows: Enter/Space selects, ArrowRight expands, ArrowLeft collapses. */
-  onRowKeydown(event: KeyboardEvent, node: TreeNode) {
+  protected onRowKeydown(event: KeyboardEvent, node: TreeNode) {
     // Keys pressed on the row's inner buttons keep their own meaning.
     if (event.target !== event.currentTarget) return;
     switch (event.key) {
@@ -233,7 +233,7 @@ export class ConfigEditorComponent implements OnDestroy {
   }
 
   /** Whether the row shows an expand twisty: it has child rows to reveal (children or an optionals menu row). */
-  hasExpandableContent(node: TreeNode): boolean {
+  protected hasExpandableContent(node: TreeNode): boolean {
     return node.children.length > 0 || (this.editable() && !!node.optionals?.length);
   }
 
@@ -242,7 +242,7 @@ export class ConfigEditorComponent implements OnDestroy {
    * and map nodes each check their backing control; `invalid` aggregates over
    * descendants, so an error anywhere below lights every ancestor row.
    */
-  hasError(node: TreeNode): boolean {
+  protected hasError(node: TreeNode): boolean {
     return !!(node.group?.invalid || node.list?.array.invalid || node.map?.group.invalid);
   }
 
@@ -305,7 +305,7 @@ export class ConfigEditorComponent implements OnDestroy {
   }
 
   /** The display label for a case: the schema's `caseLabels` entry, else the case name. */
-  caseLabel(choice: NodeChoice, caseName: string): string {
+  protected caseLabel(choice: NodeChoice, caseName: string): string {
     return choice.caseLabels?.[caseName] ?? caseName;
   }
 
@@ -317,7 +317,7 @@ export class ConfigEditorComponent implements OnDestroy {
     this.selectByPath(node.id);
   }
 
-  objectKeys(obj: Record<string, unknown>): string[] {
+  protected objectKeys(obj: Record<string, unknown>): string[] {
     return Object.keys(obj);
   }
 
@@ -355,13 +355,13 @@ export class ConfigEditorComponent implements OnDestroy {
   }
 
   /** Whether a map node is at `maxEntries` (the add control is hidden). */
-  mapAtMax(node: TreeNode | undefined): boolean {
+  protected mapAtMax(node: TreeNode | undefined): boolean {
     const m = node?.map;
     return !!m && m.schema.maxEntries != null && Object.keys(m.group.controls).length >= m.schema.maxEntries;
   }
 
   /** Whether a map node is at `minEntries` (entry remove controls are hidden). */
-  mapAtMin(node: TreeNode | undefined): boolean {
+  protected mapAtMin(node: TreeNode | undefined): boolean {
     const m = node?.map;
     return !!m && m.schema.minEntries != null && Object.keys(m.group.controls).length <= m.schema.minEntries;
   }
@@ -525,7 +525,7 @@ export class ConfigEditorComponent implements OnDestroy {
                 // Just "#n": the item sits under its list node, so repeating the
                 // item name (e.g. "Interface #1") only echoes the parent.
                 const node = this.buildTree(schema.type, item, `#${i + 1}`, `${path}/${i}`);
-                node.removable = { array, index: i };
+                node.removable = { index: i };
                 return node;
               })
           : [];

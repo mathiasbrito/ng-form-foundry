@@ -439,12 +439,11 @@ describe('ConfigEditorComponent', () => {
     expect(unnamed.map((b) => b.outerHTML.slice(0, 80))).toEqual([]);
   });
 
-  it('draws no border box around the tree (the divider is the only chrome)', () => {
-    const tree: HTMLElement = fixture.nativeElement.querySelector('.tree');
-    const style = getComputedStyle(tree);
-    expect(style.borderLeftStyle).toBe('none');
-    expect(style.borderTopStyle).toBe('none');
-    expect(style.borderRightStyle).toBe('solid'); // the tree/detail divider
+  it('draws no container of its own: the editor renders bare tree and detail panes', () => {
+    // The embedding client owns the chrome; the component contributes only the
+    // two panes (divider styling is a theme concern, verified in the demos).
+    const editor: HTMLElement = fixture.nativeElement.querySelector('.editor');
+    expect([...editor.children].map((c) => c.className.split(' ')[0])).toEqual(['tree', 'detail']);
   });
 });
 

@@ -1,12 +1,7 @@
 import { Component, computed, forwardRef, input, model, OnInit, output } from '@angular/core';
 import { LeafRendererComponent } from './leaf-renderer/leaf-renderer.component';
 import { CASE_KEY, Leaf, NodeChoice, NodeGroup, NodeType } from '../types/dynamic-recursive.types';
-import {
-  FormArray,
-  FormControl,
-  FormGroup,
-  ReactiveFormsModule,
-} from '@angular/forms';
+import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { NodeGroupListRendererComponent } from './node-group-list-renderer/node-group-list-renderer.component';
 import { LeafListRendererComponent } from './leaf-list-renderer/leaf-list-renderer.component';
 import { NodeMapRendererComponent } from './node-map-renderer/node-map-renderer.component';
@@ -88,7 +83,7 @@ export class DynamicRecursiveFormComponent implements OnInit {
     }
   }
 
-  get nodeGroupChildrenList(): Array<{ key: string; value: NodeType }> {
+  protected get nodeGroupChildrenList(): Array<{ key: string; value: NodeType }> {
     const children = this.schema().children ?? {};
     return Object.entries(children).map(([key, value]) => ({
       key,
@@ -96,7 +91,7 @@ export class DynamicRecursiveFormComponent implements OnInit {
     }));
   }
 
-  emitRemoveEvent() {
+  protected emitRemoveEvent() {
     this.remove.emit();
   }
 
@@ -154,17 +149,17 @@ export class DynamicRecursiveFormComponent implements OnInit {
 
   protected readonly CASE_KEY = CASE_KEY;
 
-  objectKeys(obj: Record<string, unknown>): string[] {
+  protected objectKeys(obj: Record<string, unknown>): string[] {
     return Object.keys(obj);
   }
 
   /** The active case name of a choice control, or null if none is selected. */
-  activeCase(key: string): string | null {
+  protected activeCase(key: string): string | null {
     return (this.formGroup().get(key) as FormGroup | null)?.get(CASE_KEY)?.value ?? null;
   }
 
   /** A synthetic flattened NodeGroup used to render the active case's fields against the choice's FormGroup. */
-  caseAsGroup(choice: NodeChoice, caseName: string): NodeGroup {
+  protected caseAsGroup(choice: NodeChoice, caseName: string): NodeGroup {
     return {
       kind: 'nodeGroup',
       name: choice.name,
@@ -183,7 +178,7 @@ export class DynamicRecursiveFormComponent implements OnInit {
    * for a presence group's body, whose container is the presence panel itself, so
    * the group's own section panel would be a redundant second box.
    */
-  flatGroup(group: NodeGroup): NodeGroup {
+  protected flatGroup(group: NodeGroup): NodeGroup {
     return { ...group, appearance: { ...group.appearance, flatten: true } };
   }
 
