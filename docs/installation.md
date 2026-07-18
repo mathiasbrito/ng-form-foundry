@@ -30,6 +30,12 @@ npm install @angular/material @angular/cdk
 Two things must be in place for the rendered forms to look correct: a Material
 theme and the Material Icons font. Animations are optional.
 
+That is the complete list — the library's component styles are self-contained
+(the compact add/remove/edit icon buttons included), so no global stylesheet
+rules, style imports, or Sass mixins from this package are needed or offered.
+If the controls render at stock Material sizes, the missing piece is the
+theme, not library CSS.
+
 ### 1. Load a Material theme
 
 ```scss

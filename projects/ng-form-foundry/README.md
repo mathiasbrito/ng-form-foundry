@@ -64,7 +64,9 @@ npm install @angular/material @angular/cdk
 ### Application setup
 
 Load a Material theme and the Material Icons font. Animations are optional in
-Angular Material 20.
+Angular Material 20. Nothing else: the library's component styles are
+self-contained (including the compact add/remove/edit icon buttons) — there are
+no global stylesheet rules or Sass mixins to import from this package.
 
 ```scss
 // styles.scss
