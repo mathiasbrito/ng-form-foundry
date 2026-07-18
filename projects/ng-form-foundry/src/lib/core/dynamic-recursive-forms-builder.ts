@@ -267,6 +267,38 @@ export function caseFields(body: ChoiceCase): Record<string, NodeType> {
 }
 
 /**
+ * Display labels for a choice's cases, keyed by case name, with colliding
+ * labels disambiguated. Schema-supplied `caseLabels` can repeat (e.g. two
+ * O-RAN A1 scope branches labeled from the same discriminating field), which
+ * makes the case selector ambiguous; each colliding case gains the fields
+ * that set it apart from its same-labeled peers — "UE ID (Group ID)" vs
+ * "UE ID (Slice ID)". Cases with identical field sets fall back to their case
+ * name. Unique labels pass through untouched.
+ */
+export function caseDisplayLabels(choice: NodeChoice): Record<string, string> {
+  const names = Object.keys(choice.cases);
+  const out: Record<string, string> = {};
+  const byLabel = new Map<string, string[]>();
+  for (const name of names) {
+    out[name] = choice.caseLabels?.[name] ?? name;
+    byLabel.set(out[name], [...(byLabel.get(out[name]) ?? []), name]);
+  }
+  for (const clashing of byLabel.values()) {
+    if (clashing.length < 2) continue;
+    for (const name of clashing) {
+      const fields = caseFields(choice.cases[name]);
+      const others = clashing.filter((o) => o !== name).map((o) => caseFields(choice.cases[o]));
+      const distinct = Object.keys(fields).filter((key) => !others.every((o) => key in o));
+      const suffix = distinct.length
+        ? distinct.map((key) => (fields[key] as { label?: string }).label ?? key).join(', ')
+        : name;
+      out[name] = `${out[name]} (${suffix})`;
+    }
+  }
+  return out;
+}
+
+/**
  * The active case of a choice: an explicit `__case` in the initial value, else
  * the case {@link inferChoiceCase} ranks best against the initial data (inline
  * wire data carries no `__case`), else the schema `default`. This lets a choice

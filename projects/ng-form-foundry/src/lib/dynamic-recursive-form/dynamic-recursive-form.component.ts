@@ -10,7 +10,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgTemplateOutlet } from '@angular/common';
 import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
-import { buildControl, caseFields, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
+import {
+  caseDisplayLabels, buildControl, caseFields, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -153,9 +154,13 @@ export class DynamicRecursiveFormComponent implements OnInit {
     };
   }
 
-  /** The display label for a case: the schema's `caseLabels` entry, else the case name. */
+  /**
+   * The display label for a case: the schema's `caseLabels` entry (colliding
+   * labels disambiguated by their distinguishing fields — see
+   * {@link caseDisplayLabels}), else the case name.
+   */
   caseLabel(choice: NodeChoice, caseName: string): string {
-    return choice.caseLabels?.[caseName] ?? caseName;
+    return caseDisplayLabels(choice)[caseName] ?? caseName;
   }
 
   /**

@@ -4,6 +4,7 @@ import {
   buildControl,
   buildFormFromSchema,
   caseFields,
+  caseDisplayLabels,
   removeMapEntry,
   renameMapEntry,
   resolveChoiceCase,
@@ -987,6 +988,61 @@ describe('dynamic-recursive-forms-builder', () => {
       const group = buildControl(plain) as FormGroup;
       expect(group.get(CASE_KEY)!.value).toBeNull();
       expect(group.valid).toBe(true);
+    });
+  });
+
+  describe('caseDisplayLabels', () => {
+    it('passes unique labels and unlabeled case names through untouched', () => {
+      const choice: NodeChoice = {
+        kind: 'choice',
+        name: 'scope',
+        caseLabels: { byUe: 'By UE' },
+        cases: {
+          byUe: { ueId: { kind: 'leaf', type: 'string', name: 'ueId' } },
+          byCell: { cellId: { kind: 'leaf', type: 'string', name: 'cellId' } },
+        },
+      };
+      expect(caseDisplayLabels(choice)).toEqual({ byUe: 'By UE', byCell: 'byCell' });
+    });
+
+    it('disambiguates colliding labels by each case&apos;s distinguishing field labels', () => {
+      // The O-RAN QoSTarget scope trap: two branches share required {ueId,
+      // qosId} — a label heuristic keyed on the first required field titles
+      // both "UE ID"; they differ only in their optional identifier.
+      const scope: NodeChoice = {
+        kind: 'choice',
+        name: 'scope',
+        caseLabels: { case0: 'UE ID', case1: 'UE ID' },
+        cases: {
+          case0: {
+            ueId: { kind: 'leaf', type: 'string', name: 'ueId', label: 'UE ID', required: true },
+            groupId: { kind: 'leaf', type: 'string', name: 'groupId', label: 'Group ID', presence: true },
+            qosId: { kind: 'leaf', type: 'string', name: 'qosId', label: 'QoS ID', required: true },
+          },
+          case1: {
+            ueId: { kind: 'leaf', type: 'string', name: 'ueId', label: 'UE ID', required: true },
+            sliceId: { kind: 'leaf', type: 'string', name: 'sliceId', label: 'Slice ID', presence: true },
+            qosId: { kind: 'leaf', type: 'string', name: 'qosId', label: 'QoS ID', required: true },
+          },
+        },
+      };
+      expect(caseDisplayLabels(scope)).toEqual({
+        case0: 'UE ID (Group ID)',
+        case1: 'UE ID (Slice ID)',
+      });
+    });
+
+    it('colliding labels over identical field sets fall back to the case name', () => {
+      const twin: NodeChoice = {
+        kind: 'choice',
+        name: 'twin',
+        caseLabels: { a: 'Same', b: 'Same' },
+        cases: {
+          a: { x: { kind: 'leaf', type: 'string', name: 'x' } },
+          b: { x: { kind: 'leaf', type: 'string', name: 'x' } },
+        },
+      };
+      expect(caseDisplayLabels(twin)).toEqual({ a: 'Same (a)', b: 'Same (b)' });
     });
   });
 

@@ -14,6 +14,7 @@ import {
   addMapEntry,
   buildControl,
   buildFormFromSchema,
+  caseDisplayLabels,
   caseFields,
   removeMapEntry,
   renameMapEntry,
@@ -351,12 +352,16 @@ export class ConfigEditorComponent implements OnDestroy {
   activeCaseLabel(node: TreeNode): string | null {
     const c = node.choice;
     const active = this.activeCase(node);
-    return c && active ? (c.schema.caseLabels?.[active] ?? active) : null;
+    return c && active ? this.caseLabel(c.schema, active) : null;
   }
 
-  /** The display label for a case: the schema's `caseLabels` entry, else the case name. */
+  /**
+   * The display label for a case: the schema's `caseLabels` entry (colliding
+   * labels disambiguated by their distinguishing fields — see
+   * {@link caseDisplayLabels}), else the case name.
+   */
   protected caseLabel(choice: NodeChoice, caseName: string): string {
-    return choice.caseLabels?.[caseName] ?? caseName;
+    return caseDisplayLabels(choice)[caseName] ?? caseName;
   }
 
   /**
