@@ -160,6 +160,38 @@ describe('DynamicRecursiveFormComponent', () => {
     expect(titles).toEqual(['A List', 'Z Map', 'Group']);
   });
 
+  it('presence leaves trail the regular fields in the root layout, regardless of declaration order', () => {
+    const rootWithPresence: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      root: true,
+      children: {
+        note: { kind: 'leaf', type: 'string', name: 'note', presence: true }, // declared first
+        host: { kind: 'leaf', type: 'string', name: 'host' },
+      },
+    };
+    const local = TestBed.createComponent(DynamicRecursiveFormComponent);
+    local.componentRef.setInput('schema', rootWithPresence);
+    local.componentRef.setInput('formGroup', buildFormFromSchema(rootWithPresence));
+    local.componentRef.setInput('editable', true);
+    local.detectChanges();
+
+    const fields: HTMLElement = local.nativeElement.querySelector('.fields');
+    const children = [...fields.children];
+    const leafIdx = children.findIndex((el) => el.tagName.toLowerCase() === 'nff-leaf-renderer');
+    const addIdx = children.findIndex((el) => el.classList.contains('presence-leaf-add'));
+    // The plain leaf renders before the trailing presence add button.
+    expect(leafIdx).toBeGreaterThan(-1);
+    expect(leafIdx).toBeLessThan(addIdx);
+
+    (local.nativeElement.querySelector('.presence-leaf-add') as HTMLElement).click();
+    local.detectChanges();
+    const after = [...local.nativeElement.querySelector('.fields').children].map((el) => el.tagName.toLowerCase());
+    // Enabled, the presence field keeps the trailing spot.
+    expect(after.filter((t) => t === 'nff-leaf-renderer').length).toBe(2);
+    expect(after[after.length - 1]).toBe('nff-leaf-renderer');
+  });
+
   it('renders nothing for an absent presence leaf in read-only mode (no dead add button)', () => {
     const presenceLeafSchema: NodeGroup = {
       kind: 'nodeGroup',

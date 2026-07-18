@@ -443,6 +443,27 @@ describe('ConfigEditorComponent', () => {
 
   // --- rendering -------------------------------------------------------------
 
+  it('editable=false renders a fully inert editor: no structural controls, read-only detail', () => {
+    component.select(node('servers').children[0]); // a map entry: key field + fields
+    fixture.componentRef.setInput('editable', false);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelectorAll('.tree .row-btn').length).toBe(0); // no add/remove rows
+    expect(el.querySelector('.optional-row')).toBeNull(); // no optionals menu
+    const keyInput: HTMLInputElement = el.querySelector('.detail .key-field input')!;
+    expect(keyInput.readOnly).toBe(true);
+    expect(el.querySelectorAll('.detail .section-actions').length).toBe(0); // no Add buttons
+
+    component.select(node('scope'));
+    fixture.detectChanges();
+    // The case selector is replaced by a read-only display of the active case.
+    expect(el.querySelector('.detail .case-select mat-select')).toBeNull();
+    const caseDisplay: HTMLInputElement = el.querySelector('.detail .case-select input')!;
+    expect(caseDisplay.readOnly).toBe(true);
+    expect(caseDisplay.value).toBe('By node');
+  });
+
   it('renders the "+ Optional field" row after the children, and hides it when not editable', () => {
     fixture.detectChanges();
     const rows: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.tree .tree-row');
@@ -580,6 +601,156 @@ describe('ConfigEditorComponent with dotted map keys', () => {
 
     expect(component.expanded.has('endpoints/web1')).toBe(true);
     expect([...component.expanded].some((id) => id.includes('10.0.0.1'))).toBe(false);
+  });
+});
+
+describe('ConfigEditorComponent shape signature', () => {
+  it('a pure __case flip re-syncs the tree even when both cases share identical field sets', async () => {
+    // Twin cases: switching changes ONLY the discriminator, so this isolates
+    // the signature's __case marker from key-set changes.
+    const twinSchema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      root: true,
+      children: {
+        mode: {
+          kind: 'choice',
+          name: 'mode',
+          caseLabels: { a: 'Case A', b: 'Case B' },
+          cases: {
+            a: { x: { kind: 'leaf', type: 'string', name: 'x' } },
+            b: { x: { kind: 'leaf', type: 'string', name: 'x' } },
+          },
+        },
+      },
+    };
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ConfigEditorComponent);
+    const form: FormGroup = buildFormFromSchema(twinSchema, { mode: { [CASE_KEY]: 'a', x: '1' } });
+    fixture.componentRef.setInput('schema', twinSchema);
+    fixture.componentRef.setInput('formGroup', form);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    const before = component.root.children.find((c) => c.id === 'mode')!;
+    expect(component.activeCaseLabel(before)).toBe('Case A');
+
+    switchChoiceCase(form.get('mode') as FormGroup, twinSchema.children['mode'] as NodeChoice, 'b');
+
+    const after = component.root.children.find((c) => c.id === 'mode')!;
+    expect(after).not.toBe(before); // the __case marker alone triggered the rebuild
+    expect(component.activeCaseLabel(after)).toBe('Case B');
+  });
+});
+
+describe('ConfigEditorComponent choice-valued map entries', () => {
+  const schema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    root: true,
+    children: {
+      rules: {
+        kind: 'map',
+        name: 'rules',
+        value: {
+          kind: 'choice',
+          name: 'rule',
+          cases: {
+            allow: { subnet: { kind: 'leaf', type: 'string', name: 'subnet' } },
+            deny: { reason: { kind: 'leaf', type: 'string', name: 'reason' } },
+          },
+        },
+      },
+    },
+  };
+
+  let component: ConfigEditorComponent;
+  let fixture: ComponentFixture<ConfigEditorComponent>;
+  let form: FormGroup;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ConfigEditorComponent);
+    component = fixture.componentInstance;
+    form = buildFormFromSchema(schema, { rules: { lan: { subnet: '10.0.0.0/8' } } });
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', form);
+    fixture.detectChanges();
+  });
+
+  it('builds a choice node per entry with the case inferred from the entry data', () => {
+    const rules = component.root.children.find((c) => c.id === 'rules')!;
+    expect(rules.map!.complex).toBe(true);
+    const entry = rules.children[0];
+    expect(entry.choice).toBeTruthy();
+    expect(component.activeCase(entry)).toBe('allow');
+    expect(entry.mapEntry!.key).toBe('lan');
+  });
+
+  it('renders the entry section with a case selector and switches its case', () => {
+    const rules = component.root.children.find((c) => c.id === 'rules')!;
+    component.select(rules.children[0]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.detail .case-select mat-select')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.detail .key-field input')).toBeTruthy();
+
+    component.switchTreeCase(rules.children[0], 'deny');
+
+    const entryGroup = (form.get('rules') as FormGroup).controls['lan'] as FormGroup;
+    expect(entryGroup.get(CASE_KEY)!.value).toBe('deny');
+    expect(entryGroup.get('subnet')).toBeNull();
+    expect(entryGroup.get('reason')).toBeTruthy();
+  });
+});
+
+describe('ConfigEditorComponent presence leaves inside a choice case', () => {
+  const schema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    root: true,
+    children: {
+      scope: {
+        kind: 'choice',
+        name: 'scope',
+        cases: {
+          byNode: {
+            nodeId: { kind: 'leaf', type: 'string', name: 'nodeId' },
+            prio: { kind: 'leaf', type: 'number', name: 'prio', presence: true },
+          },
+        },
+      },
+    },
+  };
+
+  let component: ConfigEditorComponent;
+  let fixture: ComponentFixture<ConfigEditorComponent>;
+  let form: FormGroup;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ConfigEditorComponent);
+    component = fixture.componentInstance;
+    form = buildFormFromSchema(schema, { scope: { nodeId: 'n1' } });
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', form);
+    fixture.detectChanges();
+  });
+
+  it('offers the absent case presence leaf in the choice node&apos;s optionals menu and round-trips add/remove', () => {
+    const scope = component.root.children.find((c) => c.id === 'scope')!;
+    expect(scope.optionals!.map((o) => o.key)).toEqual(['prio']);
+
+    component.addOptional(scope, scope.optionals![0]);
+
+    const choiceGroup = form.get('scope') as FormGroup;
+    expect(choiceGroup.get('prio')).toBeTruthy();
+    expect(component.root.children.find((c) => c.id === 'scope')!.optionals ?? []).toEqual([]);
+
+    // Removal through the group (as the section form's remove control does).
+    choiceGroup.removeControl('prio');
+    expect(component.root.children.find((c) => c.id === 'scope')!.optionals!.map((o) => o.key)).toEqual(['prio']);
+    expect('prio' in choiceGroup.getRawValue()).toBe(false);
   });
 });
 

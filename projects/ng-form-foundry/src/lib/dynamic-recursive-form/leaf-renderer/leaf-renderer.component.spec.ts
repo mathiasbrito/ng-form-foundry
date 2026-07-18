@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormControl } from '@angular/forms';
 
 import { LeafRendererComponent } from './leaf-renderer.component';
@@ -50,6 +50,37 @@ describe('DrfLeafRendererComponent', () => {
     fixture.detectChanges();
 
     expect(component.errorText).toContain('^[0-9]{3}$');
+  });
+
+  it('autofocus focuses the input after render, deferred out of the change-detection pass', fakeAsync(() => {
+    // Fresh component: the focus decision is taken in ngAfterViewInit.
+    const local = TestBed.createComponent(LeafRendererComponent);
+    local.componentRef.setInput('leaf_', leaf);
+    local.componentRef.setInput('control', new FormControl(''));
+    local.componentRef.setInput('autofocus', true);
+    local.detectChanges();
+
+    const input: HTMLInputElement = local.nativeElement.querySelector('input');
+    expect(document.activeElement).not.toBe(input); // not yet: the focus is deferred
+    tick();
+    expect(document.activeElement).toBe(input);
+  }));
+
+  it('without autofocus the input is left unfocused', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    expect(document.activeElement).not.toBe(fixture.nativeElement.querySelector('input'));
+  }));
+
+  it('renders the remove button only when removable and editable', () => {
+    fixture.componentRef.setInput('removable', true);
+    fixture.componentRef.setInput('editable', true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.remove-button')).toBeTruthy();
+
+    fixture.componentRef.setInput('editable', false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.remove-button')).toBeNull();
   });
 
   it('a boolean leaf is display-only when not editable: clicking cannot change the wire value', () => {
