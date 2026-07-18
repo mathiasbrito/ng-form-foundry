@@ -226,12 +226,14 @@
     font-weight: 600;
   }
 
-  // A member section's delete control, right after its trail — the same
-  // compact error-container button the form renderers use for remove.
-  .section-remove {
-    flex: 0 0 auto;
-    align-self: center;
-  }
+}
+
+// A member's delete control, right after its section trail or — when the
+// member itself is selected — after the top breadcrumb: the same compact
+// error-container button the form renderers use for remove.
+.section-remove {
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 .remove-button {

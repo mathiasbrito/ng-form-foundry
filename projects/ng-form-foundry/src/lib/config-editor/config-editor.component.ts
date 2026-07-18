@@ -643,6 +643,12 @@ export class ConfigEditorComponent implements OnDestroy {
     walk(this.root);
   }
 
+  /** The selected member's container (list / map), for the breadcrumb's remove control. */
+  protected selectedMemberParent(): TreeNode | null {
+    if (!this.selected || !(this.selected.removable || this.selected.mapEntry)) return null;
+    return this.breadcrumb.length > 1 ? (this.breadcrumb[this.breadcrumb.length - 2] ?? null) : null;
+  }
+
   /** The section node's container (list / map), for member controls in its heading. */
   protected memberParent(s: DetailSection): TreeNode | null {
     return s.trail.length > 1 ? (s.trail[s.trail.length - 2] ?? null) : null;

@@ -158,6 +158,35 @@
             <span class="crumb-sep" aria-hidden="true">/</span>
           }
         }
+        <!-- A selected member (list item / map entry) is removable from its own
+             view; the selection then moves to its container, like a tree-row
+             remove — a deleted node cannot stay selected. -->
+        @if (editable() && selected.removable && selectedMemberParent(); as parent) {
+          @if (!listAtMin(parent)) {
+            <button
+              matIconButton
+              class="remove-button small-icon-button section-remove"
+              matTooltip="Remove"
+              [attr.aria-label]="'Remove ' + selected.label"
+              (click)="removeItem(parent, selected)"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
+        }
+        @if (editable() && selected.mapEntry && selectedMemberParent(); as parent) {
+          @if (!mapAtMin(parent)) {
+            <button
+              matIconButton
+              class="remove-button small-icon-button section-remove"
+              matTooltip="Remove entry"
+              [attr.aria-label]="'Remove ' + selected.label + ' entry'"
+              (click)="removeTreeMapEntry(parent, selected)"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
+        }
       </nav>
 
       <!-- The selected subtree as a flat section list: each descendant's fields

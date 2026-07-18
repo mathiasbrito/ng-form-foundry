@@ -408,6 +408,24 @@ describe('ConfigEditorComponent', () => {
     expect(component.selected!.id).toBe(''); // detail remove: root view stays
   });
 
+  it('a selected member offers remove beside the breadcrumb; deleting falls back to the container', () => {
+    component.select(node('ifaces').children[0]);
+    fixture.detectChanges();
+    const remove: HTMLButtonElement = fixture.nativeElement.querySelector('.breadcrumb .section-remove')!;
+    expect(remove).toBeTruthy();
+
+    remove.click();
+    fixture.detectChanges();
+
+    expect((form.get('ifaces') as FormArray).length).toBe(1);
+    expect(component.selected!.id).toBe('ifaces'); // the deleted node cannot stay selected
+
+    // At the container floor the breadcrumb offers no remove.
+    component.select(node('servers').children[0]); // servers has minEntries: 1
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.breadcrumb .section-remove')).toBeNull();
+  });
+
   it('the heading delete control hides at the container floor (minEntries)', () => {
     // servers has minEntries: 1 and exactly one entry — its section heading
     // must offer no remove.
