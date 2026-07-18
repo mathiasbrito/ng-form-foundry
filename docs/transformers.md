@@ -158,6 +158,10 @@ JSON Schema types them (`{ schema, schemaOptions? }`). `@include` is rejected
 by default; `{ includes: 'opaque' }` keeps the directive line verbatim and
 edits only the file's own settings.
 
+The format, the parser design, and the full round-trip semantics are described
+in the package's
+[`docs/libconfig.md`](https://github.com/mathiasbrito/ng-form-foundry/blob/main/packages/ng-form-foundry-transformers/docs/libconfig.md).
+
 ## YANG
 
 Turn a YANG model into a schema, then revert the edited value to **RFC 7951**

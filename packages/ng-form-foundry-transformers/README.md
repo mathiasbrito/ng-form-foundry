@@ -136,6 +136,9 @@ the file's own settings. Newly added settings are value-typed (an integral
 number emits as an int) — route float-typed additions through a JSON Schema
 slot that exists in the source, or accept the int typing.
 
+The format, the parser design, and the full round-trip semantics are described
+in [`docs/libconfig.md`](docs/libconfig.md).
+
 ## YANG transformer
 
 Turn a **YANG** model into an ng-form-foundry schema, then revert the edited form
