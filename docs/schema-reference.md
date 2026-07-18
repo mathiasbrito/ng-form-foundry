@@ -202,8 +202,12 @@ is usually better modeled as a single `nullable` leaf.)
 
 The wire form of a choice is *inline* (the active case's fields sit at the
 choice's location, with no `__case` key). When a form is built from such data,
-the builder **infers** the active case: it picks the case whose fields best
-overlap the data. This is how a branch discriminated **by which properties are
+the builder **infers** the active case by ranking the cases that share at least
+one field with the data: fewest data keys the case cannot hold, then fewest
+non-`presence` fields absent from the data (fields the form would have to
+materialize empty — this separates branches that differ only in their required
+set, like `{ueId, qosId}` vs `{qosId}`), then most matched fields, then
+declaration order. This is how a branch discriminated **by which properties are
 present/required** round-trips without a discriminator key. To produce that
 wire form from an edited form, use
 [`serializeForm(schema, form)`](api.md#serialization), which strips every

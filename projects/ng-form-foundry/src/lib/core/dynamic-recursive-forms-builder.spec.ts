@@ -6,6 +6,7 @@ import {
   caseFields,
   removeMapEntry,
   renameMapEntry,
+  resolveChoiceCase,
   serializeForm,
   switchChoiceCase,
   toWireValue,
@@ -747,6 +748,131 @@ describe('dynamic-recursive-forms-builder', () => {
       const seeded = buildFormFromSchema(schema, { note: null });
       expect(seeded.get('note')).toBeTruthy();
       expect(seeded.getRawValue() as Record<string, unknown>).toEqual({ note: null });
+    });
+  });
+
+  describe('choice case inference (required-aware ranking)', () => {
+    // The O-RAN A1 scope pattern: one branch's fields are a subset of another's.
+    const scope: NodeChoice = {
+      kind: 'choice',
+      name: 'scope',
+      cases: {
+        case0: {
+          ueId: { kind: 'leaf', type: 'number', name: 'ueId', required: true, integer: true },
+          qosId: { kind: 'leaf', type: 'number', name: 'qosId', required: true, integer: true },
+        },
+        case1: {
+          qosId: { kind: 'leaf', type: 'number', name: 'qosId', required: true, integer: true },
+        },
+      },
+    };
+
+    it('picks the subset case when the data lacks the superset case required field', () => {
+      // Overlap alone ties 1=1; the old first-wins tie-break chose case0 and
+      // serialized an ajv-invalid { ueId: null, qosId } body.
+      expect(resolveChoiceCase(scope, { qosId: 5 })).toBe('case1');
+    });
+
+    it('still picks the superset case when the data covers it', () => {
+      expect(resolveChoiceCase(scope, { ueId: 7, qosId: 5 })).toBe('case0');
+    });
+
+    it('a non-leaf required field (nodeGroup) counts as missing — no tightest-case bias', () => {
+      // Reviewer counterexample: data {shared} is valid against case0 only.
+      // Ranking by "fewest fields" would wrongly pick case1 (its cfg group is
+      // invisible to a required-Leaf-only check); absence of any non-presence
+      // field must count regardless of kind.
+      const choice: NodeChoice = {
+        kind: 'choice',
+        name: 'outer',
+        cases: {
+          case0: {
+            shared: { kind: 'leaf', type: 'number', name: 'shared', required: true, integer: true },
+            opt1: { kind: 'leaf', type: 'string', name: 'opt1', presence: true },
+            opt2: { kind: 'leaf', type: 'string', name: 'opt2', presence: true },
+          },
+          case1: {
+            shared: { kind: 'leaf', type: 'number', name: 'shared', required: true, integer: true },
+            cfg: {
+              kind: 'nodeGroup',
+              name: 'cfg',
+              children: { x: { kind: 'leaf', type: 'number', name: 'x', required: true, integer: true } },
+            },
+          },
+        },
+      };
+      expect(resolveChoiceCase(choice, { shared: 1 })).toBe('case0');
+
+      const schema: NodeGroup = { kind: 'nodeGroup', name: 'root', children: { outer: choice } };
+      const form = buildFormFromSchema(schema, { outer: { shared: 1 } });
+      expect(serializeForm(schema, form)).toEqual({ outer: { shared: 1 } });
+    });
+
+    it('presence fields are exempt from the absence count; genuine full ties keep declaration order', () => {
+      const choice: NodeChoice = {
+        kind: 'choice',
+        name: 'sel',
+        cases: {
+          withOptional: {
+            qosId: { kind: 'leaf', type: 'number', name: 'qosId', required: true },
+            cellId: { kind: 'leaf', type: 'string', name: 'cellId', presence: true },
+          },
+          bare: {
+            qosId: { kind: 'leaf', type: 'number', name: 'qosId', required: true },
+          },
+        },
+      };
+      // Absent presence cellId costs nothing, so both cases tie on every
+      // criterion and the first declared wins — keeping its optional reachable.
+      expect(resolveChoiceCase(choice, { qosId: 5 })).toBe('withOptional');
+    });
+
+    it('non-string __case in the data is ignored by inference, not counted as an uncovered key', () => {
+      // getRawValue() of a not-yet-selected choice fed back as initial.
+      expect(resolveChoiceCase(scope, { [CASE_KEY]: null as unknown as string, qosId: 5 })).toBe('case1');
+    });
+
+    it('does not throw for primitive or array seeds (leaf-bodied scalar choices)', () => {
+      const scalarChoice: NodeChoice = {
+        kind: 'choice',
+        name: 'limit',
+        cases: {
+          text: { kind: 'leaf', type: 'string', name: 'text' },
+          count: { kind: 'leaf', type: 'number', name: 'count' },
+        },
+      };
+      // A scalar wire value can reach a choice position; `key in 'hello'` threw.
+      expect(() => buildControl(scalarChoice, 'hello')).not.toThrow();
+      expect(() => buildControl(scalarChoice, [1, 2] as unknown as Record<string, unknown>)).not.toThrow();
+      const group = buildControl(scalarChoice, 'hello') as FormGroup;
+      expect(group.get(CASE_KEY)!.value).toBeNull();
+    });
+
+    it('data matching no case still falls back to the schema default', () => {
+      const withDefault: NodeChoice = { ...scope, default: 'case1' };
+      expect(resolveChoiceCase(withDefault, { zzz: 1 })).toBe('case1');
+      expect(resolveChoiceCase(scope, { zzz: 1 })).toBeUndefined();
+    });
+
+    it('end-to-end: the consumer body round-trips ajv-shaped through build and serialize', () => {
+      // filter is an optional (presence) object, as the JSON-Schema transformer
+      // now emits for non-required properties.
+      const body: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'body',
+        children: {
+          name: { kind: 'leaf', type: 'string', name: 'name', required: true },
+          filter: {
+            kind: 'nodeGroup',
+            name: 'filter',
+            presence: true,
+            children: { id: { kind: 'leaf', type: 'number', name: 'id', required: true, integer: true } },
+          },
+          scope,
+        },
+      };
+      const form = buildFormFromSchema(body, { name: 'x', scope: { qosId: 5 } });
+      expect(serializeForm(body, form)).toEqual({ name: 'x', scope: { qosId: 5 } });
     });
   });
 

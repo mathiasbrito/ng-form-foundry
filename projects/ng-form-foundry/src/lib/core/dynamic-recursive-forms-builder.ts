@@ -56,12 +56,12 @@ function hasPresence(node: NodeType): boolean {
 
 /**
  * Whether a presence child should start absent: there is no initial data
- * object, or its key is missing from it. A key that is present with an explicit
- * `null` value keeps its control — `null` is a value (a nullable leaf's), while
- * presence is about the *absent key*.
+ * object (a scalar seed counts as none), or its key is missing from it. A key
+ * that is present with an explicit `null` value keeps its control — `null` is
+ * a value (a nullable leaf's), while presence is about the *absent key*.
  */
 function presenceAbsent(initial: Record<string, unknown> | null | undefined, key: string): boolean {
-  return initial == null || !(key in initial);
+  return initial == null || typeof initial !== 'object' || !(key in initial);
 }
 
 function enumValidator(choices: readonly (string | number)[]): ValidatorFn {
@@ -234,9 +234,10 @@ export function caseFields(body: ChoiceCase): Record<string, NodeType> {
 
 /**
  * The active case of a choice: an explicit `__case` in the initial value, else
- * the case whose fields best match the initial data (inline wire data carries no
- * `__case`), else the schema `default`. This lets a choice seed from real
- * instance data whose branch is discriminated by which fields are present.
+ * the case {@link inferChoiceCase} ranks best against the initial data (inline
+ * wire data carries no `__case`), else the schema `default`. This lets a choice
+ * seed from real instance data whose branch is discriminated by which fields
+ * are present and required.
  */
 export function resolveChoiceCase(
   choice: NodeChoice,
@@ -247,21 +248,47 @@ export function resolveChoiceCase(
   return inferChoiceCase(choice, initial) ?? choice.default;
 }
 
-/** Pick the case whose fields most overlap the initial data (none if nothing matches). */
+/**
+ * Pick the active case from inline wire data (which carries no `__case`).
+ *
+ * Candidates are the cases sharing at least one field name with the data; when
+ * none does, the caller falls back to the schema `default`. Candidates are
+ * ranked by, in order: fewest data keys the case has no field for (the case
+ * must be able to hold the data), fewest non-presence fields absent from the
+ * data (fields the form would have to materialize empty — this is how
+ * required-set-discriminated `oneOf` branches differ, e.g. a branch requiring
+ * `{ueId, qosId}` vs one requiring only `{qosId}`), most matched fields, and
+ * finally declaration order. Presence fields are exempt from the absence count
+ * because their absence is itself a legal state of the data.
+ */
 function inferChoiceCase(choice: NodeChoice, initial?: Record<string, unknown> | null): string | undefined {
-  if (!initial) return undefined;
+  if (initial == null || typeof initial !== 'object' || Array.isArray(initial)) return undefined;
+  const dataKeys = new Set(Object.keys(initial).filter((k) => k !== CASE_KEY));
   let best: string | undefined;
-  let bestScore = 0;
+  let bestRank: number[] | undefined;
   for (const name of Object.keys(choice.cases)) {
-    const fields = Object.keys(caseFields(choice.cases[name]));
-    let score = 0;
-    for (const field of fields) if (field in initial) score++;
-    if (score > bestScore) {
-      bestScore = score;
+    const fields = caseFields(choice.cases[name]);
+    let matched = 0;
+    for (const key of dataKeys) if (key in fields) matched++;
+    if (matched === 0) continue;
+    const missing = Object.keys(fields).filter(
+      (f) => !hasPresence(fields[f]) && !dataKeys.has(f),
+    ).length;
+    const rank = [dataKeys.size - matched, missing, -matched];
+    if (bestRank === undefined || lexLess(rank, bestRank)) {
+      bestRank = rank;
       best = name;
     }
   }
   return best;
+}
+
+/** Strictly-less comparison of two equal-length rank vectors, first difference wins. */
+function lexLess(a: readonly number[], b: readonly number[]): boolean {
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return a[i] < b[i];
+  }
+  return false;
 }
 
 /**

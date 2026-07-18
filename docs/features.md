@@ -121,9 +121,11 @@ Three things make choices practical for real schemas:
   branches with no name can be auto-named and given `caseLabels` for display.
 - **`__case` inference.** Wire data carries no `__case` (the case's fields sit
   inline). When you seed a form from such data, the builder **infers** the active
-  case — it picks the case whose fields best match the data. So a branch
-  discriminated *by which properties are present* round-trips without a
-  discriminator key:
+  case — it prefers the case that can hold every data key without leaving any of
+  its own non-optional fields empty (see the
+  [ranking](schema-reference.md#anonymous-cases-__case-inference-and-leaf-bodied-cases)).
+  So a branch discriminated *by which properties are present or required*
+  round-trips without a discriminator key:
 
   ```ts
   buildFormFromSchema(schema, { scope: { cellId: 'c-1' } });
