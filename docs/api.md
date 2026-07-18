@@ -187,6 +187,11 @@ tree and the detail pane. Wrap it in your own card or border:
 The root tree row also carries an expand-all control that flips to collapse-all
 once every node is open (collapsing keeps the root's first level visible).
 
+The tree pane is **sticky**: when a long detail pane scrolls with the page, the
+tree stays visible and scrolls internally. A host with a fixed header sets the
+CSS custom property `--nff-tree-sticky-top` (default `0px`) to its height so
+the tree pins below it.
+
 The inputs are signal inputs, like the form component's. Swapping `schema` or
 `formGroup` rebinds the editor to the new pair (a host loading another config
 document); expansion and selection reset to the new root.

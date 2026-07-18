@@ -9,7 +9,6 @@
 .editor {
   display: flex;
   align-items: stretch;
-  gap: 16px;
   min-height: 320px;
 }
 
@@ -17,12 +16,19 @@
 // Only a vertical divider separates the tree from the detail pane.
 // The pane reserves a regular phone-screen width so nested labels rarely
 // truncate; when they still do, the rows carry tooltips with the full text.
+//
+// The tree is sticky: a long detail pane scrolls with the page while the
+// tree stays visible, scrolling internally when taller than the viewport.
+// Hosts with a fixed header set --nff-tree-sticky-top to its height.
 .tree {
   flex: 0 0 360px;
   min-width: 360px;
+  position: sticky;
+  top: var(--nff-tree-sticky-top, 0px);
+  align-self: flex-start;
+  max-height: calc(100vh - var(--nff-tree-sticky-top, 0px));
   overflow: auto;
-  border-right: 1px solid var(--mat-sys-outline-variant);
-  padding: 4px 12px 4px 0;
+  padding: 4px 16px 4px 0;
 }
 
 .tree-row {
@@ -170,6 +176,10 @@
   flex: 1 1 auto;
   min-width: 0;
   overflow: auto;
+  // The divider lives here (not on the sticky tree) so it spans the full
+  // height of the usually-longer pane.
+  border-left: 1px solid var(--mat-sys-outline-variant);
+  padding-left: 16px;
 }
 
 // The detail-pane title is a navigable breadcrumb: each ancestor is a link back

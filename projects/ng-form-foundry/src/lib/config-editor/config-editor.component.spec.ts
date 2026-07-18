@@ -339,6 +339,13 @@ describe('ConfigEditorComponent', () => {
     expect(Object.keys(group.controls).length).toBe(3);
   });
 
+  it('the tree pane is sticky so a long detail scroll keeps it visible', () => {
+    const tree: HTMLElement = fixture.nativeElement.querySelector('.tree');
+    const style = getComputedStyle(tree);
+    expect(style.position).toBe('sticky');
+    expect(style.alignSelf).toBe('flex-start');
+  });
+
   it('the root row toggles edit mode, hiding the structural controls', () => {
     fixture.detectChanges();
     const toggles = fixture.nativeElement.querySelectorAll('.root-toggle');
