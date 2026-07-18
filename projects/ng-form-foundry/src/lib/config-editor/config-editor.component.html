@@ -39,7 +39,7 @@
           >
         }
 
-        @if (editable() && node.list) {
+        @if (editable() && node.list && !listAtMax(node)) {
           <button
             matIconButton
             class="row-btn add"
@@ -209,12 +209,15 @@
             <button matButton (click)="addTreeMapEntry(s.node)"><mat-icon>add</mat-icon> Add entry</button>
           </div>
         }
-        @if (editable() && s.node.list) {
+        @if (editable() && s.node.list && !listAtMax(s.node)) {
           <div class="section-actions">
             <button matButton (click)="addItem(s.node)">
               <mat-icon>add</mat-icon> Add {{ s.node.list.itemLabel }}
             </button>
           </div>
+        }
+        @if (emptySectionHint(s); as hint) {
+          <p class="empty">{{ hint }}</p>
         }
       }
 

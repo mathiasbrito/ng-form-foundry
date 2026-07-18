@@ -188,6 +188,15 @@ describe('ConfigEditorComponent', () => {
     expect(component.selected!.id).toBe('ifaces');
   });
 
+  it('a tree-row deletion hands keyboard focus back to the selected row', fakeAsync(() => {
+    fixture.detectChanges();
+    component.removeItem(node('ifaces'), node('ifaces').children[0]);
+    fixture.detectChanges();
+    tick(); // the refocus defers until the re-render settles
+
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.tree-row.selected'));
+  }));
+
   it('removeItem clears expansion under the list, since item identity is positional', () => {
     const list = node('ifaces');
     component.expanded.add('ifaces/1'); // would otherwise migrate to the item shifting into index 1
@@ -552,33 +561,64 @@ describe('ConfigEditorComponent with dotted map keys', () => {
   });
 });
 
-describe('ConfigEditorComponent list at its minItems floor', () => {
-  it('hides the item remove control instead of rendering a dead button', async () => {
-    const schema: NodeGroup = {
-      kind: 'nodeGroup',
-      name: 'net',
-      root: true,
-      children: {
-        ifaces: {
-          kind: 'nodeGroupList',
-          name: 'ifaces',
-          minItems: 1,
-          type: { kind: 'nodeGroup', name: 'iface', children: { nm: { kind: 'leaf', type: 'string', name: 'nm' } } },
-        },
+describe('ConfigEditorComponent list floors and caps', () => {
+  const schema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'net',
+    root: true,
+    children: {
+      ifaces: {
+        kind: 'nodeGroupList',
+        name: 'ifaces',
+        minItems: 1,
+        maxItems: 1,
+        type: { kind: 'nodeGroup', name: 'iface', children: { nm: { kind: 'leaf', type: 'string', name: 'nm' } } },
       },
-    };
-    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
-    const fixture = TestBed.createComponent(ConfigEditorComponent);
-    fixture.componentRef.setInput('schema', schema);
-    fixture.componentRef.setInput('formGroup', buildFormFromSchema(schema, { ifaces: [{ nm: 'eth0' }] }));
-    fixture.detectChanges();
+    },
+  };
 
+  let fixture: ComponentFixture<ConfigEditorComponent>;
+  let form: FormGroup;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ConfigEditorComponent);
+    form = buildFormFromSchema(schema, { ifaces: [{ nm: 'eth0' }] });
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', form);
+    fixture.detectChanges();
     fixture.componentInstance.expanded.add('ifaces');
     fixture.detectChanges();
+  });
 
+  it('hides the item remove control at the minItems floor instead of rendering a dead button', () => {
     const rows: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.tree .tree-row')];
     const itemRow = rows.find((r) => r.textContent!.includes('#1'))!;
     expect(itemRow).toBeTruthy();
     expect(itemRow.querySelector('.row-btn.remove')).toBeNull();
+  });
+
+  it('hides the add control and refuses addItem at the maxItems cap', () => {
+    const rows: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.tree .tree-row')];
+    const listRow = rows.find((r) => r.textContent!.includes('ifaces'))!;
+    expect(listRow.querySelector('.row-btn.add')).toBeNull();
+
+    const list = fixture.componentInstance.root.children.find((c) => c.id === 'ifaces')!;
+    fixture.componentInstance.addItem(list);
+    expect((form.get('ifaces') as FormArray).length).toBe(1); // capped
+  });
+
+  it('shows a muted hint for a list section with no items instead of a blank pane', () => {
+    // Bypass the floor guard the way external data would: an empty seeded list.
+    const emptyForm = buildFormFromSchema(schema, { ifaces: [] });
+    fixture.componentRef.setInput('formGroup', emptyForm);
+    fixture.detectChanges();
+
+    const list = fixture.componentInstance.root.children.find((c) => c.id === 'ifaces')!;
+    fixture.componentInstance.select(list);
+    fixture.detectChanges();
+
+    const hint: HTMLElement | null = fixture.nativeElement.querySelector('.detail .empty');
+    expect(hint?.textContent).toContain('No iface items.');
   });
 });

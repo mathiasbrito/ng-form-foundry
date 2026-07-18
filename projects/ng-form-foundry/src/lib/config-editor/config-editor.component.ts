@@ -28,6 +28,7 @@ interface ListRef {
   itemSchema: NodeGroup;
   itemLabel: string;
   minItems: number;
+  maxItems?: number;
 }
 
 /** An absent optional (presence) child, offered by its parent node's "+ Optional field" menu. */
@@ -248,12 +249,13 @@ export class ConfigEditorComponent implements OnDestroy {
     return !!(node.group?.invalid || node.list?.array.invalid || node.map?.group.invalid);
   }
 
-  /** Append a new item to a list node's FormArray, then select it. */
+  /** Append a new item to a list node's FormArray (up to `maxItems`), then select it. */
   addItem(listNode: TreeNode) {
     const list = listNode.list;
     if (!list) return;
+    if (list.maxItems != null && list.array.length >= list.maxItems) return;
     list.array.push(buildFormFromSchema(list.itemSchema));
-    this.selectByPath(`${listNode.id}/${list.array.length - 1}`);
+    this.selectByPath(this.join(listNode.id, String(list.array.length - 1)));
   }
 
   /**
@@ -270,6 +272,7 @@ export class ConfigEditorComponent implements OnDestroy {
     }
     listNode.list.array.removeAt(item.removable.index);
     this.selectByPath(listNode.id);
+    this.focusSelectedRow();
   }
 
   /** The just-added optional leaf (section path + key) whose field grabs focus when rendered. */
@@ -282,6 +285,8 @@ export class ConfigEditorComponent implements OnDestroy {
     node.group.addControl(entry.key, buildControl(entry.schema) as AbstractControl);
     // A leaf renders in the parent's detail pane; complex kinds become tree nodes.
     this.selectByPath(entry.schema.kind === 'leaf' ? node.id : this.join(node.id, entry.key));
+    // Adding the last optional removes the menu row that held focus.
+    if (entry.schema.kind !== 'leaf') this.focusSelectedRow();
     if (entry.schema.kind === 'leaf') {
       // Set after selection (select() retires any pending request): the new
       // field should grab focus, like the form's own add button. Retired after
@@ -303,6 +308,7 @@ export class ConfigEditorComponent implements OnDestroy {
     if (!key || !parent.group) return;
     parent.group.removeControl(key);
     this.selectByPath(parent.id);
+    this.focusSelectedRow();
   }
 
   /** The active case name of a choice node, or null when none is selected. */
@@ -348,6 +354,7 @@ export class ConfigEditorComponent implements OnDestroy {
     const e = entryNode.mapEntry;
     if (!m || !e || !removeMapEntry(m.group, m.schema, e.key)) return;
     this.selectByPath(mapNode.id);
+    this.focusSelectedRow();
   }
 
   /**
@@ -373,6 +380,28 @@ export class ConfigEditorComponent implements OnDestroy {
       // Deferred so the rebuilt section's key field exists before focusing.
       setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.detail .key-field input')?.focus());
     }
+  }
+
+  /** Move keyboard focus to the selected tree row once the action's re-render settles. */
+  private focusSelectedRow(): void {
+    setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.tree-row.selected')?.focus());
+  }
+
+  /** A muted hint for a section whose node currently renders no content of its own. */
+  protected emptySectionHint(s: DetailSection): string | null {
+    const n = s.node;
+    if (n.list && !n.children.length) return `No ${n.list.itemLabel} items.`;
+    if (n.map?.complex && !n.children.length) return 'No entries.';
+    if (n.map && !n.map.complex && !Object.keys(n.map.group.controls).length && !this.editable()) {
+      return 'No entries.';
+    }
+    return null;
+  }
+
+  /** Whether a list node is at `maxItems` (the add control is hidden). */
+  protected listAtMax(node: TreeNode | undefined): boolean {
+    const l = node?.list;
+    return !!l && l.maxItems != null && l.array.length >= l.maxItems;
   }
 
   /** Whether a list node is at `minItems` (item remove controls are hidden). */
@@ -564,7 +593,7 @@ export class ConfigEditorComponent implements OnDestroy {
         group: null,
         list:
           array instanceof FormArray
-            ? { array, itemSchema: schema.type, itemLabel, minItems: schema.minItems ?? 0 }
+            ? { array, itemSchema: schema.type, itemLabel, minItems: schema.minItems ?? 0, maxItems: schema.maxItems }
             : undefined,
       };
     }
