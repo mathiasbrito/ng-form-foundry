@@ -191,23 +191,19 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-// A section boundary in the flat detail list: a breadcrumb heading over a
-// divider line, marking where one child's fields end and the next begin.
+// A section boundary in the flat detail list: the breadcrumb trail IS the
+// delimiter — no divider line doubles it.
 .section-heading {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px;
   margin: 20px 0 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--mat-sys-outline-variant);
   font-size: 0.95rem;
 
-  // Within a run of same-list items / same-map entries the divider is noise:
-  // the repeated trail already says "next member of the same thing".
+  // Members continuing a run of same-list items / same-map entries sit
+  // tighter, so the run reads as one list.
   &.continuation {
-    border-top: none;
-    padding-top: 0;
     margin-top: 12px;
   }
 
