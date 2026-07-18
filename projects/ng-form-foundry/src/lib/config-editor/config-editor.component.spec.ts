@@ -352,6 +352,15 @@ describe('ConfigEditorComponent', () => {
     expect(node('system')).toBe(before); // same node object: no rebuild happened
   });
 
+  it('a removed deep selection falls back to its closest surviving ancestor, not the root', () => {
+    const entry = node('servers').children[0]; // servers/s1
+    component.select(entry);
+
+    (form.get('servers') as FormGroup).removeControl('s1');
+
+    expect(component.selected!.id).toBe('servers');
+  });
+
   // --- rendering -------------------------------------------------------------
 
   it('renders the "+ Optional field" row after the children, and hides it when not editable', () => {

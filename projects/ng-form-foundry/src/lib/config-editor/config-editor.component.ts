@@ -355,8 +355,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   /** Re-point `selected` at the rebuilt tree: same path, else the closest surviving ancestor. */
   private reconcileSelection(): void {
-    const path = this.selected?.id ?? '';
-    this.select(this.byPath(path) ?? this.root);
+    this.selectByPath(this.selected?.id ?? '');
   }
 
   /** The node at `path` in the current tree, or null. Walks by id-prefix segments. */
