@@ -187,6 +187,10 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.3.2` — documentation release alongside the library's `serializeForm`: the
+YAML/JSON `toSource` examples now take the wire value (choice `__case`
+discriminators stripped); no transformer code changes.
+
 `0.3.1` — version alignment with the library's review-fix release (all 59
 findings of the tree-editor/form-renderer review resolved); no transformer
 changes.
