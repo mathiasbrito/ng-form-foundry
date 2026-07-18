@@ -140,37 +140,84 @@ always materialized.
 
 ### Thesaurus — display metadata injection
 
-Every `toSchema` (and `jsonSchemaToNodeGroup` itself) accepts a `thesaurus`:
-identifier → `{ label, description }`, injected into the produced schema —
-schema-driven or inferred alike. Keys are plain identifier names matched
-case-insensitively against property/setting names, **never paths** (a `.` in a
-key is a literal character). Authored `title`/`description` always win;
-unlabeled choice cases are titled from their discriminating required field,
-and colliding sibling labels are disambiguated by the library's case
-selectors. `applyThesaurus(nodeGroup, thesaurus)` is exported for
-post-processing any schema.
+Machine schemas (O-RAN A1 policy types, plain config files) usually ship
+without `title`/`description`, so forms fall back to raw attribute names
+(`guRanUeId`, `mcc`). A **thesaurus** fixes that once, at the transformer:
+a catalog of identifier → display metadata that every `toSchema` (and
+`jsonSchemaToNodeGroup` itself) injects into the schema it produces —
+JSON-Schema-driven or inferred alike.
 
-When one identifier carries different meanings at different depths, a key maps
-to a list of variants scoped by `under` — an ancestor-**name** suffix (an
-array: no separators, every segment is a literal name). Longest matching scope
-wins; an entry without `under` is the fallback. List indices and map entry
-keys are transparent (fields scope under the list/map *name*), and **choice
-case fields match both with and without their case-name segment**:
+**How to use it:**
 
-```ts
-// scope (choice) → cases byUe / byCell, both with a field named `id`
-const thesaurus = {
-  id: [
-    { under: ['scope', 'byUe'],   label: 'UE ID' },    // one case only
-    { under: ['scope', 'byCell'], label: 'Cell ID' },
-    { under: ['scope'],           label: 'Scope ID' }, // any case of scope
-  ],
-};
-```
+1. **Build the catalog once per domain** — plain identifier names as keys,
+   `{ label, description? }` as values. Keys match **case-insensitively**
+   against property/setting names, so one entry covers `ueId`, `UeId`, and a
+   `$def` named `UeId` alike. Keys are **never paths**: no separator exists,
+   so a `.` in a key is a literal character of a name.
 
-The per-case labels also drive `caseLabels` through each case's discriminating
-field. Scoping by an auto-generated case name (`case0`) is positional and
-brittle — reserve case-name scopes for hand-named cases.
+   ```ts
+   const thesaurus = {
+     ueId: { label: 'UE ID', description: 'UE identifier.' },
+     mcc:  { label: 'MCC', description: 'Mobile Country Code (3 digits).' },
+     gfbr: { label: 'GFBR', description: 'Guaranteed Flow Bit Rate, in bit/s.' },
+   };
+   ```
+
+2. **Pass it to any entry point** — it applies wherever the schema came from:
+
+   ```ts
+   jsonSchemaToNodeGroup(policySchema, 'body', { thesaurus, refDocuments: [common] });
+   yamlTransformer.toSchema(text, { thesaurus });        // inferred or schema-driven
+   jsonTransformer.toSchema(text, { thesaurus });
+   libconfigTransformer.toSchema(cfg, { thesaurus });
+   applyThesaurus(nodeGroup, thesaurus);                 // post-process any schema
+   ```
+
+3. **Scope entries when one name has several meanings.** A key may map to a
+   list of variants scoped by `under` — an ancestor-**name** suffix, written
+   as an array (no separators, every segment a literal name). The longest
+   matching scope wins; an entry without `under` is the fallback:
+
+   ```ts
+   const thesaurus = {
+     id: [
+       { under: ['cell'],  label: 'Cell ID' },   // any `id` directly inside a `cell`
+       { under: ['slice'], label: 'S-NSSAI' },
+       { label: 'ID' },                          // everywhere else
+     ],
+   };
+   ```
+
+   List indices and map entry keys are transparent — fields scope under the
+   list/map *name* (`under: ['cells']` covers every item's fields).
+
+4. **Choices**: case fields match both **with and without** their case-name
+   segment, so one scope can cover the whole choice or target a single case:
+
+   ```ts
+   // scope (choice) → cases byUe / byCell, both with a field named `id`
+   const thesaurus = {
+     id: [
+       { under: ['scope', 'byUe'],   label: 'UE ID' },    // one case only
+       { under: ['scope', 'byCell'], label: 'Cell ID' },
+       { under: ['scope'],           label: 'Scope ID' }, // any case of scope
+     ],
+   };
+   ```
+
+   An unlabeled case is titled from its discriminating field — the first
+   `required` (else first) field whose entry **carries a label**
+   (description-only entries never title a case). When sibling cases end up
+   with the same title (identical required sets, as in the O-RAN QoSTarget
+   scope), the library's `caseDisplayLabels` guarantees the selector options
+   are unique by suffixing each case's distinguishing fields. Scoping by an
+   auto-generated case name (`case0`) is positional and brittle — reserve
+   case-name scopes for hand-named cases.
+
+**Precedence:** the thesaurus fills gaps only. Schema-authored
+`title`/`description` (including titles on `$ref`-resolved definitions) always
+win, and `applyThesaurus` never mutates its input — it returns a decorated
+copy.
 
 ## libconfig (beta)
 
