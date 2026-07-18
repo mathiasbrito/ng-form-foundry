@@ -1032,6 +1032,42 @@ describe('dynamic-recursive-forms-builder', () => {
       });
     });
 
+    it('guarantees uniqueness when two identical-set cases collide beside a differently-shaped peer', () => {
+      // Three cases share a label; c0 and c2 have identical field sets, c1 is
+      // a subset. Field-suffixing alone would give c0 and c2 the same
+      // "(extra)" suffix — the uniqueness pass sends them to their case names.
+      const L = (name: string): NodeType => ({ kind: 'leaf', type: 'string', name });
+      const choice: NodeChoice = {
+        kind: 'choice',
+        name: 'scope',
+        caseLabels: { c0: 'UE ID', c1: 'UE ID', c2: 'UE ID' },
+        cases: {
+          c0: { ueId: L('ueId'), extra: L('extra') },
+          c1: { ueId: L('ueId') },
+          c2: { ueId: L('ueId'), extra: L('extra') },
+        },
+      };
+      const out = caseDisplayLabels(choice);
+      expect(out).toEqual({ c0: 'UE ID (c0)', c1: 'UE ID (c1)', c2: 'UE ID (c2)' });
+      expect(new Set(Object.values(out)).size).toBe(3);
+    });
+
+    it('guarantees uniqueness when distinguishing fields share one display label', () => {
+      const L = (name: string, label: string): NodeType => ({ kind: 'leaf', type: 'string', name, label });
+      const choice: NodeChoice = {
+        kind: 'choice',
+        name: 'sel',
+        caseLabels: { a: 'Scope', b: 'Scope' },
+        cases: {
+          a: { shared: L('shared', 'Shared'), idA: L('idA', 'Identifier') },
+          b: { shared: L('shared', 'Shared'), idB: L('idB', 'Identifier') },
+        },
+      };
+      // Distinct fields exist (idA vs idB) but both display as "Identifier";
+      // the uniqueness pass falls back to the case names.
+      expect(caseDisplayLabels(choice)).toEqual({ a: 'Scope (a)', b: 'Scope (b)' });
+    });
+
     it('colliding labels over identical field sets fall back to the case name', () => {
       const twin: NodeChoice = {
         kind: 'choice',

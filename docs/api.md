@@ -63,7 +63,7 @@ function resolveChoiceCase(choice: NodeChoice, initial?: Record<string, unknown>
 /** Switch a choice group to `caseName`: sets `__case`, swaps the field controls. */
 function switchChoiceCase(group: FormGroup, choice: NodeChoice, caseName: string): void;
 
-/** Display labels per case, with colliding `caseLabels` disambiguated by each case's distinguishing fields ("UE ID (Group ID)" vs "UE ID (Slice ID)"); identical field sets fall back to the case name. Both renderers' case selectors use this. */
+/** Display labels per case, guaranteed unique: colliding `caseLabels` gain each case's distinguishing fields ("UE ID (Group ID)" vs "UE ID (Slice ID)"), and cases the field suffix cannot separate fall back to their case name. Both renderers' case selectors use this. */
 function caseDisplayLabels(choice: NodeChoice): Record<string, string>;
 ```
 

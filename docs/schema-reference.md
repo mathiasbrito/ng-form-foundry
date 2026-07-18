@@ -196,9 +196,11 @@ builder throws) or as a map entry key (the entry helpers reject it).
 
 Case names are arbitrary keys, so `anyOf`/`oneOf` branches with no name can be
 **auto-named** (`case0`, `case1`, …) and given friendly `caseLabels` for the
-selector. Colliding `caseLabels` are disambiguated in the selector by each
-case's distinguishing fields (`caseDisplayLabels`) — two branches labeled
-"UE ID" render as "UE ID (Group ID)" and "UE ID (Slice ID)". A **leaf-bodied case** — a branch that is a bare scalar rather than an
+selector. Colliding `caseLabels` are made unique in the selector
+(`caseDisplayLabels`): each colliding case gains its distinguishing fields —
+two branches labeled "UE ID" render as "UE ID (Group ID)" and
+"UE ID (Slice ID)" — and cases the field suffix cannot separate fall back to
+their case name. A **leaf-bodied case** — a branch that is a bare scalar rather than an
 object — may be written as a single node; it is normalized to a one-field record
 keyed by the node's `name`. (An `anyOf: [{type:'string'}, {type:'null'}]` branch
 is usually better modeled as a single `nullable` leaf.)

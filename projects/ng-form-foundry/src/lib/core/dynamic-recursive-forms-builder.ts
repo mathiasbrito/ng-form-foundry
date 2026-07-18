@@ -268,20 +268,25 @@ export function caseFields(body: ChoiceCase): Record<string, NodeType> {
 
 /**
  * Display labels for a choice's cases, keyed by case name, with colliding
- * labels disambiguated. Schema-supplied `caseLabels` can repeat (e.g. two
+ * labels made unique. Schema-supplied `caseLabels` can repeat (e.g. two
  * O-RAN A1 scope branches labeled from the same discriminating field), which
- * makes the case selector ambiguous; each colliding case gains the fields
- * that set it apart from its same-labeled peers — "UE ID (Group ID)" vs
- * "UE ID (Slice ID)". Cases with identical field sets fall back to their case
- * name. Unique labels pass through untouched.
+ * makes the case selector ambiguous. Unique labels pass through untouched;
+ * each colliding case first gains the fields that set it apart from its
+ * same-labeled peers — "UE ID (Group ID)" vs "UE ID (Slice ID)" — and any
+ * cases the field suffix cannot separate (no distinguishing fields, peers
+ * with identical field sets among a larger clash group, or distinguishing
+ * fields that share one display label) fall back to their case name, which
+ * is unique by construction.
  */
 export function caseDisplayLabels(choice: NodeChoice): Record<string, string> {
   const names = Object.keys(choice.cases);
+  const base: Record<string, string> = {};
   const out: Record<string, string> = {};
   const byLabel = new Map<string, string[]>();
   for (const name of names) {
-    out[name] = choice.caseLabels?.[name] ?? name;
-    byLabel.set(out[name], [...(byLabel.get(out[name]) ?? []), name]);
+    base[name] = choice.caseLabels?.[name] ?? name;
+    out[name] = base[name];
+    byLabel.set(base[name], [...(byLabel.get(base[name]) ?? []), name]);
   }
   for (const clashing of byLabel.values()) {
     if (clashing.length < 2) continue;
@@ -294,6 +299,14 @@ export function caseDisplayLabels(choice: NodeChoice): Record<string, string> {
         : name;
       out[name] = `${out[name]} (${suffix})`;
     }
+  }
+  // Uniqueness guarantee: whatever the collision topology, labels still equal
+  // after field-suffixing take the case name instead.
+  const byFinal = new Map<string, string[]>();
+  for (const name of names) byFinal.set(out[name], [...(byFinal.get(out[name]) ?? []), name]);
+  for (const clashing of byFinal.values()) {
+    if (clashing.length < 2) continue;
+    for (const name of clashing) out[name] = `${base[name]} (${name})`;
   }
   return out;
 }
