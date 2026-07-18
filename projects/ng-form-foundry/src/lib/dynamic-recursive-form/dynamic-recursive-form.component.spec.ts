@@ -90,6 +90,24 @@ describe('DynamicRecursiveFormComponent', () => {
     expect(component.formGroup().get('tags')).toBeNull();
   });
 
+  it('renders nothing for an absent presence leaf in read-only mode (no dead add button)', () => {
+    const presenceLeafSchema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      children: { note: { kind: 'leaf', type: 'string', name: 'note', presence: true } },
+    };
+    fixture.componentRef.setInput('schema', presenceLeafSchema);
+    fixture.componentRef.setInput('formGroup', new FormGroup({}));
+    fixture.componentRef.setInput('editable', false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.presence-leaf-add')).toBeNull();
+
+    fixture.componentRef.setInput('editable', true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.presence-leaf-add')).toBeTruthy();
+  });
+
   it('renders a presence choice panel with an unchecked toggle and no body while absent', () => {
     const presenceChoiceSchema: NodeGroup = {
       kind: 'nodeGroup',

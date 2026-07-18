@@ -137,6 +137,8 @@ export class ConfigEditorComponent implements OnDestroy {
   selected: TreeNode | null = null;
   /** The selected subtree as a flat, breadcrumb-separated section list. */
   sections: DetailSection[] = [];
+  /** Root-to-selection trail for the detail-pane breadcrumb, computed once per selection. */
+  breadcrumb: TreeNode[] = [];
   readonly expanded = new Set<string>();
 
   private shape = '';
@@ -175,12 +177,13 @@ export class ConfigEditorComponent implements OnDestroy {
   select(node: TreeNode) {
     this.selected = node;
     this.sections = this.buildSections(node, []);
+    this.breadcrumb = this.pathTo(node);
     // Navigating retires any pending just-added-leaf focus request.
     this.focusSectionId = null;
     this.focusLeafKey = null;
     // Reveal the selection: expand every ancestor so the row is visible, and
     // the node itself as it opens on the right.
-    for (const crumb of this.pathTo(node)) {
+    for (const crumb of this.breadcrumb) {
       if (crumb !== node || this.hasExpandableContent(crumb)) this.expanded.add(crumb.id);
     }
   }
@@ -254,10 +257,18 @@ export class ConfigEditorComponent implements OnDestroy {
     this.selectByPath(`${listNode.id}/${list.array.length - 1}`);
   }
 
-  /** Remove a list item from its FormArray (down to `minItems`). */
+  /**
+   * Remove a list item from its FormArray (down to `minItems`). List-item
+   * identity is positional, so expansion state under the list is cleared —
+   * otherwise it would silently migrate to the items that shift into the
+   * removed indexes.
+   */
   removeItem(listNode: TreeNode, item: TreeNode) {
     if (!listNode.list || !item.removable) return;
     if (listNode.list.array.length <= listNode.list.minItems) return;
+    for (const id of [...this.expanded]) {
+      if (id.startsWith(`${listNode.id}/`)) this.expanded.delete(id);
+    }
     listNode.list.array.removeAt(item.removable.index);
     this.selectByPath(listNode.id);
   }
@@ -352,6 +363,12 @@ export class ConfigEditorComponent implements OnDestroy {
       // Deferred so the rebuilt section's key field exists before focusing.
       setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.detail .key-field input')?.focus());
     }
+  }
+
+  /** Whether a list node is at `minItems` (item remove controls are hidden). */
+  protected listAtMin(node: TreeNode | undefined): boolean {
+    const l = node?.list;
+    return !!l && l.array.length <= l.minItems;
   }
 
   /** Whether a map node is at `maxEntries` (the add control is hidden). */

@@ -39,11 +39,13 @@
                   [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
                   (remove)="toggleLeafPresence(childItem.key, child, false)"
                 />
-              } @else {
+              } @else if (editable()) {
+                <!-- Read-only mode renders nothing for an absent presence leaf:
+                     the key is simply absent, and add affordances are hidden
+                     like every other structural control. -->
                 <button
                   matButton="outlined"
                   class="presence-leaf-add"
-                  [disabled]="!editable()"
                   (click)="toggleLeafPresence(childItem.key, child, true)"
                 >
                   <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
@@ -250,11 +252,10 @@
                 [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
                 (remove)="toggleLeafPresence(childItem.key, child, false)"
               />
-            } @else {
+            } @else if (editable()) {
               <button
                 matButton="outlined"
                 class="presence-leaf-add"
-                [disabled]="!editable()"
                 (click)="toggleLeafPresence(childItem.key, child, true)"
               >
                 <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}

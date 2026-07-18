@@ -185,6 +185,15 @@ describe('ConfigEditorComponent', () => {
     expect(component.selected!.id).toBe('ifaces');
   });
 
+  it('removeItem clears expansion under the list, since item identity is positional', () => {
+    const list = node('ifaces');
+    component.expanded.add('ifaces/1'); // would otherwise migrate to the item shifting into index 1
+
+    component.removeItem(list, list.children[0]);
+
+    expect([...component.expanded].some((id) => id.startsWith('ifaces/'))).toBe(false);
+  });
+
   // --- optionals -------------------------------------------------------------
 
   it('collects absent optional children in the menu, not the tree, with no controls built', () => {
@@ -506,5 +515,36 @@ describe('ConfigEditorComponent with dotted map keys', () => {
     expect(group.contains('10.0.0.1')).toBe(false);
     expect((group.controls['gateway.local'] as FormGroup).getRawValue()).toEqual({ url: 'http://edge' });
     expect(component.root.children.find((c) => c.id === 'endpoints')!.children[0].label).toBe('gateway.local');
+  });
+});
+
+describe('ConfigEditorComponent list at its minItems floor', () => {
+  it('hides the item remove control instead of rendering a dead button', async () => {
+    const schema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'net',
+      root: true,
+      children: {
+        ifaces: {
+          kind: 'nodeGroupList',
+          name: 'ifaces',
+          minItems: 1,
+          type: { kind: 'nodeGroup', name: 'iface', children: { nm: { kind: 'leaf', type: 'string', name: 'nm' } } },
+        },
+      },
+    };
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ConfigEditorComponent);
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', buildFormFromSchema(schema, { ifaces: [{ nm: 'eth0' }] }));
+    fixture.detectChanges();
+
+    fixture.componentInstance.expanded.add('ifaces');
+    fixture.detectChanges();
+
+    const rows: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.tree .tree-row')];
+    const itemRow = rows.find((r) => r.textContent!.includes('#1'))!;
+    expect(itemRow).toBeTruthy();
+    expect(itemRow.querySelector('.row-btn.remove')).toBeNull();
   });
 });

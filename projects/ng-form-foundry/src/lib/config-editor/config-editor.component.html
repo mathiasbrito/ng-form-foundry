@@ -61,7 +61,7 @@
             <mat-icon>add</mat-icon>
           </button>
         }
-        @if (editable() && node.removable) {
+        @if (editable() && node.removable && !listAtMin(parent)) {
           <button
             matIconButton
             class="row-btn remove"
@@ -129,7 +129,7 @@
   <section class="detail">
     @if (selected) {
       <nav class="breadcrumb" aria-label="Breadcrumb">
-        @for (crumb of pathTo(selected); track crumb.id; let last = $last) {
+        @for (crumb of breadcrumb; track crumb.id; let last = $last) {
           @if (last) {
             <span class="crumb-current" aria-current="page">{{ crumb.label }}</span>
           } @else {
