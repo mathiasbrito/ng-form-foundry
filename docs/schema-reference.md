@@ -239,8 +239,8 @@ and renames entries.
 | `kind` | `'map'` | {sub}`data` | Node discriminant. Required. |
 | `name` | `string` | {sub}`data` | Identity; must equal the `children` key. Required. |
 | `value` | `NodeType` | {sub}`data` | The schema every entry's value conforms to (a leaf, a group, …). Required. |
-| `keyPattern` | `string` | {sub}`data` | `patternProperties`: entry keys must match this regex. |
-| `minEntries` / `maxEntries` | `number` | {sub}`data` | Bounds on entry count (JSON Schema `minProperties`/`maxProperties`); gate the add/remove controls. |
+| `keyPattern` | `string` | {sub}`data` | `patternProperties`: entry keys must match this regex. Enforced as a group validator; a violating key makes the map (and the form) invalid. |
+| `minEntries` / `maxEntries` | `number` | {sub}`data` | Bounds on entry count (JSON Schema `minProperties`/`maxProperties`); gate the add/remove controls **and** validate the group. |
 | `presence` | `boolean` | {sub}`data` | Optional map: on/off toggle, omitted from the value when absent. |
 | `keyLabel` | `string` | {sub}`ui` | Label for the key column. Defaults to "Key". |
 | `label` | `string` | {sub}`ui` | Section label. |
@@ -266,9 +266,10 @@ model but not yet fully wired:
   `nff-dynamic-recursive-form` a map value of kind `leaf` or `nodeGroup` is
   rendered; the `nff-config-editor` tree additionally expands `nodeGroup`-,
   `choice`-, `map`-, and `nodeGroupList`-valued entries as child nodes.
-- A **generated map entry key** (`key1`, `key2`, …) is not checked against a
-  strict `keyPattern` — it is a placeholder meant to be renamed, and the rename
-  is where the pattern is enforced.
+- A **generated map entry key** (`key1`, `key2`, …) is committed even when it
+  violates a strict `keyPattern` — it is a placeholder meant to be renamed. The
+  map's validator flags it until the rename, so the form reports invalid rather
+  than shipping the placeholder silently.
 - **Map entry keys containing `/`** are not yet safe in the `nff-config-editor`
   tree, whose node identities are `/`-separated paths. Keys with `.` are fully
   supported everywhere.

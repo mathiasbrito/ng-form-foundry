@@ -292,18 +292,20 @@ function buildChoiceControl(
  * control, and builds `caseName`'s fields (normalized via {@link caseFields})
  * with their defaults. Presence fields of the new case start absent — the
  * switch carries no data that could make them present. An unknown case name
- * leaves only `__case`.
+ * leaves only `__case`. The swap is atomic: one value change fires, and every
+ * observable snapshot has fields matching its discriminator.
  */
 export function switchChoiceCase(group: FormGroup, choice: NodeChoice, caseName: string): void {
-  group.get(CASE_KEY)?.setValue(caseName);
+  group.get(CASE_KEY)?.setValue(caseName, { emitEvent: false });
   for (const name of Object.keys(group.controls)) {
-    if (name !== CASE_KEY) group.removeControl(name);
+    if (name !== CASE_KEY) group.removeControl(name, { emitEvent: false });
   }
   const caseChildren = choice.cases[caseName] ? caseFields(choice.cases[caseName]) : {};
   for (const name in caseChildren) {
     if (hasPresence(caseChildren[name])) continue;
-    group.addControl(name, buildControl(caseChildren[name]) as any);
+    group.addControl(name, buildControl(caseChildren[name]) as any, { emitEvent: false });
   }
+  group.updateValueAndValidity();
 }
 
 /**
@@ -317,11 +319,12 @@ export function addMapEntry(group: FormGroup, map: NodeMap, key?: string): strin
   if (map.maxEntries != null && Object.keys(group.controls).length >= map.maxEntries) return null;
   let committed: string;
   if (key != null) {
+    const trimmed = key.trim();
     // `__case` is reserved for the choice discriminator; as an entry key it
     // would make the map group indistinguishable from a choice group.
-    if (key === CASE_KEY || group.contains(key)) return null;
-    if (map.keyPattern && !new RegExp(map.keyPattern).test(key)) return null;
-    committed = key;
+    if (!trimmed || trimmed === CASE_KEY || group.contains(trimmed)) return null;
+    if (map.keyPattern && !new RegExp(map.keyPattern).test(trimmed)) return null;
+    committed = trimmed;
   } else {
     let n = Object.keys(group.controls).length + 1;
     committed = `key${n}`;
@@ -371,10 +374,44 @@ export function removeMapEntry(group: FormGroup, map: NodeMap, key: string): boo
 }
 
 /**
+ * The map's own constraints as a group validator: entry count against
+ * `minEntries`/`maxEntries` and every entry key against `keyPattern`. The UI
+ * gates prevent most violations; the validator reports the ones that slip
+ * through (seeded wire data, generated `keyN` placeholders awaiting a rename).
+ */
+function mapValidator(map: NodeMap): ValidatorFn {
+  let re: RegExp | null = null;
+  if (map.keyPattern) {
+    try {
+      re = new RegExp(map.keyPattern);
+    } catch {
+      re = null;
+    }
+  }
+  return (ctrl) => {
+    const keys = Object.keys((ctrl as FormGroup).controls);
+    const errors: Record<string, unknown> = {};
+    if (map.minEntries != null && keys.length < map.minEntries) {
+      errors['minEntries'] = { required: map.minEntries, actual: keys.length };
+    }
+    if (map.maxEntries != null && keys.length > map.maxEntries) {
+      errors['maxEntries'] = { allowed: map.maxEntries, actual: keys.length };
+    }
+    if (re) {
+      const invalidKeys = keys.filter((k) => !re!.test(k));
+      if (invalidKeys.length) errors['keyPattern'] = { pattern: map.keyPattern, keys: invalidKeys };
+    }
+    return Object.keys(errors).length ? errors : null;
+  };
+}
+
+/**
  * Build the FormGroup for a map: one control per entry, keyed by the entry key,
  * each built from the map's shared `value` schema. Because the entry keys are the
  * control names, `getRawValue()` is the map object directly. Empty when no
- * initial object is supplied; the renderer adds/removes/renames entries.
+ * initial object is supplied; the renderer adds/removes/renames entries. The
+ * group carries {@link mapValidator}, so `keyPattern`/`minEntries`/`maxEntries`
+ * violations surface as validation errors.
  */
 function buildMapControl(
   map: NodeMap,
@@ -385,7 +422,7 @@ function buildMapControl(
   for (const key of Object.keys(source)) {
     controls[key] = buildControl(map.value, source[key]);
   }
-  return new FormGroup(controls);
+  return new FormGroup(controls, { validators: mapValidator(map) });
 }
 
 /**

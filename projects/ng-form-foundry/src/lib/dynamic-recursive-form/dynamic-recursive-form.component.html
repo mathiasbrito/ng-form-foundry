@@ -100,11 +100,11 @@
               </mat-panel-title>
             </mat-expansion-panel-header>
             @if (choiceGroup) {
-              <div class="choice-group" [formGroup]="choiceGroup">
+              <div class="choice-group">
                 <mat-form-field [appearance]="editable() ? 'fill' : 'outline'">
                   <mat-label>Selected option</mat-label>
                   <mat-select
-                    [formControlName]="CASE_KEY"
+                    [value]="activeCase(childItem.key)"
                     (selectionChange)="switchCase(childItem.key, child, $event.value)"
                   >
                     @for (caseName of objectKeys(child.cases); track caseName) {
@@ -279,11 +279,11 @@
             </mat-panel-title>
           </mat-expansion-panel-header>
           @if (choiceGroup) {
-            <div class="choice-group" [formGroup]="choiceGroup">
+            <div class="choice-group">
               <mat-form-field [appearance]="editable() ? 'fill' : 'outline'">
                 <mat-label>Selected option</mat-label>
                 <mat-select
-                  [formControlName]="CASE_KEY"
+                  [value]="activeCase(childItem.key)"
                   (selectionChange)="switchCase(childItem.key, child, $event.value)"
                 >
                   @for (caseName of objectKeys(child.cases); track caseName) {

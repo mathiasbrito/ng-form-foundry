@@ -484,6 +484,17 @@ describe('dynamic-recursive-forms-builder', () => {
       expect(group.get(CASE_KEY)!.value).toBe('udp');
       expect(Object.keys(group.controls)).toEqual([CASE_KEY]);
     });
+
+    it('swaps atomically: one value change whose fields match the discriminator', () => {
+      const group = buildControl(choice, { port: 443 }) as FormGroup;
+      const snapshots: Record<string, unknown>[] = [];
+      group.valueChanges.subscribe((v) => snapshots.push(v));
+
+      switchChoiceCase(group, choice, 'tls');
+
+      expect(snapshots.length).toBe(1); // no per-mutation transients
+      expect(snapshots[0]).toEqual({ [CASE_KEY]: 'tls', cert: 'pem' });
+    });
   });
 
   describe('map entry helpers', () => {
@@ -551,6 +562,48 @@ describe('dynamic-recursive-forms-builder', () => {
       expect(removeMapEntry(g, map, 'web')).toBe(true);
       expect(removeMapEntry(g, map, 'db')).toBe(false); // at minEntries: 1
       expect(Object.keys(g.controls)).toEqual(['db']);
+    });
+
+    it('trims explicit keys and rejects empty or whitespace-only ones', () => {
+      const g = mapGroup({ web: 'a' });
+      expect(addMapEntry(g, map, '')).toBeNull();
+      expect(addMapEntry(g, map, '   ')).toBeNull();
+      expect(addMapEntry(g, map, '  db  ')).toBe('db');
+      expect(g.contains('db')).toBe(true);
+    });
+
+    it('generates keyN placeholders from the entry count, skipping taken names', () => {
+      const openMap: NodeMap = { kind: 'map', name: 'm', value: { kind: 'leaf', type: 'string', name: 'value' } };
+      const g = buildControl(openMap, {}) as FormGroup;
+      expect(addMapEntry(g, openMap)).toBe('key1');
+      expect(addMapEntry(g, openMap)).toBe('key2');
+      expect(renameMapEntry(g, openMap, 'key2', 'key3')).toBe(true);
+      expect(addMapEntry(g, openMap)).toBe('key4'); // key3 taken; count-based start probes forward
+    });
+
+    it('surfaces keyPattern/minEntries/maxEntries violations as group validation errors', () => {
+      // Seeded wire data that violates the pattern: committed, but the form reports it.
+      const seeded = buildControl(map, { 'BAD KEY': 'x' }) as FormGroup;
+      expect(seeded.errors?.['keyPattern']).toEqual({ pattern: map.keyPattern, keys: ['BAD KEY'] });
+
+      // Below minEntries: invalid until an entry exists.
+      const empty = buildControl(map, {}) as FormGroup;
+      expect(empty.errors?.['minEntries']).toEqual({ required: 1, actual: 0 });
+
+      // A generated placeholder violating a strict pattern is committed for
+      // renaming, and flagged by the validator until it is renamed.
+      const strict: NodeMap = {
+        kind: 'map',
+        name: 'm',
+        keyPattern: '^[a-z]+$',
+        value: { kind: 'leaf', type: 'string', name: 'value' },
+      };
+      const g = buildControl(strict, { web: 'a' }) as FormGroup;
+      expect(g.valid).toBe(true);
+      expect(addMapEntry(g, strict)).toBe('key2');
+      expect(g.errors?.['keyPattern']).toEqual({ pattern: '^[a-z]+$', keys: ['key2'] });
+      expect(renameMapEntry(g, strict, 'key2', 'db')).toBe(true);
+      expect(g.valid).toBe(true);
     });
 
     it('rejects the reserved __case name as an entry key (add and rename)', () => {

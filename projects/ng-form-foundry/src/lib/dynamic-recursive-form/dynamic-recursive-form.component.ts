@@ -134,8 +134,6 @@ export class DynamicRecursiveFormComponent implements OnInit {
     if (!present && this.presenceFocusKey === key) this.presenceFocusKey = null;
   }
 
-  protected readonly CASE_KEY = CASE_KEY;
-
   protected objectKeys(obj: Record<string, unknown>): string[] {
     return Object.keys(obj);
   }
