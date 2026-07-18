@@ -181,6 +181,10 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.3.1` — version alignment with the library's review-fix release (all 59
+findings of the tree-editor/form-renderer review resolved); no transformer
+changes.
+
 `0.3.0` — data-integrity release plus JSON Schema draft 2020-12. Fixes three
 round-trip corruption bugs shipped in 0.2.1 (YAML maps with non-string keys
 duplicated entries; integers beyond 2^53 lost precision — now carried
