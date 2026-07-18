@@ -42,7 +42,8 @@ interface Variant {
  * an auto-generated `case0`-style name works but is positional and brittle).
  *
  * A choice case with no label is titled from its discriminating field — the
- * first `required` field (else the first field) with a thesaurus match.
+ * first `required` field (else the first field) whose thesaurus match carries
+ * a `label` (description-only entries do not title cases).
  * Sibling cases may end up with the same label when their required sets
  * coincide; the library's `caseDisplayLabels` disambiguates colliding labels
  * in the selectors by each case's distinguishing fields, using the field
@@ -133,11 +134,14 @@ function decorate(
         const fields = caseFieldRecord(body);
         for (const [fieldKey, field] of Object.entries(fields)) decorate(field, fieldKey, caseChains, lookup);
         if (node.caseLabels?.[caseName] !== undefined) continue;
+        // The discriminant must carry a LABEL — a description-only entry on an
+        // earlier field must not block a labeled sibling from titling the case.
         const keys = Object.keys(fields);
+        const labelOf = (k: string) => resolve(k, caseChains, lookup)?.label;
         const discriminant =
-          keys.find((k) => (fields[k] as { required?: boolean }).required && resolve(k, caseChains, lookup)) ??
-          keys.find((k) => resolve(k, caseChains, lookup));
-        const label = discriminant ? resolve(discriminant, caseChains, lookup)?.label : undefined;
+          keys.find((k) => (fields[k] as { required?: boolean }).required && labelOf(k) !== undefined) ??
+          keys.find((k) => labelOf(k) !== undefined);
+        const label = discriminant ? labelOf(discriminant) : undefined;
         if (label !== undefined) node.caseLabels = { ...(node.caseLabels ?? {}), [caseName]: label };
       }
       return;

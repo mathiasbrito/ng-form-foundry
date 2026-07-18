@@ -237,3 +237,27 @@ test('list items and map entries are transparent: fields scope under the list/ma
   assert.equal(((g.children['cells'] as any).type.children.id as any).label, 'Cell ID');
   assert.equal((((g.children['peers'] as any).value as any).children.id as any).label, 'Peer ID');
 });
+
+test('a description-only entry on the first required field does not block a labeled sibling from titling the case', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    required: ['scope'],
+    properties: {
+      scope: {
+        anyOf: [
+          {
+            type: 'object',
+            required: ['typeId', 'ueId'],
+            properties: { typeId: { type: 'string' }, ueId: { type: 'string' } },
+          },
+        ],
+      },
+    },
+  };
+  const scoped: Thesaurus = {
+    typeid: { description: 'A type discriminator with no display label.' }, // label-less, first required
+    ueid: { label: 'UE ID' },
+  };
+  const scope = jsonSchemaToNodeGroup(schema, 'body', { thesaurus: scoped }).children['scope'] as any;
+  assert.deepEqual(scope.caseLabels, { case0: 'UE ID' });
+});
