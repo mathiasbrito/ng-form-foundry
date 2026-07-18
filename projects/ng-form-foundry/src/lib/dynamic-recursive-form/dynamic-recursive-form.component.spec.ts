@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 
 import { DynamicRecursiveFormComponent } from './dynamic-recursive-form.component';
+import { buildFormFromSchema } from '../core/dynamic-recursive-forms-builder';
 import { CASE_KEY, Leaf, NodeChoice, NodeGroup, NodeMap } from '../types/dynamic-recursive.types';
 
 describe('DynamicRecursiveFormComponent', () => {
@@ -88,6 +89,34 @@ describe('DynamicRecursiveFormComponent', () => {
 
     component.toggleNodePresence('tags', tags, false);
     expect(component.formGroup().get('tags')).toBeNull();
+  });
+
+  it('renders complex children in schema declaration order in the root layout', () => {
+    const ordered: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      root: true,
+      children: {
+        alist: {
+          kind: 'nodeGroupList',
+          name: 'alist',
+          label: 'A List',
+          type: { kind: 'nodeGroup', name: 'item', children: { x: { kind: 'leaf', type: 'string', name: 'x' } } },
+        },
+        zmap: { kind: 'map', name: 'zmap', label: 'Z Map', value: { kind: 'leaf', type: 'string', name: 'value' } },
+        grp: { kind: 'nodeGroup', name: 'grp', label: 'Group', children: { y: { kind: 'leaf', type: 'string', name: 'y' } } },
+      },
+    };
+    fixture.componentRef.setInput('schema', ordered);
+    fixture.componentRef.setInput('formGroup', buildFormFromSchema(ordered));
+    fixture.detectChanges();
+
+    // First title inside each top-level block after the fields container.
+    const content: HTMLElement = fixture.nativeElement.querySelector('.form-content');
+    const titles = [...content.children]
+      .slice(1)
+      .map((el) => el.querySelector('mat-panel-title')!.textContent!.trim());
+    expect(titles).toEqual(['A List', 'Z Map', 'Group']);
   });
 
   it('renders nothing for an absent presence leaf in read-only mode (no dead add button)', () => {
