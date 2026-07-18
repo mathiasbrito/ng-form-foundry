@@ -939,6 +939,45 @@ describe('dynamic-recursive-forms-builder', () => {
       expect(group.valid).toBe(true);
     });
 
+    it('a group with minPresent errors until enough optional children are enabled', () => {
+      // The A1 qosObjectives shape: closed object, all properties optional,
+      // JSON Schema minProperties: 1. Serializing {} must not report valid.
+      const qos: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'qos',
+        minPresent: 1,
+        children: {
+          gfbr: { kind: 'leaf', type: 'number', name: 'gfbr', presence: true },
+          mfbr: { kind: 'leaf', type: 'number', name: 'mfbr', presence: true },
+        },
+      };
+      const group = buildControl(qos, {}) as FormGroup;
+      expect(group.getRawValue()).toEqual({});
+      expect(group.hasError('minPresent')).toBe(true);
+      expect(group.getError('minPresent')).toEqual({ required: 1, actual: 0 });
+
+      group.addControl('gfbr', buildControl(qos.children['gfbr'], 1000));
+      expect(group.hasError('minPresent')).toBe(false);
+      group.removeControl('gfbr');
+      expect(group.hasError('minPresent')).toBe(true);
+    });
+
+    it('a group with maxPresent errors when too many children are enabled', () => {
+      const pick: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'pick',
+        maxPresent: 1,
+        children: {
+          a: { kind: 'leaf', type: 'string', name: 'a', presence: true },
+          b: { kind: 'leaf', type: 'string', name: 'b', presence: true },
+        },
+      };
+      const group = buildControl(pick, { a: 'x', b: 'y' }) as FormGroup;
+      expect(group.getError('maxPresent')).toEqual({ allowed: 1, actual: 2 });
+      group.removeControl('b');
+      expect(group.hasError('maxPresent')).toBe(false);
+    });
+
     it('a plain optional choice stays valid with no case selected (unchanged)', () => {
       const plain: NodeChoice = {
         kind: 'choice',

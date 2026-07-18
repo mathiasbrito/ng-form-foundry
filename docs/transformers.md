@@ -97,6 +97,7 @@ one, the form is inferred from the data's structure and value types. The exporte
 | --- | --- |
 | `object` with `properties` | `nodeGroup` (children keyed by property; `required` marks fields) |
 | `object` with `additionalProperties: <schema>` / `patternProperties` | `map` (open dictionary; `patternProperties` key → `keyPattern`) |
+| `minProperties` / `maxProperties` | on a closed object → `minPresent`/`maxPresent` (bounds on enabled children); on an open map → `minEntries`/`maxEntries` |
 | `array` of objects / of scalars | `nodeGroupList` / `leafList` |
 | `anyOf` / `oneOf` | `choice` — auto-named cases, `title` → case label |
 | `anyOf: [T, null]` | a single **nullable** leaf (not a choice) |
@@ -132,10 +133,10 @@ property that maps to a choice is marked `mandatory` instead. Opt out with
 When calling through the YAML/JSON transformers, pass these flags (and
 `refDocuments`) as `options.schemaOptions`.
 
-Not yet mapped: `allOf` composition, `exclusiveMinimum`/`exclusiveMaximum`,
-`minProperties` on closed objects, and `additionalProperties` *alongside* fixed
-`properties` (the fixed keys win). Optional **arrays** cannot carry `presence`
-(lists don't support it yet) and are always materialized.
+Not yet mapped: `allOf` composition, `exclusiveMinimum`/`exclusiveMaximum`, and
+`additionalProperties` *alongside* fixed `properties` (the fixed keys win).
+Optional **arrays** cannot carry `presence` (lists don't support it yet) and are
+always materialized.
 
 ## libconfig (beta)
 

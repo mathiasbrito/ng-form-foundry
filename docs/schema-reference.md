@@ -111,6 +111,7 @@ A group of fields. Builds a nested `FormGroup`. The root of every schema is a
 | `label` | `string` | {sub}`ui` | Group heading (card or panel title). Falls back to `name`. |
 | `root` | `boolean` | {sub}`ui` | Renders the group as the top-level accordion layout instead of a card. Set on the schema root. |
 | `presence` | `boolean` | {sub}`data` | Makes the group optional: rendered with an on/off toggle and absent from the form value until enabled. Its control is removed when off and rebuilt when on. |
+| `minPresent` / `maxPresent` | `number` | {sub}`data` | Bounds on how many keys are present in the group's value (JSON Schema `minProperties`/`maxProperties` on a closed object). Meaningful when children are presence-optional: the group errors `minPresent` (`{ required, actual }`) / `maxPresent` (`{ allowed, actual }`) while out of range — the tree editor marks the node and explains the fix. |
 | `appearance` | `Appearance` | {sub}`ui` | Layout options (see below). |
 
 ### `Appearance`

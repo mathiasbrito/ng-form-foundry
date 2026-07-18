@@ -1,5 +1,5 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
-import { FormArray, FormGroup } from '@angular/forms';
+import { FormArray, FormControl, FormGroup } from '@angular/forms';
 
 import { ConfigEditorComponent } from './config-editor.component';
 import { buildFormFromSchema, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
@@ -813,5 +813,62 @@ describe('ConfigEditorComponent list floors and caps', () => {
 
     const hint: HTMLElement | null = fixture.nativeElement.querySelector('.detail .empty');
     expect(hint?.textContent).toContain('No iface items.');
+  });
+});
+
+describe('ConfigEditorComponent with a present-children range (minPresent)', () => {
+  // The A1 qosObjectives shape: required closed object, all children optional,
+  // JSON Schema minProperties: 1 → nodeGroup minPresent: 1.
+  const schema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    children: {
+      qosObjectives: {
+        kind: 'nodeGroup',
+        name: 'qosObjectives',
+        label: 'QoS objectives',
+        minPresent: 1,
+        children: {
+          gfbr: { kind: 'leaf', type: 'number', name: 'gfbr', presence: true, integer: true },
+          mfbr: { kind: 'leaf', type: 'number', name: 'mfbr', presence: true, integer: true },
+        },
+      },
+    },
+  };
+
+  let component: ConfigEditorComponent;
+  let fixture: ComponentFixture<ConfigEditorComponent>;
+  let form: FormGroup;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ConfigEditorComponent);
+    component = fixture.componentInstance;
+    form = buildFormFromSchema(schema, { qosObjectives: {} }); // nothing enabled
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', form);
+    fixture.detectChanges();
+  });
+
+  it('marks the tree row red while too few optional children are enabled', () => {
+    const qos = component.root.children.find((c) => c.id === 'qosObjectives')!;
+    expect(component['hasError'](qos)).toBe(true);
+    expect(fixture.nativeElement.querySelector('.row-error-icon')).toBeTruthy();
+
+    (form.get('qosObjectives') as FormGroup).addControl('gfbr', new FormControl(1000));
+    fixture.detectChanges();
+    expect(component['hasError'](qos)).toBe(false);
+  });
+
+  it('explains the violation in the detail view and clears it when a field is enabled', () => {
+    const qos = component.root.children.find((c) => c.id === 'qosObjectives')!;
+    component.select(qos);
+    fixture.detectChanges();
+    const hint: HTMLElement | null = fixture.nativeElement.querySelector('.section-error');
+    expect(hint?.textContent).toContain('At least 1 field must be set (0 set)');
+
+    (form.get('qosObjectives') as FormGroup).addControl('mfbr', new FormControl(500));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.section-error')).toBeNull();
   });
 });

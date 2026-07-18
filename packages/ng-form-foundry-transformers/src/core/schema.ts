@@ -66,6 +66,13 @@ export interface NodeGroup {
    * serializes as `{}`, absent is omitted.
    */
   presence?: boolean;
+  /**
+   * Minimum / maximum number of keys present in the group's value (JSON Schema
+   * `minProperties`/`maxProperties` on a closed object with presence-optional
+   * children); the library validates the enabled-children count against them.
+   */
+  minPresent?: number;
+  maxPresent?: number;
   children: Record<string, NodeType>;
 }
 

@@ -394,6 +394,23 @@ export class ConfigEditorComponent implements OnDestroy {
   }
 
   /** A muted hint for a section whose node currently renders no content of its own. */
+  /**
+   * Explains a group's `minPresent`/`maxPresent` violation next to the red
+   * tree marker: the fix is enabling or removing optional fields, which is not
+   * evident from any single field's own error.
+   */
+  protected presentRangeHint(s: DetailSection): string | null {
+    const errors = s.node.group?.errors;
+    const min = errors?.['minPresent'];
+    if (min) {
+      const noun = min.required === 1 ? 'field' : 'fields';
+      return `At least ${min.required} ${noun} must be set (${min.actual} set) — add from the optional-fields menu.`;
+    }
+    const max = errors?.['maxPresent'];
+    if (max) return `At most ${max.allowed} of these fields may be set (${max.actual} set).`;
+    return null;
+  }
+
   protected emptySectionHint(s: DetailSection): string | null {
     const n = s.node;
     if (n.list && !n.children.length) return `No ${n.list.itemLabel} items.`;

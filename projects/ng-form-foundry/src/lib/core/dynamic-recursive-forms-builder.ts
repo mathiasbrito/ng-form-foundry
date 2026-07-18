@@ -184,6 +184,25 @@ function buildLeafListControl<L extends LeafList>(
   return new FormArray(values.map((v) => new FormControl(v)));
 }
 
+/**
+ * Group error while the number of present (enabled) children is outside the
+ * group's `minPresent`/`maxPresent` range — JSON Schema `minProperties` /
+ * `maxProperties` on a closed object whose properties are presence-optional.
+ * Counted from the live controls, so presence toggles re-evaluate it.
+ */
+function presentChildrenValidator(group: NodeGroup): ValidatorFn {
+  return (control) => {
+    const actual = Object.keys((control as FormGroup).controls).length;
+    if (group.minPresent != null && actual < group.minPresent) {
+      return { minPresent: { required: group.minPresent, actual } };
+    }
+    if (group.maxPresent != null && actual > group.maxPresent) {
+      return { maxPresent: { allowed: group.maxPresent, actual } };
+    }
+    return null;
+  };
+}
+
 function buildNodeGroupControl<G extends NodeGroup>(
   group: G,
   initial?: Record<string, unknown> | null,
@@ -204,7 +223,11 @@ function buildNodeGroupControl<G extends NodeGroup>(
       initial?.[key],
     ) as FormGroupType<G>[typeof key];
   }
-  return new FormGroup(controls as FormGroupType<G>) as DFormGroup<G>;
+  const constrained = group.minPresent != null || group.maxPresent != null;
+  return new FormGroup(
+    controls as FormGroupType<G>,
+    constrained ? { validators: presentChildrenValidator(group) } : undefined,
+  ) as DFormGroup<G>;
 }
 
 function buildNodeGroupListControl<GL extends NodeGroupList>(

@@ -222,6 +222,9 @@
         @if (emptySectionHint(s); as hint) {
           <p class="empty">{{ hint }}</p>
         }
+        @if (presentRangeHint(s); as hint) {
+          <p class="section-error" role="alert">{{ hint }}</p>
+        }
       }
 
       @if (

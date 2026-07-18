@@ -199,6 +199,10 @@ function objectToNodeGroup(schema: JsonSchema, name: string, resolver: RefResolv
   }
   const group: NodeGroup = { kind: 'nodeGroup', name, children };
   if (label) group.label = label;
+  // On a closed object these bound the count of *present* keys — meaningful
+  // because non-required properties are presence nodes (optionalPresence).
+  if (typeof schema.minProperties === 'number') group.minPresent = schema.minProperties;
+  if (typeof schema.maxProperties === 'number') group.maxPresent = schema.maxProperties;
   return group;
 }
 

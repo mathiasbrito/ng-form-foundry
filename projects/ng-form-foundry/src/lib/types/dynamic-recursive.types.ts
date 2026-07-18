@@ -125,6 +125,14 @@ export type NodeGroup = {
    */
   presence?: boolean;
   description?: string;
+  /**
+   * Minimum / maximum number of keys present in the group's value (JSON Schema
+   * `minProperties`/`maxProperties` on a closed object). Meaningful when
+   * children are presence-optional: the group carries a `minPresent` /
+   * `maxPresent` error while the count of enabled children is out of range.
+   */
+  minPresent?: number;
+  maxPresent?: number;
   children: Record<string, NodeType>;
   appearance?: Appearance;
 };

@@ -119,7 +119,9 @@ const schema2 = jsonSchemaToNodeGroup(mainDoc, 'policy', { refDocuments: [common
 Mapping highlights: `anyOf`/`oneOf` → `choice` (auto-named cases, `title` →
 `caseLabels`); `type: [T, 'null']` → nullable leaf (not a choice); `const` →
 read-only leaf; `additionalProperties`/`patternProperties` → `map`;
-string/number constraints and `type: "integer"` → validators; `required` →
+string/number constraints and `type: "integer"` → validators;
+`minProperties`/`maxProperties` → `minPresent`/`maxPresent` on closed objects
+(group errors while enabled-children count is out of range); `required` →
 `required: true` on leaves, `mandatory: true` on choices; optional
 (non-`required`) properties auto-become `presence` nodes — absent until enabled,
 so the serialized value validates against the source schema (opt out with

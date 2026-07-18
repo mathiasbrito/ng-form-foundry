@@ -370,3 +370,29 @@ test('an optional leaf with a default is still presence (the default seeds it wh
   assert.equal(port.presence, true);
   assert.equal(port.default, 80);
 });
+
+test('minProperties/maxProperties on a closed object map to minPresent/maxPresent', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      qosObjectives: {
+        type: 'object',
+        minProperties: 1,
+        maxProperties: 2,
+        additionalProperties: false,
+        properties: { gfbr: { type: 'integer' }, mfbr: { type: 'integer' } },
+      },
+      labels: { type: 'object', additionalProperties: { type: 'string' }, minProperties: 1 },
+    },
+  };
+  const g = jsonSchemaToNodeGroup(schema);
+  const qos = g.children['qosObjectives'] as any;
+  assert.equal(qos.kind, 'nodeGroup');
+  assert.equal(qos.minPresent, 1);
+  assert.equal(qos.maxPresent, 2);
+  // Open maps keep the map-level constraint, not the group one.
+  const labels = g.children['labels'] as any;
+  assert.equal(labels.kind, 'map');
+  assert.equal(labels.minEntries, 1);
+  assert.equal(labels.minPresent, undefined);
+});

@@ -224,6 +224,11 @@
   font-style: italic;
 }
 
+.section-error {
+  color: var(--mat-sys-error);
+  font-size: 0.85rem;
+}
+
 // A link-styled button (breadcrumb ancestors) so the item is keyboard-focusable
 // and screen-reader-announced.
 .item-link {
