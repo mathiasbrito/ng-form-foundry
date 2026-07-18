@@ -76,7 +76,9 @@ export const showcaseValue = {
   replicas: null,
   scope: { zoneId: 'eu-west-1a' },
   portMap: { '80': 'http', '443': 'https' },
-  labels: { env: 'prod', team: 'platform' },
+  // 'app.tier' exercises dotted map keys: entry keys are verbatim control
+  // names, never dot-delimited control paths.
+  labels: { env: 'prod', team: 'platform', 'app.tier': 'backend' },
   ledgerId: '9007199254740993',
   tags: ['edge', 'public'],
 };

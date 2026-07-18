@@ -512,7 +512,9 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       const entries = complex
         ? Object.keys(control.controls)
             .map((key) => {
-              const entryNode = this.buildChildNode(schema.value, control.get(key), key, `${path}/${key}`);
+              // Index access, not .get(): entry keys are arbitrary runtime data
+              // and .get() would split a key like '10.0.0.1' into a dotted path.
+              const entryNode = this.buildChildNode(schema.value, control.controls[key], key, `${path}/${key}`);
               if (entryNode) {
                 entryNode.mapEntry = { mapGroup: control, mapSchema: schema, key };
                 entryNode.ref = { group: control, key, schema: schema.value };

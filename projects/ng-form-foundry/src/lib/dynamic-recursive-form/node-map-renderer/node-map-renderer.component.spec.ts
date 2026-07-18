@@ -50,6 +50,22 @@ describe('NodeMapRendererComponent', () => {
     expect(component.entryKeys).toEqual(['beta']);
   });
 
+  it('renders and renames entries whose keys contain dots (keys are names, not control paths)', () => {
+    fixture = TestBed.createComponent(NodeMapRendererComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('nodeMap', nodeMap);
+    fixture.componentRef.setInput('formGroup', new FormGroup({ '10.0.0.1': new FormControl('edge') }));
+    fixture.detectChanges();
+
+    // The value input binds the entry's own control, not a dot-path traversal.
+    const inputs: HTMLInputElement[] = [...fixture.nativeElement.querySelectorAll('input')];
+    expect(inputs.map((i) => i.value)).toEqual(['10.0.0.1', 'edge']);
+
+    component.renameEntry('10.0.0.1', 'gateway.local');
+    expect(component.formGroup.contains('gateway.local')).toBe(true);
+    expect(component.formGroup.controls['gateway.local'].value).toBe('edge');
+  });
+
   it('renameEntry ignores a duplicate, empty, or unchanged key', () => {
     component.addEntry(); // 'key2'
     const second = component.entryKeys[1];

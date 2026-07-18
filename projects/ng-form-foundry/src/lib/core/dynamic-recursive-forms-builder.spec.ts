@@ -540,6 +540,18 @@ describe('dynamic-recursive-forms-builder', () => {
       expect(removeMapEntry(g, map, 'db')).toBe(false); // at minEntries: 1
       expect(Object.keys(g.controls)).toEqual(['db']);
     });
+
+    it('treats dotted keys as verbatim entry names, never as dot-delimited control paths', () => {
+      const openMap: NodeMap = { kind: 'map', name: 'endpoints', value: { kind: 'leaf', type: 'string', name: 'value' } };
+      const g = buildControl(openMap, { '10.0.0.1': 'edge', 'web.example.com': 'www' }) as FormGroup;
+
+      expect(renameMapEntry(g, openMap, '10.0.0.1', 'gateway.local')).toBe(true);
+      expect(g.controls['gateway.local'].value).toBe('edge');
+      expect(g.controls['10.0.0.1']).toBeUndefined();
+
+      expect(removeMapEntry(g, openMap, 'web.example.com')).toBe(true);
+      expect((g.getRawValue() as Record<string, unknown>)).toEqual({ 'gateway.local': 'edge' });
+    });
   });
 
   it('applyPresence removes an absent presence choice from the built form', () => {

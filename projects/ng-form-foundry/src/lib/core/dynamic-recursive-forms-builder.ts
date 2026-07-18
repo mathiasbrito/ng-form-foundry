@@ -307,13 +307,15 @@ export function addMapEntry(group: FormGroup, map: NodeMap, key?: string): strin
  * Rename entry `oldKey` to `newKey.trim()`, preserving the control instance
  * (remove + re-add, so the value survives). Returns whether the rename was
  * committed: an empty, unchanged, duplicate, or `keyPattern`-violating key is a
- * no-op, leaving the entry under its current name.
+ * no-op, leaving the entry under its current name. Entry keys are looked up
+ * verbatim — never via `AbstractControl.get`, which would split keys like
+ * `10.0.0.1` into dot-delimited paths.
  */
 export function renameMapEntry(group: FormGroup, map: NodeMap, oldKey: string, newKey: string): boolean {
   const committed = newKey.trim();
   if (!committed || committed === oldKey || group.contains(committed)) return false;
   if (map.keyPattern && !new RegExp(map.keyPattern).test(committed)) return false;
-  const control = group.get(oldKey);
+  const control = group.controls[oldKey];
   if (!control) return false;
   group.removeControl(oldKey);
   group.addControl(committed, control);

@@ -372,3 +372,56 @@ describe('ConfigEditorComponent', () => {
     expect(style.borderRightStyle).toBe('solid'); // the tree/detail divider
   });
 });
+
+describe('ConfigEditorComponent with dotted map keys', () => {
+  // Map entry keys are arbitrary runtime data ('10.0.0.1', 'web.example.com');
+  // they must be treated as verbatim control names, never as the dot-delimited
+  // paths AbstractControl.get() parses.
+  const schema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'net',
+    root: true,
+    children: {
+      endpoints: {
+        kind: 'map',
+        name: 'endpoints',
+        value: {
+          kind: 'nodeGroup',
+          name: 'endpoint',
+          children: { url: { kind: 'leaf', type: 'string', name: 'url' } },
+        },
+      },
+    },
+  };
+
+  let component: ConfigEditorComponent;
+  let fixture: ComponentFixture<ConfigEditorComponent>;
+  let form: FormGroup;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ConfigEditorComponent);
+    component = fixture.componentInstance;
+    form = buildFormFromSchema(schema, { endpoints: { '10.0.0.1': { url: 'http://edge' } } });
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', form);
+    fixture.detectChanges();
+  });
+
+  it('builds a tree node and detail section for a dotted-key entry instead of silently dropping it', () => {
+    const endpoints = component.root.children.find((c) => c.id === 'endpoints')!;
+    expect(endpoints.children.map((c) => c.label)).toEqual(['10.0.0.1']);
+    component.select(endpoints.children[0]);
+    expect(component.sections[0].group).toBe((form.get('endpoints') as FormGroup).controls['10.0.0.1'] as FormGroup);
+  });
+
+  it('renames a dotted-key entry, preserving its value', () => {
+    const endpoints = component.root.children.find((c) => c.id === 'endpoints')!;
+    component.renameTreeMapEntry(endpoints.children[0], 'gateway.local');
+
+    const group = form.get('endpoints') as FormGroup;
+    expect(group.contains('10.0.0.1')).toBe(false);
+    expect((group.controls['gateway.local'] as FormGroup).getRawValue()).toEqual({ url: 'http://edge' });
+    expect(component.root.children.find((c) => c.id === 'endpoints')!.children[0].label).toBe('gateway.local');
+  });
+});

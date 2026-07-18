@@ -13,17 +13,19 @@
           >
         </mat-form-field>
 
+        <!-- Index access, not .get(): entry keys are arbitrary runtime data and
+             .get() would split a key like 'web.example.com' into a dotted path. -->
         <div class="value-field">
           @if (nodeMap.value.kind === 'leaf') {
             <nff-leaf-renderer
               [leaf_]="valueLeaf"
-              [control]="asFormControl(formGroup.get(key))"
+              [control]="asFormControl(formGroup.controls[key])"
               [editable]="editable"
             />
           } @else if (nodeMap.value.kind === 'nodeGroup') {
             <nff-dynamic-recursive-form
               [schema]="valueGroup"
-              [formGroup]="asFormGroup(formGroup.get(key))"
+              [formGroup]="asFormGroup(formGroup.controls[key])"
               [editable]="editable"
             />
           }
