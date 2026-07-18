@@ -7,8 +7,9 @@ declarative, recursive **form-description schema**.
   publishable Angular package.
 - **Transformers:** [`packages/ng-form-foundry-transformers`](packages/ng-form-foundry-transformers) —
   a standalone Node + TypeScript catalog of source-format transformers that turn
-  a model or config (YANG, plus YAML and JSON config files) into an ng-form-foundry
-  schema and revert the edited value back to the source format.
+  a model or config (YANG, plus YAML and JSON config files, and libconfig
+  documents in beta) into an ng-form-foundry schema and revert the edited value
+  back to the source format.
 - **Demo:** [`projects/demo`](projects/demo) — example forms consuming the library.
 - **Documentation:** <https://ng-form-foundry.readthedocs.io> (source in
   [`docs/`](docs)).

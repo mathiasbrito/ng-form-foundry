@@ -10,7 +10,8 @@ verify your work the way this repo expects.
 `ng-form-foundry` builds **fully-typed Angular Reactive Forms + Angular Material
 UI from one declarative, recursive schema**. A sibling npm package,
 `ng-form-foundry-transformers`, turns external formats (JSON Schema 2020-12,
-YAML/JSON config, YANG models) into that schema and reverts edited form values
+YAML/JSON config, YANG models, and — in beta — libconfig documents) into that
+schema and reverts edited form values
 back to the source format.
 
 **The one load-bearing invariant:** `form.getRawValue()` **IS the data.** Every
@@ -124,6 +125,14 @@ string/number constraints and `type: "integer"` → validators; `required` →
 so the serialized value validates against the source schema (opt out with
 `schemaOptions: { optionalPresence: false }`). Not mapped: `allOf`, exclusive
 bounds, presence for optional *arrays* (lists can't carry it).
+
+### libconfig round-trip (beta)
+
+`libconfigTransformer` (same contract) edits srsRAN/OAI-style `.cfg` files:
+span-splicing revert (comments + scalar types preserved — float stays `x.0`,
+hex stays hex, `L` suffix survives), inferred or JSON-Schema-driven forms,
+empty/heterogeneous collections read-only unless a schema types them. BETA:
+warns once on first use; diff write-backs before deploying.
 
 ### YAML / JSON config round-trip
 

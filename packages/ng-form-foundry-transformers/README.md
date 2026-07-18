@@ -16,6 +16,7 @@ or a CLI just as easily.
 | `yang` | YANG model (via an engine) | RFC 7951 instance data | available |
 | `yaml` | YAML config (optionally a JSON Schema) | YAML (comments preserved) | available |
 | `json` | JSON config (optionally a JSON Schema) | JSON (indent preserved) | available |
+| `libconfig` | libconfig document (optionally a JSON Schema) | libconfig (comments **and scalar types** preserved) | **beta** — warns on first use |
 
 The YAML and JSON transformers share the same format-agnostic form builders in
 `core` (`inferNodeGroup`, `jsonSchemaToNodeGroup`) — a JSON Schema is an *option*
@@ -101,6 +102,39 @@ import { jsonTransformer } from 'ng-form-foundry-transformers';
 const { schema, binding, initialValue } = jsonTransformer.toSchema(configText);
 const out = jsonTransformer.toSource({ ...initialValue, replicas: 5 }, binding);
 ```
+
+## libconfig transformer (beta)
+
+Edit a **libconfig document** — the `.cfg`/`.conf` format of srsRAN, OAI, and
+other C/C++ software using [libconfig](https://hyperrealm.github.io/libconfig/).
+**Beta**: it logs a one-time warning on first use; diff `toSource` output
+against the original before deploying a write-back.
+
+```ts
+import { libconfigTransformer } from 'ng-form-foundry-transformers';
+
+const { schema, binding, initialValue } = libconfigTransformer.toSchema(cfgText);
+// … build the form, let the user edit …
+const editedCfg = libconfigTransformer.toSource(editedValue, binding);
+```
+
+The revert **splices edited spans into the original text**, so comments, key
+order, `=` vs `:`, terminators, and delimiter style survive verbatim on every
+unedited byte. Emission is **type-preserving** — libconfig is statically typed,
+so a float slot edited to an integral value emits `21.0` not `21`, hex re-emits
+in hex at its original width, an int64 keeps its `L` suffix, and values beyond
+2^53 travel as exact decimal strings (the same bigint strategy as YAML/JSON).
+
+Without a JSON Schema, the form is inferred from the document's own typed
+literals; a list of groups infers the union of entry keys (keys missing from
+some entries become presence toggles). **Empty and heterogeneous collections
+are then shown read-only** — libconfig gives no element type to edit by; pass a
+JSON Schema (`{ schema, schemaOptions? }`) to type them and make them editable.
+`@include` is rejected by default (the form would show less than the C reader
+sees); `{ includes: 'opaque' }` keeps the directive line verbatim and edits only
+the file's own settings. Newly added settings are value-typed (an integral
+number emits as an int) — route float-typed additions through a JSON Schema
+slot that exists in the source, or accept the int typing.
 
 ## YANG transformer
 

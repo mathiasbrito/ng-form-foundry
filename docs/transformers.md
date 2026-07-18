@@ -1,8 +1,9 @@
 # Transformers
 
 `ng-form-foundry-transformers` is a companion **Node/TypeScript** package that
-generates schemas from an existing source — a **YAML** or **JSON** config file, or
-a **YANG** model — and reverts the edited form value back to that source format. It
+generates schemas from an existing source — a **YAML** or **JSON** config file, a
+**YANG** model, or (in beta) a **libconfig** document — and reverts the edited
+form value back to that source format. It
 is framework-agnostic (no framework imports); NestJS is the likely host, but it
 runs just as well in Express, a worker, or a CLI.
 
@@ -37,6 +38,7 @@ directly (tree-shakeable).
 | --- | --- | --- |
 | `yaml` | YAML config (optionally a JSON Schema) | YAML — comments & key order preserved |
 | `json` | JSON config (optionally a JSON Schema) | JSON — indent & trailing newline preserved |
+| `libconfig` | libconfig document (optionally a JSON Schema); **beta** | libconfig — comments & scalar types preserved |
 | `yang` | YANG model (via an engine) | RFC 7951 instance data |
 
 ## YAML
@@ -134,6 +136,27 @@ Not yet mapped: `allOf` composition, `exclusiveMinimum`/`exclusiveMaximum`,
 `minProperties` on closed objects, and `additionalProperties` *alongside* fixed
 `properties` (the fixed keys win). Optional **arrays** cannot carry `presence`
 (lists don't support it yet) and are always materialized.
+
+## libconfig (beta)
+
+`libconfigTransformer` edits **libconfig documents** — the `.cfg`/`.conf`
+format of srsRAN, OAI, and other C/C++ software. It is a **beta** feature and
+logs a one-time console warning on first use: diff the `toSource` output
+against the original file before deploying a write-back.
+
+The revert splices edited value spans into the original text, so comments and
+formatting survive verbatim on every unedited byte, and emission is
+**type-preserving** — libconfig is statically typed, so a float slot keeps its
+`.0`, hex re-emits in hex at its original width, an int64 keeps its `L`
+suffix, and integers beyond 2^53 travel as exact decimal strings.
+
+Without a JSON Schema the form is inferred from the document's typed literals
+(a list of groups infers the union of entry keys; keys missing from some
+entries become presence toggles). Empty and heterogeneous collections are then
+**read-only** — no honest element type exists — and become editable when a
+JSON Schema types them (`{ schema, schemaOptions? }`). `@include` is rejected
+by default; `{ includes: 'opaque' }` keeps the directive line verbatim and
+edits only the file's own settings.
 
 ## YANG
 
