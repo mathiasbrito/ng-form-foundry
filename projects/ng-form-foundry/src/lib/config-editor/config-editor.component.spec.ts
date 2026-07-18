@@ -354,6 +354,31 @@ describe('ConfigEditorComponent', () => {
     expect(component.selected!.id).toBe('ifaces/3');
   });
 
+  it('member sections carry a delete control in their heading; removing keeps the selection', () => {
+    fixture.detectChanges();
+    const heading = [...fixture.nativeElement.querySelectorAll('.detail .section-heading')].find((h: HTMLElement) =>
+      h.textContent!.includes('#2'),
+    ) as HTMLElement;
+    const remove: HTMLButtonElement = heading.querySelector('.section-remove')!;
+    expect(remove).toBeTruthy();
+
+    remove.click();
+    fixture.detectChanges();
+
+    expect((form.get('ifaces') as FormArray).length).toBe(1);
+    expect(component.selected!.id).toBe(''); // detail remove: root view stays
+  });
+
+  it('the heading delete control hides at the container floor (minEntries)', () => {
+    // servers has minEntries: 1 and exactly one entry — its section heading
+    // must offer no remove.
+    fixture.detectChanges();
+    const heading = [...fixture.nativeElement.querySelectorAll('.detail .section-heading')].find((h: HTMLElement) =>
+      h.textContent!.includes('s1'),
+    ) as HTMLElement;
+    expect(heading.querySelector('.section-remove')).toBeNull();
+  });
+
   it('removeTreeMapEntry removes an entry but not below minEntries', () => {
     const group = form.get('servers') as FormGroup;
     const servers = node('servers');

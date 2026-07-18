@@ -285,13 +285,19 @@ export class ConfigEditorComponent implements OnDestroy {
    * otherwise it would silently migrate to the items that shift into the
    * removed indexes.
    */
-  removeItem(listNode: TreeNode, item: TreeNode) {
+  removeItem(listNode: TreeNode, item: TreeNode, keepSelection = false) {
     if (!listNode.list || !item.removable) return;
     if (listNode.list.array.length <= listNode.list.minItems) return;
     for (const id of [...this.expanded]) {
       if (id.startsWith(`${listNode.id}/`)) this.expanded.delete(id);
     }
     listNode.list.array.removeAt(item.removable.index);
+    // A detail-pane remove keeps the (ancestor) selection; a tree-row remove
+    // moves to the list and returns focus to its row.
+    if (keepSelection) {
+      this.selectByPath(this.selected?.id ?? '', false);
+      return;
+    }
     this.selectByPath(listNode.id);
     this.focusSelectedRow();
   }
@@ -382,10 +388,14 @@ export class ConfigEditorComponent implements OnDestroy {
   }
 
   /** Remove a complex map entry (down to `minEntries`). */
-  removeTreeMapEntry(mapNode: TreeNode, entryNode: TreeNode) {
+  removeTreeMapEntry(mapNode: TreeNode, entryNode: TreeNode, keepSelection = false) {
     const m = mapNode.map;
     const e = entryNode.mapEntry;
     if (!m || !e || !removeMapEntry(m.group, m.schema, e.key)) return;
+    if (keepSelection) {
+      this.selectByPath(this.selected?.id ?? '', false);
+      return;
+    }
     this.selectByPath(mapNode.id);
     this.focusSelectedRow();
   }
@@ -598,6 +608,11 @@ export class ConfigEditorComponent implements OnDestroy {
       this.emptySectionHint(s) ||
       this.presentRangeHint(s)
     );
+  }
+
+  /** The section node's container (list / map), for member controls in its heading. */
+  protected memberParent(s: DetailSection): TreeNode | null {
+    return s.trail.length > 1 ? (s.trail[s.trail.length - 2] ?? null) : null;
   }
 
   /**

@@ -1,3 +1,6 @@
+@use '@angular/material' as mat;
+@use '../styles/small-icon-button' as nff;
+
 :host {
   display: block;
   width: 100%;
@@ -211,7 +214,21 @@
   .crumb-current {
     font-weight: 600;
   }
+
+  // A member section's delete control, right after its trail — the same
+  // compact error-container button the form renderers use for remove.
+  .section-remove {
+    flex: 0 0 auto;
+    align-self: center;
+  }
 }
+
+.remove-button {
+  background-color: var(--mat-sys-error-container);
+  @include mat.elevation(1);
+}
+
+@include nff.small-icon-button;
 
 // The map-entry key editor and choice-case selector sit above their section's fields.
 .key-field,

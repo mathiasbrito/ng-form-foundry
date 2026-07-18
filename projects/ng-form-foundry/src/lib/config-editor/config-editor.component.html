@@ -156,6 +156,32 @@
                 <span class="crumb-sep" aria-hidden="true">/</span>
               }
             }
+            @if (editable() && s.node.removable && memberParent(s); as parent) {
+              @if (!listAtMin(parent)) {
+                <button
+                  matIconButton
+                  class="remove-button small-icon-button section-remove"
+                  matTooltip="Remove"
+                  [attr.aria-label]="'Remove ' + s.node.label"
+                  (click)="removeItem(parent, s.node, true)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            }
+            @if (editable() && s.node.mapEntry && memberParent(s); as parent) {
+              @if (!mapAtMin(parent)) {
+                <button
+                  matIconButton
+                  class="remove-button small-icon-button section-remove"
+                  matTooltip="Remove entry"
+                  [attr.aria-label]="'Remove ' + s.node.label + ' entry'"
+                  (click)="removeTreeMapEntry(parent, s.node, true)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            }
           </div>
         }
 
