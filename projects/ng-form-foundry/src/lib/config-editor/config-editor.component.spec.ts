@@ -151,7 +151,10 @@ describe('ConfigEditorComponent', () => {
     expect(el.querySelector('.detail mat-expansion-panel')).toBeNull();
     const headings = [...el.querySelectorAll<HTMLElement>('.detail .section-heading')];
     expect(headings.length).toBe(component.sections.length - 1); // every section but the first
-    expect(headings[0].textContent!.replace(/\s+/g, '').trim()).toBe('device/system');
+    // Assert the heading's structure, not its collapsed text: ancestor links, then the current segment.
+    const links = [...headings[0].querySelectorAll('.crumb-link')].map((a) => a.textContent!.trim());
+    expect(links).toEqual(['device']);
+    expect(headings[0].querySelector('.crumb-current')!.textContent!.trim()).toBe('system');
   });
 
   it('switchTreeCase swaps the case from the detail selector and re-syncs the sections', () => {
