@@ -76,6 +76,43 @@ discriminating required field; when sibling cases collide (identical required
 sets), the library's case selectors disambiguate them by each case's
 distinguishing fields.
 
+When the same identifier means different things at different depths, a key
+maps to a **list of variants scoped by `under`** — an ancestor-**name** suffix
+(an array, so still no separators; each segment is a literal name). The
+longest matching scope wins; an entry without `under` is the fallback:
+
+```ts
+const thesaurus = {
+  id: [
+    { under: ['cell'],  label: 'Cell ID' },   // any `id` directly inside a `cell`
+    { under: ['slice'], label: 'S-NSSAI' },
+    { label: 'ID' },                          // everywhere else
+  ],
+};
+```
+
+Scoping follows the **data hierarchy of names**: list indices, map entry keys,
+and — by default — choice case names are transparent. For a **choice**, case
+fields match both with and without their case-name segment, so one scope can
+cover the whole choice or target a single case:
+
+```ts
+// scope (choice) → cases byUe / byCell, both with a field named `id`
+const thesaurus = {
+  id: [
+    { under: ['scope', 'byUe'],   label: 'UE ID' },    // only inside the byUe case
+    { under: ['scope', 'byCell'], label: 'Cell ID' },  // only inside byCell
+    { under: ['scope'],           label: 'Scope ID' }, // any other case of scope
+  ],
+};
+// → byUe.id: "UE ID", byCell.id: "Cell ID"; the per-case labels also flow
+//   into caseLabels via each case's discriminating field.
+```
+
+Scoping by an auto-generated case name (`under: ['case0']`) works but is
+positional — it shifts when the source schema reorders its branches; prefer
+case-name scopes only for hand-named cases.
+
 ## YAML transformer
 
 Edit a **YAML config file**: turn it into a form, then write the edited value

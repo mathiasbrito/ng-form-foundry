@@ -142,6 +142,17 @@ export type FormValue = Record<string, unknown>;
 export interface ThesaurusEntry {
   label?: string;
   description?: string;
+  /**
+   * Ancestor-name suffix this variant applies under: each segment is a
+   * **literal name** (no separators exist, so any character is literal),
+   * matched case-insensitively against the identifier's ancestor chain.
+   * `['scope', 'cell']` applies to a node whose parent is `cell` inside
+   * `scope`, at any depth. Longest matching `under` wins; an entry without
+   * `under` is the unscoped fallback. Case fields match both with and without
+   * their case-name segment, so `['scope']` covers every case of a choice and
+   * `['scope', 'byUe']` targets one case.
+   */
+  under?: string[];
 }
 
 /**
@@ -149,5 +160,9 @@ export interface ThesaurusEntry {
  * by `applyThesaurus`. Keys are **plain identifier names** matched
  * **case-insensitively** against node record keys — never paths: no separator
  * exists, so a `.` (or any character) in a key is a literal part of the name.
+ *
+ * A key maps to one entry, or to a list of variants scoped by
+ * {@link ThesaurusEntry.under} when the same identifier carries different
+ * meanings at different depths.
  */
-export type Thesaurus = Record<string, ThesaurusEntry>;
+export type Thesaurus = Record<string, ThesaurusEntry | ThesaurusEntry[]>;

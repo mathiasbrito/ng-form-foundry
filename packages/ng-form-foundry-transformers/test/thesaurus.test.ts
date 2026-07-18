@@ -127,3 +127,113 @@ test('colliding case labels are emitted as-is with labeled distinguishing fields
   assert.equal(scope.cases.case0.groupId.label, 'Group ID'); // the de-dup suffix source
   assert.equal(scope.cases.case1.sliceId.label, 'Slice ID');
 });
+
+// --- scoped variants (under: ancestor-name suffixes) --------------------------
+
+test('scoped variants: the same identifier labels differently under different ancestors', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    required: ['cell', 'slice', 'policy'],
+    properties: {
+      cell: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+      slice: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+      policy: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+    },
+  };
+  const scoped: Thesaurus = {
+    id: [
+      { under: ['cell'], label: 'Cell ID' },
+      { under: ['slice'], label: 'S-NSSAI' },
+      { label: 'ID' }, // unscoped fallback
+    ],
+  };
+  const g = jsonSchemaToNodeGroup(schema, 'body', { thesaurus: scoped });
+  assert.equal(((g.children['cell'] as any).children.id as any).label, 'Cell ID');
+  assert.equal(((g.children['slice'] as any).children.id as any).label, 'S-NSSAI');
+  assert.equal(((g.children['policy'] as any).children.id as any).label, 'ID'); // fallback
+});
+
+test('the longest matching scope wins over a shorter one', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    required: ['outer'],
+    properties: {
+      outer: {
+        type: 'object',
+        required: ['cell'],
+        properties: {
+          cell: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+        },
+      },
+    },
+  };
+  const scoped: Thesaurus = {
+    id: [
+      { under: ['cell'], label: 'Any Cell ID' },
+      { under: ['outer', 'cell'], label: 'Outer Cell ID' },
+    ],
+  };
+  const g = jsonSchemaToNodeGroup(schema, 'body', { thesaurus: scoped });
+  assert.equal((((g.children['outer'] as any).children.cell as any).children.id as any).label, 'Outer Cell ID');
+});
+
+test('choice cases are scope-transparent by default and targetable by case name', () => {
+  // Hand-built NodeGroup with meaningfully named cases: the same field name
+  // means different things in sibling cases of ONE choice — only a case-name
+  // scope can distinguish them.
+  const group = {
+    kind: 'nodeGroup' as const,
+    name: 'body',
+    children: {
+      scope: {
+        kind: 'choice' as const,
+        name: 'scope',
+        cases: {
+          byUe: { id: { kind: 'leaf' as const, type: 'string' as const, name: 'id' } },
+          byCell: { id: { kind: 'leaf' as const, type: 'string' as const, name: 'id' } },
+        },
+      },
+    },
+  };
+  const scoped: Thesaurus = {
+    id: [
+      { under: ['scope', 'byUe'], label: 'UE ID' },
+      { under: ['scope', 'byCell'], label: 'Cell ID' },
+      { under: ['scope'], label: 'Scope ID' }, // would cover any other case
+    ],
+  };
+  const labeled = applyThesaurus(group, scoped);
+  const scope = labeled.children['scope'] as any;
+  assert.equal(scope.cases.byUe.id.label, 'UE ID');
+  assert.equal(scope.cases.byCell.id.label, 'Cell ID');
+  // The per-case labels also drive caseLabels via the discriminating field.
+  assert.deepEqual(scope.caseLabels, { byUe: 'UE ID', byCell: 'Cell ID' });
+
+  // Case-transparent variant: with only the ['scope'] entry, both cases match it.
+  const transparent = applyThesaurus(group, { id: [{ under: ['scope'], label: 'Scope ID' }] });
+  assert.equal((transparent.children['scope'] as any).cases.byUe.id.label, 'Scope ID');
+  assert.equal((transparent.children['scope'] as any).cases.byCell.id.label, 'Scope ID');
+});
+
+test('list items and map entries are transparent: fields scope under the list/map name', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    required: ['cells', 'peers'],
+    properties: {
+      cells: {
+        type: 'array',
+        items: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+      },
+      peers: { type: 'object', additionalProperties: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } } },
+    },
+  };
+  const scoped: Thesaurus = {
+    id: [
+      { under: ['cells'], label: 'Cell ID' },
+      { under: ['peers'], label: 'Peer ID' },
+    ],
+  };
+  const g = jsonSchemaToNodeGroup(schema, 'body', { thesaurus: scoped });
+  assert.equal(((g.children['cells'] as any).type.children.id as any).label, 'Cell ID');
+  assert.equal((((g.children['peers'] as any).value as any).children.id as any).label, 'Peer ID');
+});

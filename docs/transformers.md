@@ -150,6 +150,28 @@ and colliding sibling labels are disambiguated by the library's case
 selectors. `applyThesaurus(nodeGroup, thesaurus)` is exported for
 post-processing any schema.
 
+When one identifier carries different meanings at different depths, a key maps
+to a list of variants scoped by `under` — an ancestor-**name** suffix (an
+array: no separators, every segment is a literal name). Longest matching scope
+wins; an entry without `under` is the fallback. List indices and map entry
+keys are transparent (fields scope under the list/map *name*), and **choice
+case fields match both with and without their case-name segment**:
+
+```ts
+// scope (choice) → cases byUe / byCell, both with a field named `id`
+const thesaurus = {
+  id: [
+    { under: ['scope', 'byUe'],   label: 'UE ID' },    // one case only
+    { under: ['scope', 'byCell'], label: 'Cell ID' },
+    { under: ['scope'],           label: 'Scope ID' }, // any case of scope
+  ],
+};
+```
+
+The per-case labels also drive `caseLabels` through each case's discriminating
+field. Scoping by an auto-generated case name (`case0`) is positional and
+brittle — reserve case-name scopes for hand-named cases.
+
 ## libconfig (beta)
 
 `libconfigTransformer` edits **libconfig documents** — the `.cfg`/`.conf`
