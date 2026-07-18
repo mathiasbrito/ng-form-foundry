@@ -3,7 +3,7 @@ import { FormArray, FormGroup } from '@angular/forms';
 
 import { ConfigEditorComponent } from './config-editor.component';
 import { buildFormFromSchema, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
-import { CASE_KEY, NodeChoice, NodeGroup } from '../types/dynamic-recursive.types';
+import { CASE_KEY, NodeChoice, NodeGroup, NodeGroupList } from '../types/dynamic-recursive.types';
 
 describe('ConfigEditorComponent', () => {
   let component: ConfigEditorComponent;
@@ -393,6 +393,25 @@ describe('ConfigEditorComponent', () => {
     const before = node('system');
     form.get('hostname')!.setValue('core-2');
     expect(node('system')).toBe(before); // same node object: no rebuild happened
+  });
+
+  it('a structural re-sync does not re-expand ancestors the user collapsed', () => {
+    component.select(node('servers').children[0]); // expands 'servers'
+    component.expanded.delete('servers'); // user collapses it again
+
+    const ifaceType = (schema.children['ifaces'] as NodeGroupList).type;
+    (form.get('ifaces') as FormArray).push(buildFormFromSchema(ifaceType));
+
+    expect(component.selected!.id).toBe('servers/s1'); // selection survived
+    expect(component.expanded.has('servers')).toBe(false); // collapse respected
+  });
+
+  it('replacing a control with setControl rebuilds the tree even when the shape is identical', () => {
+    const replacement = buildFormFromSchema(schema.children['system'] as NodeGroup);
+
+    form.setControl('system', replacement);
+
+    expect(node('system').group).toBe(replacement as FormGroup); // no detached-subtree editing
   });
 
   it('a removed deep selection falls back to its closest surviving ancestor, not the root', () => {

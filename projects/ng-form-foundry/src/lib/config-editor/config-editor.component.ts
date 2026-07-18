@@ -144,6 +144,9 @@ export class ConfigEditorComponent implements OnDestroy {
   private shape = '';
   private changes?: Subscription;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  /** Stable per-instance ids for the shape signature, so replacing a control (setControl) reads as a structural change. */
+  private readonly controlIds = new WeakMap<AbstractControl, number>();
+  private controlIdSeq = 0;
 
   constructor() {
     // Rebind whenever the schema or form inputs change (a host loading another
@@ -174,7 +177,7 @@ export class ConfigEditorComponent implements OnDestroy {
     this.changes = group.valueChanges.subscribe(() => this.syncShape());
   }
 
-  select(node: TreeNode) {
+  select(node: TreeNode, reveal = true) {
     this.selected = node;
     this.sections = this.buildSections(node, []);
     this.breadcrumb = this.pathTo(node);
@@ -182,9 +185,12 @@ export class ConfigEditorComponent implements OnDestroy {
     this.focusSectionId = null;
     this.focusLeafKey = null;
     // Reveal the selection: expand every ancestor so the row is visible, and
-    // the node itself as it opens on the right.
-    for (const crumb of this.breadcrumb) {
-      if (crumb !== node || this.hasExpandableContent(crumb)) this.expanded.add(crumb.id);
+    // the node itself as it opens on the right. Structural re-syncs pass
+    // reveal=false — they must not re-expand what the user collapsed.
+    if (reveal) {
+      for (const crumb of this.breadcrumb) {
+        if (crumb !== node || this.hasExpandableContent(crumb)) this.expanded.add(crumb.id);
+      }
     }
   }
 
@@ -446,12 +452,22 @@ export class ConfigEditorComponent implements OnDestroy {
         .map((k) => `${k}:${this.shapeOf(control.controls[k])}`)
         .join(',');
       const active = control.get(CASE_KEY)?.value;
-      return `{${typeof active === 'string' ? `=${active};` : ''}${inner}}`;
+      return `{#${this.uidOf(control)}${typeof active === 'string' ? `=${active};` : ''}${inner}}`;
     }
     if (control instanceof FormArray) {
-      return `[${control.controls.map((c) => this.shapeOf(c)).join(',')}]`;
+      return `[#${this.uidOf(control)}${control.controls.map((c) => this.shapeOf(c)).join(',')}]`;
     }
     return '.';
+  }
+
+  /** The instance id a container contributes to the shape signature. */
+  private uidOf(control: AbstractControl): number {
+    let id = this.controlIds.get(control);
+    if (id == null) {
+      id = ++this.controlIdSeq;
+      this.controlIds.set(control, id);
+    }
+    return id;
   }
 
   /** Rebuild the whole tree from schema + form and refresh the shape signature. */
@@ -463,7 +479,7 @@ export class ConfigEditorComponent implements OnDestroy {
 
   /** Re-point `selected` at the rebuilt tree: same path, else the closest surviving ancestor. */
   private reconcileSelection(): void {
-    this.selectByPath(this.selected?.id ?? '');
+    this.selectByPath(this.selected?.id ?? '', false);
   }
 
   /** The node at `path` in the current tree, or null. Walks by id-prefix segments. */
@@ -480,14 +496,14 @@ export class ConfigEditorComponent implements OnDestroy {
   }
 
   /** Select the node at `path`, falling back through its ancestors to the root. */
-  private selectByPath(path: string): void {
+  private selectByPath(path: string, reveal = true): void {
     let target = this.byPath(path);
     let trimmed = path;
     while (!target && trimmed.includes('/')) {
       trimmed = trimmed.slice(0, trimmed.lastIndexOf('/'));
       target = this.byPath(trimmed);
     }
-    this.select(target ?? this.root);
+    this.select(target ?? this.root, reveal);
   }
 
   /**
