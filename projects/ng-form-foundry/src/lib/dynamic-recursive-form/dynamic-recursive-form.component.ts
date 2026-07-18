@@ -8,7 +8,6 @@ import { NodeMapRendererComponent } from './node-map-renderer/node-map-renderer.
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { NgTemplateOutlet } from '@angular/common';
 import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
 import { buildControl, caseFields, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
@@ -31,7 +30,6 @@ import { MatSelectModule } from '@angular/material/select';
     MatIconModule,
     MatButtonModule,
     NgTemplateOutlet,
-    MatCardModule,
     MatCheckboxModule,
     MatFormFieldModule,
     MatSelectModule,

@@ -67,8 +67,6 @@ interface TreeNode {
   group: FormGroup | null;
   /** The node's own schema, set on group-backed nodes (groups, list items, group-valued map entries). */
   schema?: NodeGroup;
-  /** The node as a named child of its parent group: enough to render or remove it there. */
-  ref?: { group: FormGroup; key: string; schema: NodeType };
   /** Present on a nodeGroupList node: lets a `+` add an item. */
   list?: ListRef;
   /** Present on a list-item node: its current index in the parent list (removal goes through the parent list array). */
@@ -509,7 +507,6 @@ export class ConfigEditorComponent implements OnDestroy {
       }
       const node = this.buildChildNode(child, group.get(key), this.labelOf(child, key), this.join(path, key));
       if (!node) continue;
-      node.ref = { group, key, schema: child };
       if (presence) node.presenceRemovable = { key };
       children.push(node);
     }
@@ -581,7 +578,6 @@ export class ConfigEditorComponent implements OnDestroy {
               const entryNode = this.buildChildNode(schema.value, control.controls[key], key, `${path}/${key}`);
               if (entryNode) {
                 entryNode.mapEntry = { mapGroup: control, mapSchema: schema, key };
-                entryNode.ref = { group: control, key, schema: schema.value };
               }
               return entryNode;
             })
