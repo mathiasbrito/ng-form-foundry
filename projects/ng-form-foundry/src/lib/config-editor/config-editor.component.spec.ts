@@ -155,6 +155,9 @@ describe('ConfigEditorComponent', () => {
     const links = [...headings[0].querySelectorAll('.crumb-link')].map((a) => a.textContent!.trim());
     expect(links).toEqual(['device']);
     expect(headings[0].querySelector('.crumb-current')!.textContent!.trim()).toBe('system');
+    // Section headings are headings, not nav landmarks: only the breadcrumb is a nav.
+    expect(headings.every((h) => h.getAttribute('role') === 'heading')).toBe(true);
+    expect(el.querySelectorAll('.detail nav').length).toBe(1);
   });
 
   it('switchTreeCase swaps the case from the detail selector and re-syncs the sections', () => {

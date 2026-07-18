@@ -144,7 +144,10 @@
            boundary between one child and the next. -->
       @for (s of sections; track s.node.id) {
         @if (s.trail.length > 1) {
-          <nav class="section-heading" aria-label="Section">
+          <!-- A heading, not a nav landmark: dozens of identical "Section"
+               landmarks would flood the assistive-tech landmark list. Its
+               accessible name is the trail itself. -->
+          <div class="section-heading" role="heading" aria-level="3">
             @for (crumb of s.trail; track crumb.id; let last = $last) {
               @if (last) {
                 <span class="crumb-current">{{ crumb.label }}</span>
@@ -153,7 +156,7 @@
                 <span class="crumb-sep" aria-hidden="true">/</span>
               }
             }
-          </nav>
+          </div>
         }
 
         @if (s.node.mapEntry; as entry) {
