@@ -179,7 +179,10 @@ export class ConfigEditorComponent implements OnDestroy {
 
   select(node: TreeNode, reveal = true) {
     this.selected = node;
-    this.sections = this.buildSections(node, []);
+    // Sections that would render only their breadcrumb heading (a composite
+    // node with no leaf fields and no chrome) are dropped: their children get
+    // sections of their own, whose trails carry the full path anyway.
+    this.sections = this.buildSections(node, []).filter((s, i) => i === 0 || this.sectionHasContent(s));
     this.breadcrumb = this.pathTo(node);
     // Navigating retires any pending just-added-leaf focus request.
     this.focusSectionId = null;
@@ -255,13 +258,19 @@ export class ConfigEditorComponent implements OnDestroy {
     return !!(node.group?.invalid || node.list?.array.invalid || node.map?.group.invalid);
   }
 
-  /** Append a new item to a list node's FormArray (up to `maxItems`), then select it. */
-  addItem(listNode: TreeNode) {
+  /**
+   * Append a new item to a list node's FormArray (up to `maxItems`). A tree-row
+   * add selects the new item; a detail-pane add passes `keepSelection` so the
+   * current (possibly ancestor) view stays put and the item appears as a new
+   * section in it.
+   */
+  addItem(listNode: TreeNode, keepSelection = false) {
     const list = listNode.list;
     if (!list) return;
     if (list.maxItems != null && list.array.length >= list.maxItems) return;
     list.array.push(buildFormFromSchema(list.itemSchema));
-    this.selectByPath(this.join(listNode.id, String(list.array.length - 1)));
+    if (keepSelection) this.selectByPath(this.selected?.id ?? '', false);
+    else this.selectByPath(this.join(listNode.id, String(list.array.length - 1)));
   }
 
   /**
@@ -334,24 +343,36 @@ export class ConfigEditorComponent implements OnDestroy {
     return choice.caseLabels?.[caseName] ?? caseName;
   }
 
-  /** Switch a choice node's active case; the structural sync rebuilds the tree and sections. */
+  /**
+   * Switch a choice node's active case from its detail selector; the
+   * structural sync rebuilds the tree and sections. The tree selection stays
+   * where it is: detail edits must never steal it, or a flattened ancestor
+   * view would collapse to the choice node mid-edit. Selection moves only
+   * through the tree itself.
+   */
   switchTreeCase(node: TreeNode, caseName: string) {
     const c = node.choice;
     if (!c) return;
     switchChoiceCase(c.group, c.schema, caseName);
-    this.selectByPath(node.id);
+    this.selectByPath(this.selected?.id ?? node.id, false);
   }
 
   protected objectKeys(obj: Record<string, unknown>): string[] {
     return Object.keys(obj);
   }
 
-  /** Append a new entry to a complex map node under a generated unique key, then select it. */
-  addTreeMapEntry(mapNode: TreeNode) {
+  /**
+   * Append a new entry to a complex map node under a generated unique key. A
+   * tree-row add selects the new entry; a detail-pane add passes
+   * `keepSelection` so the current view stays put (see {@link addItem}).
+   */
+  addTreeMapEntry(mapNode: TreeNode, keepSelection = false) {
     const m = mapNode.map;
     if (!m) return;
     const key = addMapEntry(m.group, m.schema);
-    if (key != null) this.selectByPath(this.join(mapNode.id, key));
+    if (key == null) return;
+    if (keepSelection) this.selectByPath(this.selected?.id ?? '', false);
+    else this.selectByPath(this.join(mapNode.id, key));
   }
 
   /** Remove a complex map entry (down to `minEntries`). */
@@ -364,14 +385,19 @@ export class ConfigEditorComponent implements OnDestroy {
   }
 
   /**
-   * Commit a rename-on-blur of a map entry's key; on success the entry is
-   * selected under its new path and its fresh key field regains focus (the
-   * rename re-renders the section under a new id, destroying the input that
-   * held focus).
+   * Commit a rename-on-blur of a map entry's key; on success the selection is
+   * remapped to the entry's new identity when it pointed at (or inside) the
+   * entry — otherwise it stays put — and the fresh key field regains focus
+   * (the rename re-renders the section under a new id, destroying the input
+   * that held focus).
    */
   renameTreeMapEntry(entryNode: TreeNode, rawKey: string) {
     const e = entryNode.mapEntry;
     if (!e) return;
+    // Captured before the mutation: the rename's structural sync reconciles
+    // the selection against the stale id (falling back to an ancestor) before
+    // this method can remap it.
+    const selectedId = this.selected?.id ?? '';
     if (renameMapEntry(e.mapGroup, e.mapSchema, e.key, rawKey)) {
       const parentPath = entryNode.id.slice(0, entryNode.id.lastIndexOf('/'));
       const newId = this.join(parentPath, rawKey.trim());
@@ -382,7 +408,13 @@ export class ConfigEditorComponent implements OnDestroy {
           this.expanded.add(newId + id.slice(entryNode.id.length));
         }
       }
-      this.selectByPath(newId);
+      // Selection is remapped, not moved: it follows the rename only when it
+      // sat on the entry (or inside it); an ancestor view stays put.
+      const followed =
+        selectedId === entryNode.id || selectedId.startsWith(`${entryNode.id}/`)
+          ? newId + selectedId.slice(entryNode.id.length)
+          : selectedId;
+      this.selectByPath(followed, false);
       // Deferred so the rebuilt section's key field exists before focusing.
       setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.detail .key-field input')?.focus());
     }
@@ -533,6 +565,17 @@ export class ConfigEditorComponent implements OnDestroy {
     const list: DetailSection[] = [{ node, trail: here, ...this.sectionContent(node) }];
     for (const child of node.children) list.push(...this.buildSections(child, here));
     return list;
+  }
+
+  /**
+   * Whether a section renders anything beyond its heading: a leaf slice, the
+   * chrome of its node kind (case selector, key field, add controls), or a
+   * present-children error that needs explaining. Heading-only sections are
+   * dropped from the flat list — a divider with nothing under it is clutter.
+   */
+  private sectionHasContent(s: DetailSection): boolean {
+    const n = s.node;
+    return !!(s.schema || n.choice || n.list || n.map || n.mapEntry || this.presentRangeHint(s));
   }
 
   /** A section's own renderable fields: a leaf-only schema slice and the group it binds to. */

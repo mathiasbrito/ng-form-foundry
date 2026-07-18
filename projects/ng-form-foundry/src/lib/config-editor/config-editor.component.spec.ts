@@ -160,12 +160,25 @@ describe('ConfigEditorComponent', () => {
     expect(el.querySelectorAll('.detail nav').length).toBe(1);
   });
 
-  it('switchTreeCase swaps the case from the detail selector and re-syncs the sections', () => {
+  it('switchTreeCase re-syncs the sections without stealing the tree selection', () => {
+    // Editing from the root's flattened view: the case swaps, the sections
+    // re-sync, and the selection stays on the root — collapsing the view to
+    // the choice node would hide the rest of the form mid-edit.
+    expect(component.selected!.id).toBe('');
     component.switchTreeCase(node('scope'), 'byZone');
     expect((form.get('scope') as FormGroup).get(CASE_KEY)!.value).toBe('byZone');
-    expect(component.selected!.id).toBe('scope');
+    expect(component.selected!.id).toBe('');
     // The zoneId leaf renders in the choice's own section; the ports child section is gone.
     expect(component.sections.some((s) => s.node.id === 'scope/ports')).toBe(false);
+    expect(component.sections.some((s) => s.node.id === 'scope')).toBe(true);
+    // The rest of the flattened root view survives the edit.
+    expect(component.sections.some((s) => s.node.id === 'system')).toBe(true);
+  });
+
+  it('switchTreeCase keeps the choice node selected when its own view is active', () => {
+    component.select(node('scope'));
+    component.switchTreeCase(node('scope'), 'byZone');
+    expect(component.selected!.id).toBe('scope');
   });
 
   // --- lists -----------------------------------------------------------------
@@ -317,6 +330,21 @@ describe('ConfigEditorComponent', () => {
     expect(Object.keys(group.controls).length).toBe(3);
   });
 
+  it('detail-pane adds keep the current selection; tree-row adds move it', () => {
+    // Detail add from the root view: item and entry appear as new sections,
+    // the root stays selected.
+    component.addItem(node('ifaces'), true);
+    expect(component.selected!.id).toBe('');
+    expect(component.sections.some((s) => s.node.id === 'ifaces/2')).toBe(true);
+
+    component.addTreeMapEntry(node('servers'), true);
+    expect(component.selected!.id).toBe('');
+
+    // The tree-row variants still select what they created.
+    component.addItem(node('ifaces'));
+    expect(component.selected!.id).toBe('ifaces/3');
+  });
+
   it('removeTreeMapEntry removes an entry but not below minEntries', () => {
     const group = form.get('servers') as FormGroup;
     const servers = node('servers');
@@ -329,15 +357,23 @@ describe('ConfigEditorComponent', () => {
     expect(Object.keys(group.controls)).toEqual(['s1']);
   });
 
-  it('renameTreeMapEntry renames the control preserving its value and re-selects the entry', () => {
+  it('renameTreeMapEntry renames the control preserving its value, selection staying put', () => {
     const group = form.get('servers') as FormGroup;
     const control = group.get('s1');
 
+    // Renamed from the root's flattened view: the ancestor view must not
+    // collapse to the entry.
     component.renameTreeMapEntry(node('servers').children[0], 'web1');
 
     expect(group.get('s1')).toBeNull();
     expect(group.get('web1')).toBe(control);
     expect(node('servers').children[0].label).toBe('web1');
+    expect(component.selected!.id).toBe('');
+  });
+
+  it('renameTreeMapEntry remaps the selection when it sat on the renamed entry', () => {
+    component.select(node('servers').children[0]);
+    component.renameTreeMapEntry(node('servers').children[0], 'web1');
     expect(component.selected!.id).toBe('servers/web1');
   });
 
@@ -583,6 +619,9 @@ describe('ConfigEditorComponent with dotted map keys', () => {
   });
 
   it('keys containing the path separator get escaped ids, so entries and their subtrees stay addressable', () => {
+    // Select the entry first: a selection sitting on the renamed entry follows
+    // it to the new (escaped) identity instead of going stale.
+    component.select(component.root.children.find((c) => c.id === 'endpoints')!.children[0]);
     component.renameTreeMapEntry(component.root.children.find((c) => c.id === 'endpoints')!.children[0], 'edge/gw');
 
     const entry = component.root.children.find((c) => c.id === 'endpoints')!.children[0];
@@ -813,6 +852,56 @@ describe('ConfigEditorComponent list floors and caps', () => {
 
     const hint: HTMLElement | null = fixture.nativeElement.querySelector('.detail .empty');
     expect(hint?.textContent).toContain('No iface items.');
+  });
+});
+
+describe('ConfigEditorComponent with composite-only groups', () => {
+  // `net` renders nothing itself — no leaves, only a nested group — so it must
+  // not contribute a heading-only section between the root and `net/tcp`.
+  const schema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    children: {
+      host: { kind: 'leaf', type: 'string', name: 'host' },
+      net: {
+        kind: 'nodeGroup',
+        name: 'net',
+        children: {
+          tcp: {
+            kind: 'nodeGroup',
+            name: 'tcp',
+            children: { port: { kind: 'leaf', type: 'number', name: 'port' } },
+          },
+        },
+      },
+    },
+  };
+
+  let component: ConfigEditorComponent;
+  let fixture: ComponentFixture<ConfigEditorComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ConfigEditorComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', buildFormFromSchema(schema));
+    fixture.detectChanges();
+  });
+
+  it('drops heading-only sections; children keep the full breadcrumb trail', () => {
+    expect(component.sections.map((s) => s.node.id)).toEqual(['', 'net/tcp']);
+    // The skipped node still appears in its child's trail, so the path reads whole.
+    expect(component.sections[1].trail.map((n) => n.label)).toEqual(['root', 'net', 'tcp']);
+    const headings = fixture.nativeElement.querySelectorAll('.detail .section-heading');
+    expect(headings.length).toBe(1);
+  });
+
+  it('still shows the composite-only node as its own selection target', () => {
+    component.select(component.root.children.find((c) => c.id === 'net')!);
+    // Selected directly, its own (first) section stays even though empty; the
+    // child follows with content.
+    expect(component.sections.map((s) => s.node.id)).toEqual(['net', 'net/tcp']);
   });
 });
 
