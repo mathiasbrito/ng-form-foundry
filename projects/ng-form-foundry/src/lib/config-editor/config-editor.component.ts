@@ -283,9 +283,16 @@ export class ConfigEditorComponent implements OnDestroy {
     this.selectByPath(entry.schema.kind === 'leaf' ? node.id : this.join(node.id, entry.key));
     if (entry.schema.kind === 'leaf') {
       // Set after selection (select() retires any pending request): the new
-      // field should grab focus, like the form's own add button.
+      // field should grab focus, like the form's own add button. Retired after
+      // a tick so later re-renders of the section cannot steal focus again.
       this.focusSectionId = node.id;
       this.focusLeafKey = entry.key;
+      setTimeout(() => {
+        if (this.focusLeafKey === entry.key) {
+          this.focusSectionId = null;
+          this.focusLeafKey = null;
+        }
+      });
     }
   }
 

@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 
 import { DynamicRecursiveFormComponent } from './dynamic-recursive-form.component';
@@ -90,6 +90,47 @@ describe('DynamicRecursiveFormComponent', () => {
     component.toggleNodePresence('tags', tags, false);
     expect(component.formGroup().get('tags')).toBeNull();
   });
+
+  it('binds leaves by their record key even when it differs from node.name', () => {
+    // The schema reference asks authors to keep key === name, but the renderer
+    // must bind by the key — that is what buildFormFromSchema keyed.
+    const skewed: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      root: true,
+      children: { 'contact-email': { kind: 'leaf', type: 'string', name: 'contact' } },
+    };
+    fixture.componentRef.setInput('schema', skewed);
+    fixture.componentRef.setInput('formGroup', buildFormFromSchema(skewed, { 'contact-email': 'a@b.c' }));
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    expect(input.value).toBe('a@b.c');
+  });
+
+  it('initialValue materializes presence keys it carries instead of silently dropping them', () => {
+    const withPresence: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      children: { note: { kind: 'leaf', type: 'string', name: 'note', presence: true } },
+    };
+    // Fresh component: the seeding happens in ngOnInit.
+    const local = TestBed.createComponent(DynamicRecursiveFormComponent);
+    local.componentRef.setInput('schema', withPresence);
+    local.componentRef.setInput('formGroup', buildFormFromSchema(withPresence)); // note absent
+    local.componentRef.setInput('initialValue', { note: 'carried' });
+    local.detectChanges();
+
+    expect(local.componentInstance.formGroup().get('note')!.value).toBe('carried');
+  });
+
+  it('retires the presence focus request once consumed, so re-created renderers do not re-steal focus', fakeAsync(() => {
+    const note: Leaf = { kind: 'leaf', type: 'string', name: 'note', presence: true };
+    component.toggleLeafPresence('note', note, true);
+    expect(component['presenceFocusKey']).toBe('note');
+    tick();
+    expect(component['presenceFocusKey']).toBeNull();
+  }));
 
   it('renders complex children in schema declaration order in the root layout', () => {
     const ordered: NodeGroup = {

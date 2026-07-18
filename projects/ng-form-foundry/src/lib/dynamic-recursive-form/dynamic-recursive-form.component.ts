@@ -72,7 +72,15 @@ export class DynamicRecursiveFormComponent implements OnInit {
   ngOnInit() {
     const initial = this.initialValue();
     if (initial) {
-      this.formGroup().patchValue(initial);
+      const group = this.formGroup();
+      // Presence keys carried by the initial value need controls first:
+      // patchValue silently skips keys that have none, dropping the data.
+      for (const [key, child] of Object.entries(this.schema().children ?? {})) {
+        if ('presence' in child && child.presence && key in initial && !group.get(key)) {
+          group.addControl(key, buildControl(child, initial[key]) as never);
+        }
+      }
+      group.patchValue(initial);
     }
   }
 
@@ -115,7 +123,14 @@ export class DynamicRecursiveFormComponent implements OnInit {
   toggleLeafPresence(key: string, schema: Leaf, present: boolean) {
     const had = !!this.formGroup().get(key);
     this.toggleNodePresence(key, schema, present);
-    if (present && !had) this.presenceFocusKey = key;
+    if (present && !had) {
+      this.presenceFocusKey = key;
+      // Retire the request once the field has rendered and taken focus, so a
+      // later re-creation of the same renderer cannot steal focus again.
+      setTimeout(() => {
+        if (this.presenceFocusKey === key) this.presenceFocusKey = null;
+      });
+    }
     if (!present && this.presenceFocusKey === key) this.presenceFocusKey = null;
   }
 

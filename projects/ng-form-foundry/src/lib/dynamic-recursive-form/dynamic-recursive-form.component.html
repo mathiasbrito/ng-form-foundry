@@ -8,7 +8,7 @@
             @if (child.kind == 'leaf' && !child.presence) {
               <nff-leaf-renderer
                 [leaf_]=child
-                [control]=asFormControl(formGroup().get(child.name))
+                [control]=asFormControl(formGroup().get(childItem.key))
                 [removable]=false
                 [editable]="editable()"
               />
@@ -20,8 +20,8 @@
               <nff-leaf-list-renderer
                 [leaf_]="child"
                 [editable]="editable()"
-                [formArray]="asFormArray(formGroup().get(child.name))"
-                [initialValue]="formGroup().get(child.name)?.value"
+                [formArray]="asFormArray(formGroup().get(childItem.key))"
+                [initialValue]="formGroup().get(childItem.key)?.value"
               />
             }
           }
@@ -76,8 +76,8 @@
         @else if (child.kind == 'nodeGroup') {
           <nff-dynamic-recursive-form
             [schema]="child"
-            [formGroup]="asFormGroup(formGroup().get(child.name))"
-            [initialValue]="formGroup().get(child.name)?.value"
+            [formGroup]="asFormGroup(formGroup().get(childItem.key))"
+            [initialValue]="formGroup().get(childItem.key)?.value"
             [editable]="editable()"
           />
         }
@@ -126,8 +126,8 @@
         @else if (child.kind == 'nodeGroupList') {
           <nff-node-group-list-renderer
             [nodeGroupList]="child"
-            [formArray]="asFormArray(formGroup().get(child.name))"
-            [initialValue]="formGroup().get(child.name)?.value"
+            [formArray]="asFormArray(formGroup().get(childItem.key))"
+            [initialValue]="formGroup().get(childItem.key)?.value"
             [editable]="editable()"
           />
         }
@@ -214,7 +214,7 @@
           @if (child.kind == 'leaf' && !child.presence) {
             <nff-leaf-renderer
               [leaf_]=child
-              [control]=asFormControl(formGroup().get(child.name))
+              [control]=asFormControl(formGroup().get(childItem.key))
               [removable]=false
               [editable]="editable()"
             />
@@ -226,8 +226,8 @@
             <nff-leaf-list-renderer
               [leaf_]="child"
               [editable]="editable()"
-              [formArray]="asFormArray(formGroup().get(child.name))"
-              [initialValue]="formGroup().get(child.name)?.value"
+              [formArray]="asFormArray(formGroup().get(childItem.key))"
+              [initialValue]="formGroup().get(childItem.key)?.value"
             />
           }
         }
@@ -337,8 +337,8 @@
           </mat-expansion-panel-header>
           <nff-node-group-list-renderer
             [nodeGroupList]="child"
-            [formArray]="asFormArray(formGroup().get(child.name))"
-            [initialValue]="formGroup().get(child.name)?.value"
+            [formArray]="asFormArray(formGroup().get(childItem.key))"
+            [initialValue]="formGroup().get(childItem.key)?.value"
             [editable]="editable()"
           />
         </mat-expansion-panel>
@@ -367,8 +367,8 @@
       @else if (child.kind == 'nodeGroup') {
         <nff-dynamic-recursive-form
           [schema]="child"
-          [formGroup]="asFormGroup(formGroup().get(child.name))"
-          [initialValue]="formGroup().get(child.name)?.value"
+          [formGroup]="asFormGroup(formGroup().get(childItem.key))"
+          [initialValue]="formGroup().get(childItem.key)?.value"
           [editable]="editable()"
         />
       }
