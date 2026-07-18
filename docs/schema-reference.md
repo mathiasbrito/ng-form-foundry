@@ -40,7 +40,7 @@ A scalar field. Builds a `FormControl`.
 | `multipleOf` | `number` | {sub}`data` | **`type: 'number'` only.** Require the value to be an integer multiple of this number. |
 | `integer` | `boolean` | {sub}`data` | **`type: 'number'` only.** Require a whole-number value (JSON Schema `type: 'integer'`). |
 | `nullable` | `boolean` | {sub}`data` | The value may be `null` (JSON Schema `type: [T, 'null']`). Builds a nullable control so `null` is a valid value that survives the round-trip. Distinct from `presence` (an *absent key*). |
-| `presence` | `boolean` | {sub}`data` | Optional scalar whose presence is itself data (mirrors `nodeGroup.presence`). Rendered with an on/off toggle; omitted from `form.value` when absent, re-added when toggled on. |
+| `presence` | `boolean` | {sub}`data` | Optional scalar whose presence is itself data (mirrors `nodeGroup.presence`). Rendered with an on/off toggle; omitted from `form.value` when absent, re-added when toggled on. While enabled the control is `required` (materialized means the key serializes — an empty value would emit `null`); a `nullable` presence leaf is exempt, since explicit `null` is one of its values. |
 
 ```{admonition} Constraint validators and error messages
 :class: note
@@ -182,8 +182,8 @@ case selector plus the selected case's fields.
 | `cases` | `Record<string, ChoiceCase>` | {sub}`data` | Each case name → that case's body: a field record, **or a single node** (a leaf-bodied case). Required. |
 | `caseLabels` | `Record<string, string>` | {sub}`ui` | Display label per case name — for anonymous/auto-named cases. Falls back to the case name. |
 | `default` | `string` | {sub}`data` | Case selected when none is chosen and none can be inferred. |
-| `mandatory` | `boolean` | {sub}`data` | Whether a case must be selected. |
-| `presence` | `boolean` | {sub}`data` | Optional choice: on/off toggle, omitted from the value when absent. |
+| `mandatory` | `boolean` | {sub}`data` | A case must be selected: the group carries a `caseRequired` error while `__case` is null. |
+| `presence` | `boolean` | {sub}`data` | Optional choice: on/off toggle, omitted from the value when absent. While enabled it carries the same `caseRequired` error until a case is picked (`{}` satisfies no case). A plain optional choice reports no error. |
 | `label` | `string` | {sub}`ui` | Selector label. Falls back to `name`. |
 | `appearance` | `Appearance` | {sub}`ui` | Layout options (see [`Appearance`](#appearance)). |
 

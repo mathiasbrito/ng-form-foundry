@@ -82,6 +82,10 @@ buildFormFromSchema(schema).getRawValue();
 // (no `contact` key)           ← presence leaf absent until toggled on
 ```
 
+An **enabled** presence leaf is `required` (unless `nullable`): materialized
+means the key serializes, and an empty value would go on the wire as `null`.
+Disable the field to omit it instead.
+
 `presence` works on a `nodeGroup` too (an optional sub-object), and on a `map` (an
 optional dictionary). `form.value` also drops absent presence controls; use
 `getRawValue()` for the full nullable-inclusive object.

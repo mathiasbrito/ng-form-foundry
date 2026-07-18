@@ -884,6 +884,61 @@ describe('dynamic-recursive-forms-builder', () => {
     });
   });
 
+  describe('materialized validity (presence leaves, mandatory/presence choices)', () => {
+    it('an enabled presence leaf must hold a value', () => {
+      const note: Leaf = { kind: 'leaf', type: 'string', name: 'note', presence: true };
+      const control = buildControl(note) as FormControl;
+      // Materialized means the key serializes; empty would emit null and fail
+      // typed-schema validation, so the control is required while it exists.
+      expect(control.hasError('required')).toBe(true);
+      control.setValue('x');
+      expect(control.valid).toBe(true);
+    });
+
+    it('a nullable presence leaf accepts explicit null', () => {
+      const note: Leaf = { kind: 'leaf', type: 'string', name: 'note', presence: true, nullable: true };
+      const control = buildControl(note, null) as FormControl;
+      expect(control.valid).toBe(true);
+    });
+
+    it('a mandatory choice errors until a case is selected', () => {
+      const scope: NodeChoice = {
+        kind: 'choice',
+        name: 'scope',
+        mandatory: true,
+        cases: { byUe: { ueId: { kind: 'leaf', type: 'string', name: 'ueId' } } },
+      };
+      const group = buildControl(scope) as FormGroup;
+      expect(group.hasError('caseRequired')).toBe(true);
+      switchChoiceCase(group, scope, 'byUe');
+      expect(group.hasError('caseRequired')).toBe(false);
+    });
+
+    it('an enabled presence choice errors until a case is selected', () => {
+      const mode: NodeChoice = {
+        kind: 'choice',
+        name: 'mode',
+        presence: true,
+        cases: { a: { x: { kind: 'leaf', type: 'string', name: 'x' } } },
+      };
+      const group = buildControl(mode) as FormGroup;
+      expect(group.hasError('caseRequired')).toBe(true);
+      switchChoiceCase(group, mode, 'a');
+      expect(group.valid).toBe(true);
+    });
+
+    it('a plain optional choice stays valid with no case selected (unchanged)', () => {
+      const plain: NodeChoice = {
+        kind: 'choice',
+        name: 'plain',
+        cases: { a: { x: { kind: 'leaf', type: 'string', name: 'x' } } },
+      };
+      const group = buildControl(plain) as FormGroup;
+      expect(group.get(CASE_KEY)!.value).toBeNull();
+      expect(group.valid).toBe(true);
+    });
+  });
+
   describe('serializeForm / toWireValue', () => {
     const transport: NodeChoice = {
       kind: 'choice',

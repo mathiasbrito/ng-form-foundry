@@ -134,6 +134,14 @@ function buildLeafControl<L extends Leaf>(
 ): FormControl<LeafRuntimeType<L['type']>> {
   const validators: ValidatorFn[] = [];
   if ('required' in leaf && leaf.required) validators.push(Validators.required);
+  // A presence leaf only ever has a control while enabled, and enabled means
+  // the key goes on the wire — an empty materialized value would serialize as
+  // null and fail typed-schema validation. So materialized ⇒ must hold a
+  // value; disable the field to omit it. A nullable presence leaf is exempt:
+  // explicit null is one of its legal values.
+  else if ((leaf as LeafBase).presence === true && (leaf as LeafBase).nullable !== true) {
+    validators.push(Validators.required);
+  }
   if ('type' in leaf && leaf.type === 'enum') {
     const choices = (leaf as LeafEnum).enum as (string | number)[];
     validators.push(enumValidator(choices));
@@ -295,9 +303,21 @@ function lexLess(a: readonly number[], b: readonly number[]): boolean {
 }
 
 /**
+ * Group error while a choice that must resolve to a case has none selected.
+ * Attached to `mandatory` choices (a case is always due) and `presence` choices
+ * (enabled means the key serializes, and `{}` satisfies no case) — a plain
+ * optional choice stays validator-free, `{ __case: null }` and all.
+ */
+function caseRequiredValidator(): ValidatorFn {
+  return (group) =>
+    (group as FormGroup).get(CASE_KEY)?.value == null ? { caseRequired: true } : null;
+}
+
+/**
  * Build the FormGroup for a choice: a `__case` control holding the active case
  * name plus that case's field controls. Only the active case's fields are built,
- * matching the inline YANG encoding; switching the case swaps them.
+ * matching the inline YANG encoding; switching the case swaps them. Mandatory
+ * and presence choices carry {@link caseRequiredValidator}.
  */
 function buildChoiceControl(
   choice: NodeChoice,
@@ -314,7 +334,8 @@ function buildChoiceControl(
       controls[key] = buildControl(caseChildren[key], initial?.[key]);
     }
   }
-  return new FormGroup(controls);
+  const needsCase = choice.mandatory === true || choice.presence === true;
+  return new FormGroup(controls, needsCase ? { validators: caseRequiredValidator() } : undefined);
 }
 
 /**

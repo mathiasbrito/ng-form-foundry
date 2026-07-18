@@ -52,6 +52,15 @@ describe('DynamicRecursiveFormComponent', () => {
     expect(component.formGroup().get('note')).toBeNull();
   });
 
+  it('an enabled presence leaf reports invalid until filled, so the gap is visible before submit', () => {
+    const note: Leaf = { kind: 'leaf', type: 'string', name: 'note', presence: true };
+    component.toggleLeafPresence('note', note, true);
+    const control = component.formGroup().get('note')!;
+    expect(control.hasError('required')).toBe(true);
+    control.setValue('filled');
+    expect(component.formGroup().valid).toBe(true);
+  });
+
   it('toggleNodePresence enables a presence choice as a group holding only __case', () => {
     const mode: NodeChoice = {
       kind: 'choice',
