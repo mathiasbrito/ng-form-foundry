@@ -231,6 +231,14 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.3.4` — the **libconfig transformer debuts as a beta** (one-time console
+warning on first use; lossless span-splicing round-trip with scalar types
+preserved — see [`docs/libconfig.md`](docs/libconfig.md)), and
+`minProperties`/`maxProperties` on closed objects now map to the library's
+`minPresent`/`maxPresent` present-children bounds, so an emptied
+all-optional object (e.g. an A1 `qosObjectives`) is flagged client-side
+instead of only by the server's validator.
+
 `0.3.3` — schema-valid round-trips for JSON-Schema-driven forms. Non-`required`
 properties now map to `presence` nodes (absent until enabled; opt out with
 `schemaOptions: { optionalPresence: false }`), a required property mapping to a
