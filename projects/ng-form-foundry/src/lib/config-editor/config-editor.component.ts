@@ -55,6 +55,8 @@ interface DetailSection {
   group: FormGroup | null;
   /** A trailing add-control section of a list / complex map: renders after the last item, with no heading. */
   footer?: boolean;
+  /** The section continues a run of same-list items / same-map entries: its heading draws no divider line. */
+  continuation?: boolean;
 }
 
 /**
@@ -184,7 +186,9 @@ export class ConfigEditorComponent implements OnDestroy {
     // Sections that would render only their breadcrumb heading (a composite
     // node with no leaf fields and no chrome) are dropped: their children get
     // sections of their own, whose trails carry the full path anyway.
-    this.sections = this.buildSections(node, []).filter((s, i) => i === 0 || this.sectionHasContent(s));
+    this.sections = this.markContinuations(
+      this.buildSections(node, []).filter((s, i) => i === 0 || this.sectionHasContent(s)),
+    );
     this.breadcrumb = this.pathTo(node);
     // Navigating retires any pending just-added-leaf focus request.
     this.focusSectionId = null;
@@ -594,6 +598,23 @@ export class ConfigEditorComponent implements OnDestroy {
       this.emptySectionHint(s) ||
       this.presentRangeHint(s)
     );
+  }
+
+  /**
+   * Flag the sections that continue a run of siblings — a list item or map
+   * entry whose preceding section is inside the same container. Their headings
+   * draw no divider line, so a run of same-kind members reads as one list
+   * rather than a stack of separated blocks.
+   */
+  private markContinuations(sections: DetailSection[]): DetailSection[] {
+    for (let i = 1; i < sections.length; i++) {
+      const s = sections[i];
+      if (s.footer || !(s.node.removable || s.node.mapEntry)) continue;
+      const containerId = s.node.id.slice(0, s.node.id.lastIndexOf('/'));
+      const prev = sections[i - 1].node.id;
+      if (prev === containerId || prev.startsWith(`${containerId}/`)) s.continuation = true;
+    }
+    return sections;
   }
 
   /** A section's own renderable fields: a leaf-only schema slice and the group it binds to. */

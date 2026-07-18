@@ -125,6 +125,11 @@ describe('ConfigEditorComponent', () => {
     const item0 = component.sections.find((s) => s.node.id === 'ifaces/0')!;
     expect(item0.trail.map((n) => n.label)).toEqual(['device', 'ifaces', '#1']);
 
+    // Members continuing a run of siblings drop their divider line: #2 follows
+    // #1 inside the same list; #1 follows the 'system' group, so it keeps it.
+    expect(item0.continuation).toBeUndefined();
+    expect(component.sections.find((s) => s.node.id === 'ifaces/1')!.continuation).toBe(true);
+
     const system = node('system');
     component.select(system);
     expect(component.sections.length).toBe(1);

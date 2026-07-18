@@ -147,7 +147,7 @@
           <!-- A heading, not a nav landmark: dozens of identical "Section"
                landmarks would flood the assistive-tech landmark list. Its
                accessible name is the trail itself. -->
-          <div class="section-heading" role="heading" aria-level="3">
+          <div class="section-heading" [class.continuation]="s.continuation" role="heading" aria-level="3">
             @for (crumb of s.trail; track crumb.id; let last = $last) {
               @if (last) {
                 <span class="crumb-current">{{ crumb.label }}</span>
