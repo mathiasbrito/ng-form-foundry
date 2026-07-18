@@ -270,8 +270,6 @@ model but not yet fully wired:
 - **Map entry keys containing `/`** are not yet safe in the `nff-config-editor`
   tree, whose node identities are `/`-separated paths. Keys with `.` are fully
   supported everywhere.
-- **Presence fields inside a choice case** are built present when the case is
-  activated; they do not start absent the way presence fields of a group do.
 - **`minItems` / `maxItems`** currently gate the remove control on
   `nodeGroupList`, but are not yet enforced as `FormArray` validators, and are not
   yet applied to `leafList`. Treat them as UI hints for now, and validate

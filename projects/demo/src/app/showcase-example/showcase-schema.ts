@@ -33,7 +33,12 @@ export const showcase = defineSchema({
       kind: 'choice', name: 'scope', label: 'Deploy scope',
       caseLabels: { byNode: 'By node', byZone: 'By zone', byRegion: 'By region' },
       cases: {
-        byNode: { nodeId: { kind: 'leaf', type: 'string', name: 'nodeId', label: 'Node id', required: true } },
+        byNode: {
+          nodeId: { kind: 'leaf', type: 'string', name: 'nodeId', label: 'Node id', required: true },
+          // A presence leaf INSIDE a choice case: starts absent, also after a
+          // case switch, until added through its "Add" affordance.
+          priority: { kind: 'leaf', type: 'number', name: 'priority', label: 'Priority', integer: true, presence: true },
+        },
         byZone: { zoneId: { kind: 'leaf', type: 'string', name: 'zoneId', label: 'Zone id', required: true } },
         byRegion: { regionId: { kind: 'leaf', type: 'string', name: 'regionId', label: 'Region id', required: true } },
       },

@@ -46,6 +46,24 @@ function isMap(node: NodeType): node is NodeMap {
   return node.kind === 'map';
 }
 
+/** Whether the node is an optional (presence) node: its key is data, absent until enabled. */
+function hasPresence(node: NodeType): boolean {
+  return (
+    (node.kind === 'leaf' || node.kind === 'nodeGroup' || node.kind === 'map' || node.kind === 'choice') &&
+    node.presence === true
+  );
+}
+
+/**
+ * Whether a presence child should start absent: there is no initial data
+ * object, or its key is missing from it. A key that is present with an explicit
+ * `null` value keeps its control — `null` is a value (a nullable leaf's), while
+ * presence is about the *absent key*.
+ */
+function presenceAbsent(initial: Record<string, unknown> | null | undefined, key: string): boolean {
+  return initial == null || !(key in initial);
+}
+
 function enumValidator(choices: readonly (string | number)[]): ValidatorFn {
   const set = new Set(choices);
   return (ctrl) =>
@@ -163,6 +181,11 @@ function buildNodeGroupControl<G extends NodeGroup>(
   const controls: any = {} as Partial<FormGroupType<G>>;
   for (const key in group.children) {
     const child = group.children[key];
+    // An absent presence child gets no control at all, so it is absent from the
+    // form value until enabled. Because every nested group is built through this
+    // function — plain children, list items, map values, choice case fields —
+    // presence is honored at any depth.
+    if (hasPresence(child) && presenceAbsent(initial, key)) continue;
     // Forward only this child's slice of the initial data, keyed by the child's
     // record key. Passing the whole `initial` object seeds every leaf with the
     // parent record and prevents list builders from sizing to the real data.
@@ -188,23 +211,6 @@ function buildNodeGroupListControl<GL extends NodeGroupList>(
   );
 }
 
-/**
- * Build the `AbstractControl` for a single schema node.
- *
- * Dispatches on `node.kind`: a `leaf` becomes a `FormControl`, a `leafList` a
- * `FormArray` of controls, a `nodeGroup` a nested `FormGroup`, and a
- * `nodeGroupList` a `FormArray` of groups. `initial` is the runtime value for
- * this node — a scalar for a leaf, an array for a list, an object for a group —
- * and seeds the control's value (falling back to the node's `default`).
- *
- * Most callers use {@link buildFormFromSchema}; this is exposed for building a
- * control from a single non-root node.
- */
-/**
- * Build the FormGroup for a choice: a `__case` control holding the active case
- * name plus that case's field controls. Only the active case's fields are built,
- * matching the inline YANG encoding; switching the case swaps them.
- */
 /**
  * Normalize a {@link ChoiceCase} to a field record. A field record is returned
  * as-is; a single node (a leaf-bodied case, e.g. a scalar `anyOf` branch) becomes
@@ -249,6 +255,11 @@ function inferChoiceCase(choice: NodeChoice, initial?: Record<string, unknown> |
   return best;
 }
 
+/**
+ * Build the FormGroup for a choice: a `__case` control holding the active case
+ * name plus that case's field controls. Only the active case's fields are built,
+ * matching the inline YANG encoding; switching the case swaps them.
+ */
 function buildChoiceControl(
   choice: NodeChoice,
   initial?: Record<string, unknown> | null,
@@ -258,6 +269,9 @@ function buildChoiceControl(
   if (active && choice.cases[active]) {
     const caseChildren = caseFields(choice.cases[active]);
     for (const key in caseChildren) {
+      // Case fields honor presence like any group's children: an absent
+      // presence field gets no control.
+      if (hasPresence(caseChildren[key]) && presenceAbsent(initial, key)) continue;
       controls[key] = buildControl(caseChildren[key], initial?.[key]);
     }
   }
@@ -267,7 +281,9 @@ function buildChoiceControl(
 /**
  * Switch a choice's FormGroup to `caseName`: sets `__case`, removes every other
  * control, and builds `caseName`'s fields (normalized via {@link caseFields})
- * with their defaults. An unknown case name leaves only `__case`.
+ * with their defaults. Presence fields of the new case start absent — the
+ * switch carries no data that could make them present. An unknown case name
+ * leaves only `__case`.
  */
 export function switchChoiceCase(group: FormGroup, choice: NodeChoice, caseName: string): void {
   group.get(CASE_KEY)?.setValue(caseName);
@@ -276,6 +292,7 @@ export function switchChoiceCase(group: FormGroup, choice: NodeChoice, caseName:
   }
   const caseChildren = choice.cases[caseName] ? caseFields(choice.cases[caseName]) : {};
   for (const name in caseChildren) {
+    if (hasPresence(caseChildren[name])) continue;
     group.addControl(name, buildControl(caseChildren[name]) as any);
   }
 }
@@ -348,6 +365,18 @@ function buildMapControl(
   return new FormGroup(controls);
 }
 
+/**
+ * Build the `AbstractControl` for a single schema node.
+ *
+ * Dispatches on `node.kind`: a `leaf` becomes a `FormControl`, a `leafList` a
+ * `FormArray` of controls, a `nodeGroup` a nested `FormGroup`, and a
+ * `nodeGroupList` a `FormArray` of groups. `initial` is the runtime value for
+ * this node — a scalar for a leaf, an array for a list, an object for a group —
+ * and seeds the control's value (falling back to the node's `default`).
+ *
+ * Most callers use {@link buildFormFromSchema}; this is exposed for building a
+ * control from a single non-root node.
+ */
 export function buildControl<T extends NodeType>(
   node: T,
   initial?: unknown | null,
@@ -399,46 +428,22 @@ export function buildControl<T extends NodeType>(
  * is an optional value object keyed by the schema's `children` keys; each child
  * control is seeded from its matching slice (falling back to the node `default`).
  *
+ * Presence nodes whose key is absent from `initial` get no control, at any depth
+ * — plain children, list items, map values, and choice case fields alike — so
+ * they are absent from the form value until enabled. A key present with an
+ * explicit `null` keeps its control: `null` is a value, absence is the missing
+ * key.
+ *
  * Inference only holds when `schema`'s literal type is preserved. Author schemas
  * with {@link defineSchema} or a `satisfies NodeGroup` annotation — never
  * `const schema: NodeGroup = ...`, which widens `children` and erases the field
  * names and value types.
  */
-/**
- * Remove presence nodes that have no initial value so they are absent from the
- * built form (and from `form.value`) until the user toggles them on. Applies to
- * presence groups, leaves, maps, and choices. Runs on the fully-built, attached
- * tree. `removeControl` is used rather than `disable` because a disabled control
- * is still included in `FormGroup.value`.
- */
-function applyPresence(
-  group: FormGroup,
-  schema: NodeGroup,
-  initial?: Record<string, unknown> | null,
-): void {
-  for (const key in schema.children) {
-    const child = schema.children[key];
-    const childInitial = (initial as Record<string, unknown> | null | undefined)?.[key];
-    if (child.kind === 'leaf' || child.kind === 'map' || child.kind === 'choice') {
-      if (child.presence && childInitial == null) group.removeControl(key);
-      continue;
-    }
-    if (child.kind !== 'nodeGroup') continue;
-    if (child.presence && childInitial == null) {
-      group.removeControl(key);
-    } else if (group.get(key) instanceof FormGroup) {
-      applyPresence(group.get(key) as FormGroup, child, childInitial as Record<string, unknown> | null);
-    }
-  }
-}
-
 export function buildFormFromSchema<S extends NodeGroup>(
   schema: S,
   initial: Record<string, unknown> | null = null,
 ): DFormGroup<S> {
-  const group = buildNodeGroupControl<S>(schema, initial);
-  applyPresence(group, schema, initial);
-  return group;
+  return buildNodeGroupControl<S>(schema, initial);
 }
 
 /**

@@ -554,7 +554,7 @@ describe('dynamic-recursive-forms-builder', () => {
     });
   });
 
-  it('applyPresence removes an absent presence choice from the built form', () => {
+  it('never builds a control for an absent presence choice', () => {
     const schema: NodeGroup = {
       kind: 'nodeGroup',
       name: 'root',
@@ -569,5 +569,100 @@ describe('dynamic-recursive-forms-builder', () => {
     };
     expect(buildFormFromSchema(schema).get('mode')).toBeNull();
     expect(buildFormFromSchema(schema, { mode: { x: '1' } }).get('mode')).toBeInstanceOf(FormGroup);
+  });
+
+  // ---- presence at depth: list items, map values, choice cases -----------
+
+  describe('presence descendants beyond plain groups', () => {
+    it('a presence leaf inside a list item starts absent per item and follows each item&apos;s data', () => {
+      const schema: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'root',
+        children: {
+          items: {
+            kind: 'nodeGroupList',
+            name: 'items',
+            type: {
+              kind: 'nodeGroup',
+              name: 'item',
+              children: {
+                name: { kind: 'leaf', type: 'string', name: 'name' },
+                note: { kind: 'leaf', type: 'string', name: 'note', presence: true },
+              },
+            },
+          },
+        },
+      };
+      const g = buildFormFromSchema(schema, { items: [{ name: 'a' }, { name: 'b', note: 'kept' }] });
+      expect((g.getRawValue() as any).items).toEqual([{ name: 'a' }, { name: 'b', note: 'kept' }]);
+    });
+
+    it('a presence group inside a map value starts absent unless the entry data carries it', () => {
+      const schema: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'root',
+        children: {
+          backends: {
+            kind: 'map',
+            name: 'backends',
+            value: {
+              kind: 'nodeGroup',
+              name: 'backend',
+              children: {
+                url: { kind: 'leaf', type: 'string', name: 'url' },
+                tls: {
+                  kind: 'nodeGroup',
+                  name: 'tls',
+                  presence: true,
+                  children: { cert: { kind: 'leaf', type: 'string', name: 'cert' } },
+                },
+              },
+            },
+          },
+        },
+      };
+      const data = { backends: { a: { url: 'http://a' }, b: { url: 'https://b', tls: { cert: 'pem' } } } };
+      const g = buildFormFromSchema(schema, data);
+      expect((g.getRawValue() as any).backends).toEqual(data.backends);
+    });
+
+    it('a presence field inside a choice case starts absent and stays absent on a case switch', () => {
+      const choice: NodeChoice = {
+        kind: 'choice',
+        name: 'scope',
+        cases: {
+          byNode: {
+            nodeId: { kind: 'leaf', type: 'string', name: 'nodeId' },
+            priority: { kind: 'leaf', type: 'number', name: 'priority', presence: true },
+          },
+          byZone: { kind: 'leaf', type: 'string', name: 'zoneId' },
+        },
+      };
+      const g = buildControl(choice, { nodeId: 'n1' }) as FormGroup;
+      expect(g.get('priority')).toBeNull();
+      expect(g.getRawValue()).toEqual({ [CASE_KEY]: 'byNode', nodeId: 'n1' });
+
+      const seeded = buildControl(choice, { nodeId: 'n1', priority: 5 }) as FormGroup;
+      expect(seeded.get('priority')!.value).toBe(5);
+
+      switchChoiceCase(g, choice, 'byZone');
+      switchChoiceCase(g, choice, 'byNode');
+      expect(g.get('nodeId')).toBeTruthy();
+      expect(g.get('priority')).toBeNull(); // a switch carries no data to make it present
+    });
+
+    it('keeps a nullable presence leaf whose key is present with an explicit null (null is a value, absence is the missing key)', () => {
+      const schema: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'root',
+        children: {
+          note: { kind: 'leaf', type: 'string', name: 'note', presence: true, nullable: true },
+        },
+      };
+      expect(buildFormFromSchema(schema).get('note')).toBeNull();
+      const seeded = buildFormFromSchema(schema, { note: null });
+      expect(seeded.get('note')).toBeTruthy();
+      expect(seeded.getRawValue() as Record<string, unknown>).toEqual({ note: null });
+    });
   });
 });
