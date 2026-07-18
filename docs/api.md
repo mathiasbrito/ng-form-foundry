@@ -64,6 +64,26 @@ function resolveChoiceCase(choice: NodeChoice, initial?: Record<string, unknown>
 function switchChoiceCase(group: FormGroup, choice: NodeChoice, caseName: string): void;
 ```
 
+### Serialization
+
+The form value equals the wire value except for one artifact: each choice group
+carries its `__case` discriminator ([`CASE_KEY`](#types)). These return the value
+without it — the inline encoding `buildFormFromSchema` accepts back as `initial`
+(the case is re-inferred from the field shape), so serialize → rebuild
+round-trips. For a schema without choices, `serializeForm` equals
+`getRawValue()`.
+
+```ts
+/** `form.getRawValue()` with every choice's `__case` stripped — the wire value. */
+function serializeForm(schema: NodeGroup, form: FormGroup): Record<string, unknown>;
+
+/** The same schema-driven strip over an already-extracted value, from any node down. */
+function toWireValue(node: NodeType, value: unknown): unknown;
+```
+
+The strip is schema-driven: only positions the schema declares as `choice` are
+touched, so a field or map entry that happens to be named `__case` survives.
+
 ### Map entry helpers
 
 Add, rename, and remove entries of a `map` node's `FormGroup`. All guard the
@@ -175,7 +195,7 @@ property.
 | `Leaf` | A single scalar field. Union of `LeafString`, `LeafNumber`, `LeafBoolean`, `LeafEnum`. Carries the constraint, `nullable`, `presence`, and `readOnly` fields. |
 | `LeafList` | A list of scalar fields. |
 | `NodeGroupList` | A list of groups. |
-| `NodeChoice` | A discriminated selection (`cases`, `caseLabels`); in the form value the selection is `{ __case, ...fields }`. The active case is inferred from seed data when no `__case` is present. |
+| `NodeChoice` | A discriminated selection (`cases`, `caseLabels`); in the form value the selection is `{ __case, ...fields }`. The active case is inferred from seed data when no `__case` is present, and [`serializeForm`](#serialization) strips `__case` back out for the wire. |
 | `ChoiceCase` | One case body: a field record, or a single node (a leaf-bodied case). |
 | `NodeMap` | An open, arbitrary-keyed record (`value` schema, `keyPattern`, `min`/`maxEntries`). |
 | `NodeType` | `Leaf \| LeafList \| NodeGroup \| NodeGroupList \| NodeChoice \| NodeMap`. |

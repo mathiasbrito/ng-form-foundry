@@ -90,6 +90,11 @@ this.form.getRawValue(); // full value, typed to the schema
 this.form.valid;         // validity from the schema's constraint validators
 ```
 
+If the schema contains `choice` nodes, `getRawValue()` carries their `__case`
+discriminators; `serializeForm(schema, form)` returns the value with them
+stripped — the inline wire encoding, which `buildFormFromSchema` accepts back
+as `initial`.
+
 ## Documentation
 
 Full guide, schema reference, and worked examples:

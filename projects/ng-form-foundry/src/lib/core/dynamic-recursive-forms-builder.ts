@@ -507,6 +507,61 @@ export function buildFormFromSchema<S extends NodeGroup>(
 }
 
 /**
+ * The wire value at `node`: `value` rebuilt with every choice discriminator
+ * removed.
+ *
+ * A choice's form value is `{ __case, ...fields }` ({@link CASE_KEY}); its wire
+ * encoding is the active case's fields inline, with no discriminator — the case
+ * is recovered from the field shape when the data is seeded back in
+ * ({@link resolveChoiceCase}). The walk is schema-driven: only positions the
+ * schema declares as choices are stripped, so a group child or map entry that
+ * happens to be named `__case` passes through untouched. Values at positions
+ * the schema does not describe pass through unchanged.
+ */
+export function toWireValue(node: NodeType, value: unknown): unknown {
+  if (value === null || typeof value !== 'object') return value;
+  if (isChoice(node)) {
+    const { [CASE_KEY]: active, ...rest } = value as Record<string, unknown>;
+    const fields =
+      typeof active === 'string' && node.cases[active] ? caseFields(node.cases[active]) : {};
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(rest)) {
+      out[key] = key in fields ? toWireValue(fields[key], rest[key]) : rest[key];
+    }
+    return out;
+  }
+  if (isNodeGroup(node)) {
+    const source = value as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(source)) {
+      out[key] = key in node.children ? toWireValue(node.children[key], source[key]) : source[key];
+    }
+    return out;
+  }
+  if (isNodeGroupList(node)) {
+    return Array.isArray(value) ? value.map((item) => toWireValue(node.type, item)) : value;
+  }
+  if (isMap(node)) {
+    const source = value as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(source)) out[key] = toWireValue(node.value, source[key]);
+    return out;
+  }
+  return value;
+}
+
+/**
+ * Serialize a form built by {@link buildFormFromSchema} to its wire value:
+ * `form.getRawValue()` with every choice's {@link CASE_KEY} discriminator
+ * stripped (see {@link toWireValue}). The result is the inline encoding that
+ * `buildFormFromSchema` accepts back as `initial`, so serialize → rebuild
+ * round-trips the value.
+ */
+export function serializeForm(schema: NodeGroup, form: FormGroup): Record<string, unknown> {
+  return toWireValue(schema, form.getRawValue()) as Record<string, unknown>;
+}
+
+/**
  * Capture a schema literal with its exact type while checking it against
  * `NodeGroup`.
  *

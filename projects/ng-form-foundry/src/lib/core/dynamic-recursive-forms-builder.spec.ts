@@ -6,7 +6,9 @@ import {
   caseFields,
   removeMapEntry,
   renameMapEntry,
+  serializeForm,
   switchChoiceCase,
+  toWireValue,
 } from './dynamic-recursive-forms-builder';
 import {
   CASE_KEY,
@@ -745,6 +747,145 @@ describe('dynamic-recursive-forms-builder', () => {
       const seeded = buildFormFromSchema(schema, { note: null });
       expect(seeded.get('note')).toBeTruthy();
       expect(seeded.getRawValue() as Record<string, unknown>).toEqual({ note: null });
+    });
+  });
+
+  describe('serializeForm / toWireValue', () => {
+    const transport: NodeChoice = {
+      kind: 'choice',
+      name: 'transport',
+      cases: {
+        tcp: { 'tcp-port': { kind: 'leaf', type: 'number', name: 'tcp-port' } },
+        udp: { 'udp-port': { kind: 'leaf', type: 'number', name: 'udp-port' } },
+      },
+    };
+
+    it('strips the discriminator, leaving the active case fields inline', () => {
+      const schema: NodeGroup = { kind: 'nodeGroup', name: 'root', children: { transport } };
+      const form = buildFormFromSchema(schema, { transport: { 'tcp-port': 830 } });
+      expect((form.getRawValue() as any).transport[CASE_KEY]).toBe('tcp');
+      expect(serializeForm(schema, form)).toEqual({ transport: { 'tcp-port': 830 } });
+    });
+
+    it('round-trips: wire → build (case inferred) → serialize → the same wire value', () => {
+      const schema: NodeGroup = { kind: 'nodeGroup', name: 'root', children: { transport } };
+      const wire = { transport: { 'udp-port': 1812 } };
+      expect(serializeForm(schema, buildFormFromSchema(schema, wire))).toEqual(wire);
+    });
+
+    it('strips at depth: choices inside list items and map entries', () => {
+      const schema: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'root',
+        children: {
+          links: {
+            kind: 'nodeGroupList',
+            name: 'links',
+            type: { kind: 'nodeGroup', name: 'link', children: { transport } },
+          },
+          peers: { kind: 'map', name: 'peers', value: transport },
+        },
+      };
+      const wire = {
+        links: [{ transport: { 'tcp-port': 22 } }, { transport: { 'udp-port': 53 } }],
+        peers: { east: { 'tcp-port': 179 } },
+      };
+      const serialized = serializeForm(schema, buildFormFromSchema(schema, wire));
+      expect(serialized).toEqual(wire);
+      expect(JSON.stringify(serialized)).not.toContain(CASE_KEY);
+    });
+
+    it('collapses a choice nested inside another choice case', () => {
+      const outer: NodeChoice = {
+        kind: 'choice',
+        name: 'outer',
+        cases: { net: { transport } },
+      };
+      const schema: NodeGroup = { kind: 'nodeGroup', name: 'root', children: { outer } };
+      const wire = { outer: { transport: { 'udp-port': 500 } } };
+      expect(serializeForm(schema, buildFormFromSchema(schema, wire))).toEqual(wire);
+    });
+
+    it('serializes an enabled-but-unselected choice to an empty object', () => {
+      const schema: NodeGroup = { kind: 'nodeGroup', name: 'root', children: { transport } };
+      const form = buildFormFromSchema(schema, { transport: {} });
+      expect((form.getRawValue() as any).transport).toEqual({ [CASE_KEY]: null });
+      expect(serializeForm(schema, form)).toEqual({ transport: {} });
+    });
+
+    it('leaves keys named __case alone outside choice positions', () => {
+      const schema: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'root',
+        children: {
+          [CASE_KEY]: { kind: 'leaf', type: 'string', name: CASE_KEY },
+          tags: { kind: 'map', name: 'tags', value: { kind: 'leaf', type: 'string', name: 'value' } },
+        },
+      };
+      const wire = { [CASE_KEY]: 'a literal field', tags: { [CASE_KEY]: 'a literal key' } };
+      expect(serializeForm(schema, buildFormFromSchema(schema, wire))).toEqual(wire);
+    });
+
+    it('passes scalars, null, and leaf lists through toWireValue unchanged', () => {
+      const port: Leaf = { kind: 'leaf', type: 'number', name: 'port', nullable: true };
+      const aliases: LeafList = { kind: 'leafList', name: 'aliases', type: 'string' };
+      expect(toWireValue(port, 8080)).toBe(8080);
+      expect(toWireValue(port, null)).toBeNull();
+      expect(toWireValue(aliases, ['a', 'b'])).toEqual(['a', 'b']);
+    });
+
+    it('serializes a leaf-bodied case to its single inline field', () => {
+      const limit: NodeChoice = {
+        kind: 'choice',
+        name: 'limit',
+        cases: {
+          unlimited: { kind: 'leaf', type: 'boolean', name: 'unlimited' },
+          capped: { cap: { kind: 'leaf', type: 'number', name: 'cap' } },
+        },
+      };
+      const schema: NodeGroup = { kind: 'nodeGroup', name: 'root', children: { limit } };
+      const wire = { limit: { unlimited: true } };
+      expect(serializeForm(schema, buildFormFromSchema(schema, wire))).toEqual(wire);
+    });
+
+    it('omits an absent presence field inside a case and keeps it once enabled', () => {
+      const choice: NodeChoice = {
+        kind: 'choice',
+        name: 'auth',
+        cases: {
+          basic: {
+            user: { kind: 'leaf', type: 'string', name: 'user' },
+            realm: { kind: 'leaf', type: 'string', name: 'realm', presence: true },
+          },
+        },
+      };
+      const schema: NodeGroup = { kind: 'nodeGroup', name: 'root', children: { auth: choice } };
+      const form = buildFormFromSchema(schema, { auth: { user: 'ada' } });
+      expect(serializeForm(schema, form)).toEqual({ auth: { user: 'ada' } });
+
+      (form.get('auth') as FormGroup).addControl('realm', buildControl(choice.cases['basic'] && (caseFields(choice.cases['basic'])['realm']), 'corp'));
+      expect(serializeForm(schema, form)).toEqual({ auth: { user: 'ada', realm: 'corp' } });
+    });
+
+    it('serialize output rebuilds an identical form (full round-trip both directions)', () => {
+      const schema: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'root',
+        children: {
+          transport,
+          tags: { kind: 'map', name: 'tags', value: { kind: 'leaf', type: 'string', name: 'value' } },
+          aliases: { kind: 'leafList', name: 'aliases', type: 'string' },
+        },
+      };
+      const form = buildFormFromSchema(schema, {
+        transport: { 'tcp-port': 22 },
+        tags: { env: 'prod' },
+        aliases: ['a'],
+      });
+      const wire = serializeForm(schema, form);
+      const rebuilt = buildFormFromSchema(schema, wire);
+      expect(rebuilt.getRawValue()).toEqual(form.getRawValue());
+      expect(serializeForm(schema, rebuilt)).toEqual(wire);
     });
   });
 });

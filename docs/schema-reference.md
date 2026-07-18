@@ -204,7 +204,10 @@ The wire form of a choice is *inline* (the active case's fields sit at the
 choice's location, with no `__case` key). When a form is built from such data,
 the builder **infers** the active case: it picks the case whose fields best
 overlap the data. This is how a branch discriminated **by which properties are
-present/required** round-trips without a discriminator key.
+present/required** round-trips without a discriminator key. To produce that
+wire form from an edited form, use
+[`serializeForm(schema, form)`](api.md#serialization), which strips every
+`__case` from `getRawValue()`.
 
 ```{admonition} Recipe — `anyOf`/`oneOf` by required-set or `const`
 :class: tip

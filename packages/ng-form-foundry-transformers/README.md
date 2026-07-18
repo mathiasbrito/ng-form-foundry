@@ -43,6 +43,12 @@ For config formats (YAML, JSON) the thing you load and save is the same document
 type, so `TData` defaults to `TSource`. Schema formats differ: YANG's `toSchema`
 consumes a model source but its `toSource` reverts to RFC 7951 *data*.
 
+**Choice values:** the YAML/JSON `toSource` applies the value's keys verbatim,
+so when the schema contains choices (`anyOf`/`oneOf`) pass the **wire value** —
+the library's `serializeForm(schema, form)`, which strips the `__case`
+discriminators from `getRawValue()`. The YANG adapter is the exception: its
+`toYangData` consumes the form value and flattens `__case` itself.
+
 ## YAML transformer
 
 Edit a **YAML config file**: turn it into a form, then write the edited value

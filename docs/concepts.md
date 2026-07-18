@@ -92,6 +92,12 @@ array, a `choice` is `{ __case, ...fields }`. Seed a form with
 the shape round-trips. (`form.value` omits disabled/absent controls — see
 [optional fields](features.md#optional-nullable-and-present-fields).)
 
+The one form-only artifact in that shape is the choice discriminator: wire data
+carries no `__case` (the active case is inferred from which fields are present).
+To emit wire data, use `serializeForm(schema, form)` — `getRawValue()` with
+every `__case` stripped; without choices in the schema the two are identical.
+See [Serialization](api.md#serialization).
+
 ## Data vs. presentation
 
 A schema node carries two kinds of information:

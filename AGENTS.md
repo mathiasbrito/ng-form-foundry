@@ -15,9 +15,11 @@ back to the source format.
 
 **The one load-bearing invariant:** `form.getRawValue()` **IS the data.** Every
 node maps to a control whose value is the wire shape — map keys are control
-names, absent optional keys are absent controls (never `disable()`d), a choice
-group holds `__case` plus only the active case's fields. Any change that would
-make `getRawValue()` need post-processing is wrong.
+names, absent optional keys are absent controls (never `disable()`d). The single
+exception is the choice discriminator: a choice group holds `__case` plus only
+the active case's fields, and `serializeForm(schema, form)` returns the value
+with every `__case` stripped — the wire encoding. Any change that would make
+`getRawValue()` need post-processing beyond that one built-in strip is wrong.
 
 ## Repository map
 
@@ -42,7 +44,7 @@ make `getRawValue()` need post-processing is wrong.
 | `leafList` | repeatable scalar rows | `FormArray<FormControl>` | |
 | `nodeGroup` | section panel | `FormGroup` | the root node; fixed, declared keys |
 | `nodeGroupList` | repeatable groups | `FormArray<FormGroup>` | |
-| `choice` | "Selected option" select | `FormGroup` of `{ __case, ...fields }` | one case active at a time; `__case` is form-only, never on the wire |
+| `choice` | "Selected option" select | `FormGroup` of `{ __case, ...fields }` | one case active at a time; `__case` is form-only, never on the wire — `serializeForm` strips it |
 | `map` | key/value rows | `FormGroup` with **dynamic keys** | open/arbitrary keys (`additionalProperties`); control name = entry key |
 
 Distinctions agents get wrong:
@@ -87,7 +89,8 @@ const form = buildFormFromSchema(schema, initialData);  // typed FormGroup
 
 Always pass a `formGroup` built from the **same schema** — rendering with
 `[schema]` alone binds fields to a throwaway group. Read the edited data with
-`form.getRawValue()`; that object is the wire format.
+`serializeForm(schema, form)` — `form.getRawValue()` with every choice's
+`__case` stripped; when the schema has no choices the two are identical.
 
 ## Using the transformers
 
@@ -124,8 +127,14 @@ import { yamlTransformer, jsonTransformer } from 'ng-form-foundry-transformers';
 
 const { schema, binding, initialValue } = yamlTransformer.toSchema(yamlText); // optionally { schema: jsonSchema }
 // … build the form, let the user edit …
-const editedYaml = yamlTransformer.toSource(form.getRawValue(), binding); // comments & formatting preserved
+const editedYaml = yamlTransformer.toSource(serializeForm(schema, form), binding); // comments & formatting preserved
 ```
+
+`toSource` for YAML/JSON applies the value's keys verbatim, so hand it the
+**wire value** (`serializeForm`, from `ng-form-foundry`) — a raw
+`getRawValue()` would write `__case` keys into the config when the schema
+contains choices. The YANG adapter is the exception: `toYangData` consumes the
+**form value** and flattens `__case` itself.
 
 Round-trip guarantees you must not break: YAML comments/formatting and JSON
 indent are preserved; **non-string map keys** (`{80: http}`) survive; integers
@@ -179,7 +188,8 @@ real browser, not only through unit tests.
 
 - **Never break `getRawValue()` IS the data.** Absent optional = removed
   control (`removeControl`, never `disable()` — a disabled control still
-  appears in `.value`).
+  appears in `.value`). The choice `__case` discriminator is the sole
+  exception; `serializeForm` is the strip, and nothing else may need one.
 - **Colors:** only `var(--mat-sys-*)` Material theme tokens. No hardcoded hex.
 - **Docs travel with code:** update `docs/`, READMEs, and docstrings in the
   same commit as the behavior change. Docstrings describe current behavior

@@ -130,6 +130,10 @@ Three things make choices practical for real schemas:
   // active case inferred as `byCell`
   ```
 
+  The reverse direction is `serializeForm(schema, form)`: `getRawValue()` with
+  every `__case` stripped, restoring the inline wire encoding — see
+  [Serialization](api.md#serialization).
+
 - **Leaf-bodied cases.** A branch that is a bare scalar can be written as a single
   node instead of a field record; it is normalized to a one-field record keyed by
   the node's `name`. (An `anyOf: [{string}, {null}]` is usually better modeled as a

@@ -174,6 +174,7 @@ export const target = defineSchema({
 const form = buildFormFromSchema(target, { scope: { cellId: 'c-1' } });
 form.controls.scope.get('__case')!.value;  // 'byCell' — inferred from the data
 form.getRawValue().scope;                   // { __case: 'byCell', cellId: 'c-1' }
+serializeForm(target, form).scope;          // { cellId: 'c-1' } — the wire value
 ```
 
 ## An open map
