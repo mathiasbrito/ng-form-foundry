@@ -1,0 +1,84 @@
+<h2>Field layout — appearance.grid / minFieldWidth</h2>
+<p>
+  <code>grid</code> lays a node's scalar fields on a CSS grid (<code>cols</code> per row,
+  left-to-right; <code>rows</code> alone fills top-to-bottom, adding columns as needed) and
+  overrides <code>minFieldWidth</code>, which instead fits as many equal-width fields per row
+  as stay at least that wide. Without either, fields share one wrapping flex row, where
+  <code>minTextFieldWidth</code> / <code>minNumberFieldWidth</code> bound how narrow string
+  and number fields may get. The appearance is set on the <strong>root group only</strong> —
+  the nested <em>TLS</em> group and the <em>Backend</em> choice inherit it (a child setting
+  its own layout would override).
+</p>
+
+<div class="controls">
+  <mat-button-toggle-group [value]="view()" (change)="view.set($event.value)" aria-label="View">
+    <mat-button-toggle value="form">Form view</mat-button-toggle>
+    <mat-button-toggle value="tree">Tree view</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <mat-button-toggle-group [value]="mode()" (change)="mode.set($event.value)" aria-label="Layout mode">
+    <mat-button-toggle value="flex">Default (flex)</mat-button-toggle>
+    <mat-button-toggle value="grid">grid</mat-button-toggle>
+    <mat-button-toggle value="minWidth">minFieldWidth</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  @if (mode() === 'grid') {
+    <div class="slider-row">
+      <label>cols: <strong>{{ cols() > 0 ? cols() : 'unset' }}</strong></label>
+      <mat-slider min="0" max="6" step="1" discrete>
+        <input matSliderThumb [value]="cols()" (valueChange)="cols.set($event)" aria-label="Grid columns" />
+      </mat-slider>
+    </div>
+    <div class="slider-row">
+      <label>rows: <strong>{{ rows() > 0 ? rows() : 'unset' }}</strong></label>
+      <mat-slider min="0" max="4" step="1" discrete>
+        <input matSliderThumb [value]="rows()" (valueChange)="rows.set($event)" aria-label="Grid rows" />
+      </mat-slider>
+    </div>
+  }
+  @if (mode() === 'minWidth') {
+    <div class="slider-row">
+      <label>minFieldWidth: <strong>{{ minWidth() }}px</strong></label>
+      <mat-slider min="80" max="400" step="10" discrete>
+        <input matSliderThumb [value]="minWidth()" (valueChange)="minWidth.set($event)" aria-label="Minimum field width" />
+      </mat-slider>
+    </div>
+  }
+  @if (mode() === 'flex') {
+    <div class="slider-row">
+      <label>minTextFieldWidth: <strong>{{ minText() > 0 ? minText() + 'px' : 'unset' }}</strong></label>
+      <mat-slider min="0" max="400" step="10" discrete>
+        <input matSliderThumb [value]="minText()" (valueChange)="minText.set($event)" aria-label="Minimum text field width" />
+      </mat-slider>
+    </div>
+    <div class="slider-row">
+      <label>minNumberFieldWidth: <strong>{{ minNumber() > 0 ? minNumber() + 'px' : 'unset' }}</strong></label>
+      <mat-slider min="0" max="400" step="10" discrete>
+        <input matSliderThumb [value]="minNumber()" (valueChange)="minNumber.set($event)" aria-label="Minimum number field width" />
+      </mat-slider>
+    </div>
+    <div class="slider-row">
+      <label>maxNumberFieldWidth: <strong>{{ maxNumber() > 0 ? maxNumber() + 'px' : 'unset' }}</strong></label>
+      <mat-slider min="0" max="600" step="10" discrete>
+        <input matSliderThumb [value]="maxNumber()" (valueChange)="maxNumber.set($event)" aria-label="Maximum number field width" />
+      </mat-slider>
+    </div>
+  }
+
+  <div class="slider-row">
+    <label>booleanFields:</label>
+    <mat-button-toggle-group [value]="booleans()" (change)="booleans.set($event.value)" aria-label="Boolean field placement">
+      <mat-button-toggle value="default">default</mat-button-toggle>
+      <mat-button-toggle value="beginning">beginning</mat-button-toggle>
+      <mat-button-toggle value="end">end</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+
+  <code class="appearance-json">appearance: {{ appearanceJson() }}</code>
+</div>
+
+@if (view() === 'form') {
+  <nff-dynamic-recursive-form [schema]="schema()" [formGroup]="formGroup" [editable]="true" />
+} @else {
+  <nff-config-editor [schema]="schema()" [formGroup]="formGroup" />
+}

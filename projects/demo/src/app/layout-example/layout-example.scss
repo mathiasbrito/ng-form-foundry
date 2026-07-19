@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  label {
+    min-width: 10em;
+  }
+}
+
+.appearance-json {
+  flex-basis: 100%;
+  color: var(--mat-sys-on-surface-variant);
+}

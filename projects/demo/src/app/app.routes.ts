@@ -9,6 +9,8 @@ import { ComplexTreeExample } from './complex-tree-example/complex-tree-example'
 import { ShowcaseExample } from './showcase-example/showcase-example';
 import { ShowcaseTreeExample } from './showcase-tree-example/showcase-tree-example';
 import { A1PolicyExample } from './a1-policy-example/a1-policy-example';
+import { LayoutExample } from './layout-example/layout-example';
+import { RootTitleExample } from './root-title-example/root-title-example';
 
 export const routes: Routes = [
   {
@@ -55,5 +57,13 @@ export const routes: Routes = [
   {
     path: 'showcase-tree',
     component: ShowcaseTreeExample
+  },
+  {
+    path: 'layout',
+    component: LayoutExample
+  },
+  {
+    path: 'root-title',
+    component: RootTitleExample
   }
 ];

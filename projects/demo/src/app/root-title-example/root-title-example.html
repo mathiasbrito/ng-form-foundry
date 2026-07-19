@@ -1,0 +1,22 @@
+<h2>Tree editor — root row title</h2>
+<p>
+  Transformer-produced schemas name an unlabeled root <code>__root__</code>; the tree never
+  shows that sentinel — it falls back to <strong>Configuration</strong>. An authored
+  <code>label</code> or a real root <code>name</code> displays as-is, and the
+  <code>rootTitle</code> input overrides them all.
+</p>
+
+<div class="controls">
+  <mat-button-toggle-group [value]="variant()" (change)="variant.set($event.value)" aria-label="Root variant">
+    <mat-button-toggle value="sentinel">name: __root__ (no label)</mat-button-toggle>
+    <mat-button-toggle value="labeled">name: __root__, label: Device</mat-button-toggle>
+    <mat-button-toggle value="named">name: device (no label)</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <mat-form-field class="override-field" appearance="fill">
+    <mat-label>rootTitle input (empty = unset)</mat-label>
+    <input matInput [ngModel]="titleOverride()" (ngModelChange)="titleOverride.set($event)" />
+  </mat-form-field>
+</div>
+
+<nff-config-editor [schema]="schema()" [formGroup]="formGroup" [rootTitle]="rootTitle()" />
