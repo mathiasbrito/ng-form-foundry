@@ -108,6 +108,34 @@ describe('ConfigEditorComponent', () => {
     expect(component.root.children.map((c) => c.id)).toEqual(['system', 'ifaces', 'scope', 'labels', 'servers']);
   });
 
+  it('substitutes a generic title for the __root__ sentinel, unless a label is authored', () => {
+    const anonymous: NodeGroup = {
+      kind: 'nodeGroup',
+      name: '__root__',
+      root: true,
+      children: { hostname: { kind: 'leaf', type: 'string', name: 'hostname' } },
+    };
+    fixture.componentRef.setInput('schema', anonymous);
+    fixture.componentRef.setInput('formGroup', buildFormFromSchema(anonymous, {}));
+    fixture.detectChanges();
+    expect(component.root.label).toBe('Configuration');
+
+    const labeled: NodeGroup = { ...anonymous, label: 'Device' };
+    fixture.componentRef.setInput('schema', labeled);
+    fixture.componentRef.setInput('formGroup', buildFormFromSchema(labeled, {}));
+    fixture.detectChanges();
+    expect(component.root.label).toBe('Device');
+  });
+
+  it('titles the root from the rootTitle input, over the schema label', () => {
+    const labeled: NodeGroup = { ...schema, label: 'Device' };
+    fixture.componentRef.setInput('rootTitle', 'Site A');
+    fixture.componentRef.setInput('schema', labeled);
+    fixture.componentRef.setInput('formGroup', buildFormFromSchema(labeled, {}));
+    fixture.detectChanges();
+    expect(component.root.label).toBe('Site A');
+  });
+
   it('expands a nodeGroupList into one tree node per item, ids by index', () => {
     const list = node('ifaces');
     expect(list.children.map((c) => c.id)).toEqual(['ifaces/0', 'ifaces/1']);

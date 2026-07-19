@@ -23,6 +23,15 @@ import {
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form/dynamic-recursive-form.component';
 import { NodeMapRendererComponent } from '../dynamic-recursive-form/node-map-renderer/node-map-renderer.component';
 
+/**
+ * The transformers package names a root nobody named `__root__` — a sentinel,
+ * not display text (the packages share no code, so the string is matched here
+ * verbatim). The tree substitutes {@link ROOT_FALLBACK_TITLE} for it; any
+ * other root name is an authored one and displays as-is.
+ */
+const ROOT_SENTINEL = '__root__';
+const ROOT_FALLBACK_TITLE = 'Configuration';
+
 /** Metadata on a list-container node that lets the tree add items to its FormArray. */
 interface ListRef {
   array: FormArray;
@@ -141,6 +150,12 @@ export class ConfigEditorComponent implements OnDestroy {
    * can flip it itself and the host observes the change.
    */
   readonly editable = model<boolean>(true);
+  /**
+   * Title for the root tree row and breadcrumb origin, overriding the schema's
+   * own `label`/`name`. Read when the tree is (re)built, so a later change
+   * shows on the next rebind or structural rebuild, not immediately.
+   */
+  readonly rootTitle = input<string>();
 
   root!: TreeNode;
   selected: TreeNode | null = null;
@@ -176,7 +191,7 @@ export class ConfigEditorComponent implements OnDestroy {
   private attach(schema: NodeGroup, group: FormGroup): void {
     this.changes?.unsubscribe();
     this.expanded.clear();
-    this.root = this.buildTree(schema, group, schema.label ?? schema.name, '');
+    this.root = this.buildTree(schema, group, this.rootLabelOf(schema), '');
     this.shape = this.shapeOf(group);
     this.expanded.add(this.root.id);
     this.select(this.root);
@@ -544,10 +559,15 @@ export class ConfigEditorComponent implements OnDestroy {
     return id;
   }
 
+  /** Root row title: host override, else schema label, else its name — with the {@link ROOT_SENTINEL} swapped for a generic title. */
+  private rootLabelOf(schema: NodeGroup): string {
+    return this.rootTitle() ?? schema.label ?? (schema.name === ROOT_SENTINEL ? ROOT_FALLBACK_TITLE : schema.name);
+  }
+
   /** Rebuild the whole tree from schema + form and refresh the shape signature. */
   private rebuild(): void {
     const schema = this.schema();
-    this.root = this.buildTree(schema, this.formGroup(), schema.label ?? schema.name, '');
+    this.root = this.buildTree(schema, this.formGroup(), this.rootLabelOf(schema), '');
     this.shape = this.shapeOf(this.formGroup());
   }
 
