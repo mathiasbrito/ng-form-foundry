@@ -30,8 +30,21 @@ form = buildFormFromSchema(schema);
 // FormGroup<{ firstName: FormControl<string>; age: FormControl<number> }>
 ```
 
+Layout is declarative too. An `appearance` on any group (or choice, or map)
+lays its fields on a CSS grid (`grid: { cols: 2 }`), packs as many equal-width
+fields per row as fit (`minFieldWidth: '14rem'`), gathers checkboxes into a
+compact row (`booleanFields: 'end'`), and bounds text/number field widths in
+the default wrapping flow (`minTextFieldWidth`, `min`/`maxNumberFieldWidth`).
+The options **cascade** — declared once on the root they style nested groups,
+list items, map entries, and choice cases, and any descendant may override:
+
+```ts
+appearance: { grid: { cols: 2 }, booleanFields: 'end' }
+```
+
 See the [library README](projects/ng-form-foundry/README.md) for installation and
-a quickstart.
+a quickstart, and [Field layout](https://ng-form-foundry.readthedocs.io/en/latest/features.html#field-layout)
+in the docs for the full layout tour.
 
 ## This is an Angular CLI workspace
 
@@ -59,8 +72,8 @@ already on npm is skipped, so re-running a tag is safe.
 2. Commit, then tag and push (both packages release together at the tag version;
    a package version already on npm is skipped):
    ```bash
-   git tag v0.3.5
-   git push origin v0.3.5
+   git tag v0.4.0
+   git push origin v0.4.0
    ```
 
 Required repository secrets (**Settings → Secrets and variables → Actions**):

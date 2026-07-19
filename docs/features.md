@@ -192,6 +192,120 @@ lines: {
 `minItems`/`maxItems` gate the add/remove controls. Lists size themselves to the
 data you seed: an array of three produces three items.
 
+## Field layout
+
+A group's scalar fields flow left-to-right in one wrapping row by default. The
+`appearance` property — accepted by `nodeGroup`, `choice`, and `map` — turns
+that into a declared layout. There are three sizing modes (one of which is the
+default), a checkbox-placement option, and per-type width bounds; the whole
+set **cascades** to descendants, so declaring it once on the root usually
+styles the entire form.
+
+### Default: the wrapping flex row
+
+With no layout options, all of a group's scalar fields share one row, divide
+its width evenly, and wrap once each field would drop below 10% of the row.
+Three bounds tune this flow (each a CSS length such as `'12rem'` or `'180px'`):
+
+- `minTextFieldWidth` — the narrowest a **string** field may get before the
+  row wraps instead. Enum fields (rendered as a select) are text-like and
+  follow it too.
+- `minNumberFieldWidth` — the same floor for **number** fields, typically
+  smaller.
+- `maxNumberFieldWidth` — a cap on number fields: numbers are short, and
+  without it a lone number stretches across space a text field could use.
+
+```ts
+appearance: { minTextFieldWidth: '16rem', minNumberFieldWidth: '6rem', maxNumberFieldWidth: '10rem' }
+```
+
+The bounds also govern a string/enum/number **leaf-list's entries**. They are
+flex-flow-only: under either grid mode below, the tracks size every field
+alike and the bounds are ignored.
+
+### Fixed grid: `grid: { cols }` — or `{ rows }`
+
+A real CSS grid over the group's scalar fields:
+
+- `cols` — that many equal-width fields per row, filling left-to-right.
+  Rows are implied by the field count.
+- `rows` alone — fields fill **top-to-bottom** into that many rows, adding
+  equal-width columns as needed.
+- Both — `cols` drives the row-major flow; `rows` merely sizes the first
+  rows, and extra fields spill into implicit rows below.
+
+```ts
+appearance: { grid: { cols: 2 } }   // Hostname | Port
+                                    // Protocol | Timeout
+```
+
+Non-positive or missing counts are treated as absent. When `grid` is set it
+**overrides `minFieldWidth`**.
+
+### As many as fit: `minFieldWidth`
+
+One knob instead of a column count: also a CSS grid, but each row fits as many
+equal-width fields as stay at least this wide and wraps the rest. A container
+too narrow for even one falls back to a single column rather than overflow.
+
+```ts
+appearance: { minFieldWidth: '14rem' }
+```
+
+### Checkbox placement: `booleanFields`
+
+Boolean leaves render as checkboxes, which don't need a field-sized slot — in
+a grid each one would claim a whole track and leave the row ragged.
+`booleanFields: 'end'` (or `'beginning'`) gathers every boolean leaf into a
+compact wrapping row of natural-width items after (before) the group's other
+fields; `'default'`, or omitting it, keeps them in declaration order.
+
+Presence booleans move with all their states: the enabled checkbox with its
+remove control, and the "Add *field*" button while editing. Boolean
+**leaf-lists** are not gathered — the option covers boolean leaves only.
+
+```ts
+appearance: { grid: { cols: 2 }, booleanFields: 'end' }
+```
+
+### The cascade
+
+The layout subset — `grid`, `minFieldWidth`, `booleanFields`, and the three
+width bounds — is inherited by everything below the node that declares it:
+nested groups, list items, group-valued map entries, and choice cases. A
+descendant overrides by declaring its own:
+
+- `grid` and `minFieldWidth` count as **one field-sizing decision**: a node
+  that sets either inherits neither, so an inherited grid can never trump the
+  node's own `minFieldWidth`.
+- Every other layout property falls back individually; an explicit
+  `booleanFields: 'default'` is a deliberate opt-out of an inherited value.
+- The chrome flags — `flatten`, `noBorder`, `collapsed` — describe a node's
+  own frame and never cascade.
+
+```ts
+{
+  kind: 'nodeGroup', name: 'service', root: true,
+  appearance: { grid: { cols: 2 } },          // the whole form: 2 columns…
+  children: {
+    tls: {
+      kind: 'nodeGroup', name: 'tls',
+      appearance: { minFieldWidth: '12rem' }, // …except TLS, which packs as many as fit
+      children: { /* … */ },
+    },
+  },
+}
+```
+
+Multi-entry (**stacked**) leaf-lists cooperate with the grid: the list spans
+the full row and repeats the parent's **column** tracks, so its entries stay
+aligned with the fields above (in a rows-only grid the list keeps to a single
+cell). The cascade applies wherever the form renders — including a choice's
+active case fields and the tree editor's detail sections.
+
+The demo app's `/layout` playground exercises every option live, in both the
+plain form and the tree editor.
+
 ## The editing UX
 
 `[editable]` starts the form read-only (`false`) or editable (`true`). It is a

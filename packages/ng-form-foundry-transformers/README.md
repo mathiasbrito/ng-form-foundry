@@ -294,6 +294,10 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.4.0` — version-alignment release with the workspace (the paired
+`ng-form-foundry` 0.4.0 adds appearance-driven field layout); no transformer
+changes.
+
 `0.3.5` — the **thesaurus**: every `toSchema` and `jsonSchemaToNodeGroup`
 accept identifier → `{ label, description }` display metadata, with variants
 scoped by ancestor names (`under`) for identifiers that mean different things

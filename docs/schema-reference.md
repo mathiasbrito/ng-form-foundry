@@ -141,6 +141,9 @@ the parent's grid **column** tracks so its entries align with the columns
 above (in a rows-only grid it stays a normal cell). All of this applies in
 the tree editor's detail sections as well.
 
+[Field layout](features.md#field-layout) is the task-oriented tour of these
+options, with examples of each mode and the cascade.
+
 ## `nodeGroupList` — a list of objects
 
 A repeatable group. Builds a `FormArray<FormGroup>`. Each item is an instance of

@@ -71,6 +71,35 @@ Distinctions agents get wrong:
 NodeGroup`). Annotating a constant `: NodeGroup` widens the literal type and
 destroys the schema → `FormGroup` type inference.
 
+## Field layout (`appearance`) in 30 seconds
+
+`nodeGroup`, `choice`, and `map` accept an `appearance` whose layout options
+control how the node's scalar fields are placed:
+
+- **Sizing, one of three modes** — `grid: { cols?, rows? }` (real CSS grid:
+  `cols` per row; `rows` alone fills top-to-bottom) **overrides**
+  `minFieldWidth` (as many equal-width fields per row as stay at least that
+  wide); with neither, fields share one wrapping flex row.
+- **Flex-only bounds** — `minTextFieldWidth` (string *and* enum/select
+  fields), `minNumberFieldWidth`, `maxNumberFieldWidth`: CSS lengths bounding
+  fields in the default flow; inert under either grid mode.
+- **`booleanFields: 'beginning' | 'end' | 'default'`** — gathers checkbox
+  (boolean leaf) fields into a compact natural-width row before/after the
+  other fields; boolean leaf-lists are not gathered.
+- **Cascade** — the layout subset inherits down to nested groups, list items,
+  group-valued map entries, and choice cases (chrome flags `flatten`/
+  `noBorder`/`collapsed` never cascade). A descendant that sets *either*
+  `grid` or `minFieldWidth` inherits *neither* of that pair; an explicit
+  `booleanFields: 'default'` opts out of an inherited value.
+- Stacked (multi-entry) leaf-lists span the row and repeat the parent's grid
+  **column** tracks; the whole system also applies inside the tree editor's
+  detail sections.
+
+Implementation: merge rules in `projects/ng-form-foundry/src/lib/core/appearance.ts`;
+rendering in `dynamic-recursive-form.component.ts` (`fieldsLayout`,
+`booleanPlacement`, `inheritedAppearance` input). The demo's `/layout` route is
+a live playground for every option, in both the form and the tree editor.
+
 ## Using the library
 
 ```ts

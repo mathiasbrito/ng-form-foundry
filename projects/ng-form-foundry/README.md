@@ -36,7 +36,13 @@ form = buildFormFromSchema(schema);
 - **Angular Material renderers** for string, number, boolean, and enum fields,
   add/remove lists, collapsible groups, optional **presence** fields with a
   toggle, **choice/case** selection, and add/remove/rename **map** entries.
-- **Two layouts:** an all-in-one recursive form (`nff-dynamic-recursive-form`),
+- **Declarative field layout.** An `appearance` on any group lays its fields on
+  a CSS **grid** (`grid: { cols }`), packs as many equal-width fields per row
+  as fit (`minFieldWidth`), gathers checkboxes into a compact row
+  (`booleanFields`), and bounds text/number widths in the default wrapping
+  flow — the options **cascade** to nested groups, list items, map entries,
+  and choice cases, with per-node override.
+- **Two views:** an all-in-one recursive form (`nff-dynamic-recursive-form`),
   or a tree/detail **config editor** (`nff-config-editor`) — structure on the
   left, a node's fields on the right.
 - **Standalone components**, Angular 20, signal inputs, reactive forms throughout.
