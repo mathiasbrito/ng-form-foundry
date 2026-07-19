@@ -36,69 +36,74 @@
   </div>
   }
 </ng-template>
+<!-- The node's scalar-field area — gathered booleans (beginning), the .fields
+     flow, gathered booleans (end) — shared by the root and non-root branches. -->
+<ng-template #fieldFlow>
+  @if (booleanPlacement() === 'beginning') {
+    <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
+  }
+  <div class="fields" [class.grid-fields]="!!fieldsLayout()" [class.grid-cols]="gridHasCols()" [style]="fieldsLayout()" [style.--nff-min-text-field-width]="textFieldMin()" [style.--nff-min-number-field-width]="numberFieldMin()" [style.--nff-max-number-field-width]="numberFieldMax()">
+    @for (childItem of nodeGroupChildrenList; track $index) {
+      @let child = childItem.value;
+      @if (child.kind == 'leaf' && !child.presence && inFieldFlow(child)) {
+        <nff-leaf-renderer
+          [leaf_]=child
+          [control]=asFormControl(formGroup().get(childItem.key))
+          [removable]=false
+          [editable]="editable()"
+        />
+      }
+    }
+    @for (childItem of nodeGroupChildrenList; track $index) {
+      @let child = childItem.value;
+      @if (child.kind == 'leafList') {
+        <nff-leaf-list-renderer
+          [layout]="gridHasCols() ? fieldsLayout() : null"
+          [leaf_]="child"
+          [editable]="editable()"
+          [formArray]="asFormArray(formGroup().get(childItem.key))"
+          [initialValue]="formGroup().get(childItem.key)?.value"
+        />
+      }
+    }
+    <!-- Presence leaves trail the regular fields so their add buttons don't
+         interrupt the field flow; an enabled one keeps its trailing spot. -->
+    @for (childItem of nodeGroupChildrenList; track $index) {
+      @let child = childItem.value;
+      @if (child.kind == 'leaf' && child.presence && inFieldFlow(child)) {
+        @if (formGroup().get(childItem.key)) {
+          <nff-leaf-renderer
+            [leaf_]=child
+            [control]=asFormControl(formGroup().get(childItem.key))
+            [removable]=true
+            [editable]="editable()"
+            [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
+            (remove)="toggleLeafPresence(childItem.key, child, false)"
+          />
+        } @else if (editable()) {
+          <!-- Read-only mode renders nothing for an absent presence leaf:
+               the key is simply absent, and add affordances are hidden
+               like every other structural control. -->
+          <button
+            matButton="outlined"
+            class="presence-leaf-add"
+            (click)="toggleLeafPresence(childItem.key, child, true)"
+          >
+            <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
+          </button>
+        }
+      }
+    }
+  </div>
+  @if (booleanPlacement() === 'end') {
+    <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
+  }
+</ng-template>
 @if (!root()) {
   <ng-template #formRender>
     <div class="form-content" [formGroup]="formGroup()">
       <div class="leafs-container">
-        @if (booleanPlacement() === 'beginning') {
-          <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
-        }
-        <div class="fields" [class.grid-fields]="!!fieldsLayout()" [class.grid-cols]="gridHasCols()" [style]="fieldsLayout()" [style.--nff-min-text-field-width]="textFieldMin()" [style.--nff-min-number-field-width]="numberFieldMin()" [style.--nff-max-number-field-width]="numberFieldMax()">
-          @for (childItem of nodeGroupChildrenList; track $index) {
-            @let child = childItem.value;
-            @if (child.kind == 'leaf' && !child.presence && (booleanPlacement() === 'default' || child.type != 'boolean')) {
-              <nff-leaf-renderer
-                [leaf_]=child
-                [control]=asFormControl(formGroup().get(childItem.key))
-                [removable]=false
-                [editable]="editable()"
-              />
-            }
-          }
-          @for (childItem of nodeGroupChildrenList; track $index) {
-            @let child = childItem.value;
-            @if (child.kind == 'leafList') {
-              <nff-leaf-list-renderer
-                [layout]="gridHasCols() ? fieldsLayout() : null"
-                [leaf_]="child"
-                [editable]="editable()"
-                [formArray]="asFormArray(formGroup().get(childItem.key))"
-                [initialValue]="formGroup().get(childItem.key)?.value"
-              />
-            }
-          }
-          <!-- Presence leaves trail the regular fields so their add buttons don't
-               interrupt the field flow; an enabled one keeps its trailing spot. -->
-          @for (childItem of nodeGroupChildrenList; track $index) {
-            @let child = childItem.value;
-            @if (child.kind == 'leaf' && child.presence && (booleanPlacement() === 'default' || child.type != 'boolean')) {
-              @if (formGroup().get(childItem.key)) {
-                <nff-leaf-renderer
-                  [leaf_]=child
-                  [control]=asFormControl(formGroup().get(childItem.key))
-                  [removable]=true
-                  [editable]="editable()"
-                  [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
-                  (remove)="toggleLeafPresence(childItem.key, child, false)"
-                />
-              } @else if (editable()) {
-                <!-- Read-only mode renders nothing for an absent presence leaf:
-                     the key is simply absent, and add affordances are hidden
-                     like every other structural control. -->
-                <button
-                  matButton="outlined"
-                  class="presence-leaf-add"
-                  (click)="toggleLeafPresence(childItem.key, child, true)"
-                >
-                  <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
-                </button>
-              }
-            }
-          }
-        </div>
-        @if (booleanPlacement() === 'end') {
-          <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
-        }
+        <ng-container *ngTemplateOutlet="fieldFlow"></ng-container>
       </div>
       @for (childItem of nodeGroupChildrenList; track $index) {
         @let child = childItem.value;
@@ -263,62 +268,7 @@
           <mat-icon>edit</mat-icon>
         </button>
       </div>
-      @if (booleanPlacement() === 'beginning') {
-        <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
-      }
-      <div class="fields" [class.grid-fields]="!!fieldsLayout()" [class.grid-cols]="gridHasCols()" [style]="fieldsLayout()" [style.--nff-min-text-field-width]="textFieldMin()" [style.--nff-min-number-field-width]="numberFieldMin()" [style.--nff-max-number-field-width]="numberFieldMax()">
-        @for (childItem of nodeGroupChildrenList; track $index) {
-          @let child = childItem.value;
-          @if (child.kind == 'leaf' && !child.presence && (booleanPlacement() === 'default' || child.type != 'boolean')) {
-            <nff-leaf-renderer
-              [leaf_]=child
-              [control]=asFormControl(formGroup().get(childItem.key))
-              [removable]=false
-              [editable]="editable()"
-            />
-          }
-        }
-        @for (childItem of nodeGroupChildrenList; track $index) {
-          @let child = childItem.value;
-          @if (child.kind == 'leafList') {
-            <nff-leaf-list-renderer
-              [layout]="gridHasCols() ? fieldsLayout() : null"
-              [leaf_]="child"
-              [editable]="editable()"
-              [formArray]="asFormArray(formGroup().get(childItem.key))"
-              [initialValue]="formGroup().get(childItem.key)?.value"
-            />
-          }
-        }
-        <!-- Presence leaves trail the regular fields so their add buttons don't
-             interrupt the field flow; an enabled one keeps its trailing spot. -->
-        @for (childItem of nodeGroupChildrenList; track $index) {
-          @let child = childItem.value;
-          @if (child.kind == 'leaf' && child.presence && (booleanPlacement() === 'default' || child.type != 'boolean')) {
-            @if (formGroup().get(childItem.key)) {
-              <nff-leaf-renderer
-                [leaf_]=child
-                [control]=asFormControl(formGroup().get(childItem.key))
-                [removable]=true
-                [editable]="editable()"
-                [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
-                (remove)="toggleLeafPresence(childItem.key, child, false)"
-              />
-            } @else if (editable()) {
-              <button
-                matButton="outlined"
-                class="presence-leaf-add"
-                (click)="toggleLeafPresence(childItem.key, child, true)"
-              >
-                <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
-              </button>
-            }
-          }
-        }
-      </div>
-      @if (booleanPlacement() === 'end') {
-        <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
-      }
+      <ng-container *ngTemplateOutlet="fieldFlow"></ng-container>
     </div>
     @for (childItem of nodeGroupChildrenList; track $index) {
       @let child = childItem.value;

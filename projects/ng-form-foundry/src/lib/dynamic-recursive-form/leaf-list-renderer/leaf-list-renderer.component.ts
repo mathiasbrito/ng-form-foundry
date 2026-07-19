@@ -1,4 +1,5 @@
 import { Component, EventEmitter, HostBinding, inject, Input, OnInit, Output } from '@angular/core';
+import { LayoutStyles } from '../../core/appearance';
 import { LeafList } from '../../types/dynamic-recursive.types';
 import { FormControl } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,7 +34,7 @@ export class LeafListRendererComponent implements OnInit {
    * stay aligned with the columns above; an inline (single-entry) list sits in
    * one track and ignores it.
    */
-  @Input() layout: Record<string, string> | null = null;
+  @Input() layout: LayoutStyles | null = null;
   @Output() message = new EventEmitter();
 
   matDialog = inject(MatDialog);
@@ -57,7 +58,7 @@ export class LeafListRendererComponent implements OnInit {
 
   /** Applies {@link layout} to the host (the entries' container) while stacked. */
   @HostBinding('style')
-  get hostLayout(): Record<string, string> | null {
+  get hostLayout(): LayoutStyles | null {
     return this.stacked ? this.layout : null;
   }
 

@@ -10,7 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltip } from '@angular/material/tooltip';
 import { Appearance, CASE_KEY, NodeChoice, NodeGroup, NodeMap, NodeType } from '../types/dynamic-recursive.types';
-import { inheritableAppearance, mergeAppearance } from '../core/appearance';
+import { descendantLayout } from '../core/appearance';
 import {
   addMapEntry,
   buildControl,
@@ -740,9 +740,7 @@ export class ConfigEditorComponent implements OnDestroy {
   ): TreeNode {
     const children: TreeNode[] = [];
     const optionals: OptionalEntry[] = [];
-    // What this node's descendants inherit: the ancestors' layout with the
-    // node's own appearance merged over it.
-    const childInherited = inheritableAppearance(mergeAppearance(inherited, schema.appearance));
+    const childInherited = descendantLayout(inherited, schema.appearance);
 
     for (const key of Object.keys(schema.children)) {
       const child = schema.children[key];
@@ -835,7 +833,7 @@ export class ConfigEditorComponent implements OnDestroy {
                 control.controls[key],
                 key,
                 this.join(path, key),
-                inheritableAppearance(mergeAppearance(inherited, schema.appearance)),
+                descendantLayout(inherited, schema.appearance),
               );
               if (entryNode) {
                 entryNode.mapEntry = { mapGroup: control, mapSchema: schema, key };

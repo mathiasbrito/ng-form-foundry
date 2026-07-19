@@ -1,7 +1,7 @@
 import { Component, computed, forwardRef, input, model, OnInit, output } from '@angular/core';
 import { LeafRendererComponent } from './leaf-renderer/leaf-renderer.component';
 import { Appearance, CASE_KEY, Leaf, NodeChoice, NodeGroup, NodeType } from '../types/dynamic-recursive.types';
-import { inheritableAppearance, mergeAppearance } from '../core/appearance';
+import { inheritableAppearance, LayoutStyles, mergeAppearance } from '../core/appearance';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { NodeGroupListRendererComponent } from './node-group-list-renderer/node-group-list-renderer.component';
 import { LeafListRendererComponent } from './leaf-list-renderer/leaf-list-renderer.component';
@@ -17,6 +17,15 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+
+/**
+ * A grid track count from `appearance.grid`: positive finite counts floored,
+ * anything else (absent, zero, negative, non-finite) is 0 — so a bogus `cols`
+ * cannot half-enter grid mode (e.g. suppress the rows-only column flow).
+ */
+function gridTrackCount(count: number | undefined): number {
+  return Number.isFinite(count) && count! > 0 ? Math.floor(count!) : 0;
+}
 
 @Component({
   imports: [
@@ -120,15 +129,12 @@ export class DynamicRecursiveFormComponent implements OnInit {
    * `minFieldWidth`; with neither, `null` keeps the stylesheet's wrapping
    * flex flow. Non-positive `rows`/`cols` are ignored.
    */
-  protected readonly fieldsLayout = computed<Record<string, string> | null>(() => {
+  protected readonly fieldsLayout = computed<LayoutStyles | null>(() => {
     const appearance = this.effectiveAppearance();
-    // Non-positive / non-finite counts are absent — so a bogus `cols` can't
-    // half-enter grid mode (e.g. suppress the rows-only column flow).
-    const track = (count: number | undefined) => (Number.isFinite(count) && count! > 0 ? Math.floor(count!) : 0);
-    const cols = track(appearance?.grid?.cols);
-    const rows = track(appearance?.grid?.rows);
+    const cols = gridTrackCount(appearance?.grid?.cols);
+    const rows = gridTrackCount(appearance?.grid?.rows);
     if (cols > 0 || rows > 0) {
-      const layout: Record<string, string> = { display: 'grid' };
+      const layout: LayoutStyles = { display: 'grid' };
       if (cols > 0) layout['grid-template-columns'] = `repeat(${cols}, minmax(0, 1fr))`;
       if (rows > 0) layout['grid-template-rows'] = `repeat(${rows}, auto)`;
       if (rows > 0 && cols === 0) {
@@ -150,12 +156,6 @@ export class DynamicRecursiveFormComponent implements OnInit {
   });
 
   /**
-   * Where `appearance.booleanFields` places the checkbox fields: `'beginning'`
-   * or `'end'` renders them grouped in the `.boolean-fields` row and excludes
-   * them from the regular field flow; `'default'` (also when the group has no
-   * boolean leaf to move) leaves the flow untouched.
-   */
-  /**
    * Whether the gathered boolean row would show anything: a plain boolean, an
    * enabled presence boolean, or (while editable) an absent one's add button.
    * Keeps a read-only form from rendering an empty `.boolean-fields` div,
@@ -170,6 +170,21 @@ export class DynamicRecursiveFormComponent implements OnInit {
     );
   }
 
+  /**
+   * Whether a leaf renders in the regular `.fields` flow: always, unless it is
+   * a boolean that {@link booleanPlacement} gathers into the `.boolean-fields`
+   * row instead.
+   */
+  protected inFieldFlow(child: Leaf): boolean {
+    return this.booleanPlacement() === 'default' || child.type !== 'boolean';
+  }
+
+  /**
+   * Where `appearance.booleanFields` places the checkbox fields: `'beginning'`
+   * or `'end'` renders them grouped in the `.boolean-fields` row and excludes
+   * them from the regular field flow; `'default'` (also when the group has no
+   * boolean leaf to move) leaves the flow untouched.
+   */
   protected readonly booleanPlacement = computed<'beginning' | 'end' | 'default'>(() => {
     const placement = this.effectiveAppearance()?.booleanFields ?? 'default';
     if (placement === 'default') return 'default';

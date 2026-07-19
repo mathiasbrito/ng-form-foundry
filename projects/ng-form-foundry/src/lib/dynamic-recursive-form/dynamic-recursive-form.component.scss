@@ -9,12 +9,9 @@
   margin: 4px 0;
 }
 
-.presence-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
+// A presence group's checkbox-plus-body and a choice's selector-plus-case-body
+// stack vertically with the same rhythm.
+.presence-group,
 .choice-group {
   display: flex;
   flex-direction: column;
