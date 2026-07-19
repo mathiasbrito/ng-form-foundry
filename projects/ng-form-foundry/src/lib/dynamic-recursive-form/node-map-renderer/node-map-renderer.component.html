@@ -35,14 +35,14 @@
         </div>
 
         @if (editable && !atMin) {
-          <button class="remove-button small-icon-button" matIconButton [attr.aria-label]="'Remove ' + key + ' entry'" (click)="removeEntry(key)">
+          <button class="remove-button small-icon-button" matIconButton [matTooltip]="'Remove ' + key + ' entry'" [attr.aria-label]="'Remove ' + key + ' entry'" (click)="removeEntry(key)">
             <mat-icon>delete</mat-icon>
           </button>
         }
       </div>
     }
     @if (editable && !atMax) {
-      <button class="add-button small-icon-button" matIconButton aria-label="Add entry" (click)="addEntry()">
+      <button class="add-button small-icon-button" matIconButton [matTooltip]="'Add ' + (nodeMap.label ?? nodeMap.name) + ' entry'" [attr.aria-label]="'Add ' + (nodeMap.label ?? nodeMap.name) + ' entry'" (click)="addEntry()">
         <mat-icon>add</mat-icon>
       </button>
     }

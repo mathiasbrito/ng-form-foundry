@@ -75,7 +75,7 @@
           <button
             matIconButton
             class="row-btn add"
-            matTooltip="Add entry"
+            [matTooltip]="'Add ' + node.label + ' entry'"
             [attr.aria-label]="'Add ' + node.label + ' entry'"
             (click)="addTreeMapEntry(node); $event.stopPropagation()"
           >
@@ -86,7 +86,7 @@
           <button
             matIconButton
             class="row-btn remove"
-            matTooltip="Remove"
+            [matTooltip]="'Remove ' + node.label"
             [attr.aria-label]="'Remove ' + node.label"
             (click)="removeItem(parent, node); $event.stopPropagation()"
           >
@@ -97,7 +97,7 @@
           <button
             matIconButton
             class="row-btn remove"
-            matTooltip="Remove"
+            [matTooltip]="'Remove ' + node.label"
             [attr.aria-label]="'Remove ' + node.label"
             (click)="removeOptional(parent, node); $event.stopPropagation()"
           >
@@ -108,7 +108,7 @@
           <button
             matIconButton
             class="row-btn remove"
-            matTooltip="Remove entry"
+            [matTooltip]="'Remove ' + node.label + ' entry'"
             [attr.aria-label]="'Remove ' + node.label + ' entry'"
             (click)="removeTreeMapEntry(parent, node); $event.stopPropagation()"
           >
@@ -166,7 +166,7 @@
             <button
               matIconButton
               class="remove-button small-icon-button section-remove"
-              matTooltip="Remove"
+              [matTooltip]="'Remove ' + selected.label"
               [attr.aria-label]="'Remove ' + selected.label"
               (click)="removeItem(parent, selected)"
             >
@@ -179,7 +179,7 @@
             <button
               matIconButton
               class="remove-button small-icon-button section-remove"
-              matTooltip="Remove entry"
+              [matTooltip]="'Remove ' + selected.label + ' entry'"
               [attr.aria-label]="'Remove ' + selected.label + ' entry'"
               (click)="removeTreeMapEntry(parent, selected)"
             >
@@ -211,7 +211,7 @@
                 <button
                   matIconButton
                   class="remove-button small-icon-button section-remove"
-                  matTooltip="Remove"
+                  [matTooltip]="'Remove ' + s.node.label"
                   [attr.aria-label]="'Remove ' + s.node.label"
                   (click)="removeItem(parent, s.node, true)"
                 >
@@ -224,7 +224,7 @@
                 <button
                   matIconButton
                   class="remove-button small-icon-button section-remove"
-                  matTooltip="Remove entry"
+                  [matTooltip]="'Remove ' + s.node.label + ' entry'"
                   [attr.aria-label]="'Remove ' + s.node.label + ' entry'"
                   (click)="removeTreeMapEntry(parent, s.node, true)"
                 >
@@ -285,7 +285,7 @@
 
         @if (s.footer && editable() && s.node.map?.complex && !mapAtMax(s.node)) {
           <div class="section-actions">
-            <button matButton (click)="addTreeMapEntry(s.node, true)"><mat-icon>add</mat-icon> Add entry</button>
+            <button matButton [matTooltip]="'Add ' + s.node.label + ' entry'" (click)="addTreeMapEntry(s.node, true)"><mat-icon>add</mat-icon> Add entry</button>
           </div>
         }
         @if (s.footer && editable() && s.node.list && !listAtMax(s.node)) {

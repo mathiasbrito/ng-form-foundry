@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltip } from '@angular/material/tooltip';
 import { Leaf, NodeGroup, NodeMap } from '../../types/dynamic-recursive.types';
 import { addMapEntry, removeMapEntry, renameMapEntry } from '../../core/dynamic-recursive-forms-builder';
 import { asFormControl, asFormGroup } from '../../core/utils';
@@ -25,6 +26,7 @@ import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form.compone
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
+    MatTooltip,
     LeafRendererComponent,
     // node-map-renderer and dynamic-recursive-form import each other (a map value
     // may be a group); forwardRef defers the reference to break the cycle.

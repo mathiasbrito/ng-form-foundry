@@ -6,6 +6,7 @@ import { AnonLeafRendererComponent } from '../anon-leaf-renderer/anon-leaf-rende
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPrefix } from '@angular/material/input';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'nff-leaf-list-renderer',
@@ -15,6 +16,7 @@ import { MatPrefix } from '@angular/material/input';
     AnonLeafRendererComponent,
     MatButtonModule,
     MatPrefix,
+    MatTooltip,
   ],
   templateUrl: './leaf-list-renderer.component.html',
   styleUrl: './leaf-list-renderer.component.scss',

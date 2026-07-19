@@ -170,7 +170,7 @@
           </button>
         }
         @if (editable() && removable()) {
-          <button matIconButton  class="remove-button small-icon-button" [attr.aria-label]="'Remove ' + (schema().label ?? schema().name)" (click)="emitRemoveEvent(); $event.stopPropagation()">
+          <button matIconButton  class="remove-button small-icon-button" matTooltip="Remove {{ schema().label ?? schema().name }}" [attr.aria-label]="'Remove ' + (schema().label ?? schema().name)" (click)="emitRemoveEvent(); $event.stopPropagation()">
             <mat-icon>delete</mat-icon>
           </button>
         }
@@ -193,7 +193,7 @@
           </button>
         }
         @if (editable() && removable()) {
-          <button matIconButton class="remove-button small-icon-button" [attr.aria-label]="'Remove ' + (schema().label ?? schema().name)" (click)="emitRemoveEvent(); $event.stopPropagation()">
+          <button matIconButton class="remove-button small-icon-button" matTooltip="Remove {{ schema().label ?? schema().name }}" [attr.aria-label]="'Remove ' + (schema().label ?? schema().name)" (click)="emitRemoveEvent(); $event.stopPropagation()">
             <mat-icon>delete</mat-icon>
           </button>
         }
