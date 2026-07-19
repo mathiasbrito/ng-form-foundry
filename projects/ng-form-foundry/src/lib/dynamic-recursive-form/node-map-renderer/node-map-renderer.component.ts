@@ -5,7 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltip } from '@angular/material/tooltip';
-import { Leaf, NodeGroup, NodeMap } from '../../types/dynamic-recursive.types';
+import { Appearance, Leaf, NodeGroup, NodeMap } from '../../types/dynamic-recursive.types';
+import { inheritableAppearance, mergeAppearance } from '../../core/appearance';
 import { addMapEntry, removeMapEntry, renameMapEntry } from '../../core/dynamic-recursive-forms-builder';
 import { asFormControl, asFormGroup } from '../../core/utils';
 import { LeafRendererComponent } from '../leaf-renderer/leaf-renderer.component';
@@ -39,6 +40,8 @@ export class NodeMapRendererComponent implements OnChanges {
   @Input() nodeMap!: NodeMap;
   @Input() formGroup = new FormGroup<any>({});
   @Input() editable = true;
+  /** Field-layout appearance from the enclosing group, forwarded to group-valued entry forms. */
+  @Input() inheritedAppearance: Appearance | null = null;
 
   /** Ordered view of entry keys, kept stable across renames (`addControl` appends). */
   entryKeys: string[] = [];
@@ -48,6 +51,15 @@ export class NodeMapRendererComponent implements OnChanges {
     // to another map (e.g. the tree editor swapping documents) while this
     // component instance survives.
     if (changes['formGroup']) this.entryKeys = Object.keys(this.formGroup.controls);
+  }
+
+  /**
+   * What entry forms inherit: the enclosing group's layout with the map's own
+   * `appearance` merged over it. Counterpart of the config editor's map-entry
+   * threading in `buildChildNode`.
+   */
+  get entryAppearance(): Appearance | null {
+    return inheritableAppearance(mergeAppearance(this.inheritedAppearance, this.nodeMap?.appearance));
   }
 
   /** The value schema as a leaf (used when `value.kind === 'leaf'`). */

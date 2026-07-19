@@ -27,6 +27,210 @@ describe('DynamicRecursiveFormComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('appearance field layout', () => {
+    const fields = (): HTMLElement => fixture.nativeElement.querySelector('.fields');
+
+    function bind(appearance: NodeGroup['appearance']) {
+      const laid: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'laid',
+        root: true,
+        appearance,
+        children: {
+          a: { kind: 'leaf', type: 'string', name: 'a' },
+          on: { kind: 'leaf', type: 'boolean', name: 'on' },
+          b: { kind: 'leaf', type: 'string', name: 'b' },
+          num: { kind: 'leaf', type: 'number', name: 'num' },
+          sel: { kind: 'leaf', type: 'enum', name: 'sel', enum: ['x', 'y'] },
+          c: { kind: 'leaf', type: 'string', name: 'c' },
+        },
+      };
+      fixture.componentRef.setInput('schema', laid);
+      fixture.componentRef.setInput('formGroup', buildFormFromSchema(laid));
+      fixture.detectChanges();
+    }
+
+    it('defaults to the flex flow with no inline layout', () => {
+      bind(undefined);
+      expect(fields().classList.contains('grid-fields')).toBe(false);
+      expect(fields().style.display).toBe('');
+    });
+
+    it('grid.cols lays fields on a CSS grid with that many columns', () => {
+      bind({ grid: { cols: 2 } });
+      expect(fields().classList.contains('grid-fields')).toBe(true);
+      expect(fields().style.display).toBe('grid');
+      expect(fields().style.gridTemplateColumns).toBe('repeat(2, minmax(0px, 1fr))');
+    });
+
+    it('grid.rows alone fills top-to-bottom, adding bounded columns as needed', () => {
+      bind({ grid: { rows: 2 } });
+      expect(fields().style.gridTemplateRows).toBe('repeat(2, auto)');
+      expect(fields().style.gridAutoFlow).toBe('column');
+      expect(fields().style.gridAutoColumns).toBe('minmax(0px, 1fr)');
+    });
+
+    it('a non-positive cols counts as absent and cannot suppress the rows-only column flow', () => {
+      bind({ grid: { rows: 2, cols: -1 } });
+      expect(fields().style.gridTemplateColumns).toBe('');
+      expect(fields().style.gridAutoFlow).toBe('column');
+    });
+
+    it('grid mode does not set the per-type width variables (flex-only bounds)', () => {
+      bind({ grid: { cols: 2 }, minTextFieldWidth: '250px', maxNumberFieldWidth: '120px' });
+      expect(fields().style.getPropertyValue('--nff-min-text-field-width')).toBe('');
+      expect(fields().style.getPropertyValue('--nff-max-number-field-width')).toBe('');
+    });
+
+    it('minFieldWidth becomes as-many-as-fit equal columns of at least that width', () => {
+      bind({ minFieldWidth: '12rem' });
+      expect(fields().style.display).toBe('grid');
+      expect(fields().style.gridTemplateColumns).toBe('repeat(auto-fit, minmax(min(12rem, 100%), 1fr))');
+    });
+
+    it('grid overrides minFieldWidth', () => {
+      bind({ grid: { cols: 3 }, minFieldWidth: '12rem' });
+      expect(fields().style.gridTemplateColumns).toBe('repeat(3, minmax(0px, 1fr))');
+    });
+
+    it('booleanFields default keeps checkboxes in the field flow', () => {
+      bind({ grid: { cols: 2 } });
+      expect(fixture.nativeElement.querySelector('.boolean-fields')).toBeNull();
+      expect(fields().querySelectorAll('nff-leaf-renderer').length).toBe(6);
+    });
+
+    it('booleanFields: end gathers checkboxes into a trailing row', () => {
+      bind({ grid: { cols: 2 }, booleanFields: 'end' });
+      const booleans: HTMLElement = fixture.nativeElement.querySelector('.boolean-fields');
+      expect(booleans.querySelectorAll('nff-leaf-renderer').length).toBe(1);
+      expect(fields().querySelectorAll('nff-leaf-renderer').length).toBe(5);
+      // Trailing: the boolean row comes after the field flow in the DOM.
+      expect(fields().compareDocumentPosition(booleans) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('booleanFields: beginning puts the checkbox row before the field flow', () => {
+      bind({ booleanFields: 'beginning' });
+      const booleans: HTMLElement = fixture.nativeElement.querySelector('.boolean-fields');
+      expect(booleans.querySelectorAll('nff-leaf-renderer').length).toBe(1);
+      expect(fields().compareDocumentPosition(booleans) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    });
+
+    it('per-type flex bounds reach string and number fields via CSS custom properties', () => {
+      bind({ minTextFieldWidth: '200px', minNumberFieldWidth: '80px', maxNumberFieldWidth: '120px' });
+      // Flex flow, not a grid: the bounds shape wrapping, not tracks.
+      expect(fields().classList.contains('grid-fields')).toBe(false);
+      const text = fields().querySelector('nff-leaf-renderer.leaf-type-string')!;
+      const number = fields().querySelector('nff-leaf-renderer.leaf-type-number')!;
+      const select = fields().querySelector('nff-leaf-renderer.leaf-type-enum')!;
+      expect(getComputedStyle(text).minWidth).toBe('200px');
+      expect(getComputedStyle(number).minWidth).toBe('80px');
+      expect(getComputedStyle(number).maxWidth).toBe('120px');
+      // An enum renders as a mat-select — text-like, so it tracks the text minimum.
+      expect(getComputedStyle(select).minWidth).toBe('200px');
+    });
+
+    function bindWithSub(appearance: NodeGroup['appearance'], subAppearance?: NodeGroup['appearance']) {
+      const laid: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'laid',
+        root: true,
+        appearance,
+        children: {
+          a: { kind: 'leaf', type: 'string', name: 'a' },
+          sub: {
+            kind: 'nodeGroup',
+            name: 'sub',
+            appearance: subAppearance,
+            children: {
+              x: { kind: 'leaf', type: 'string', name: 'x' },
+              y: { kind: 'leaf', type: 'string', name: 'y' },
+            },
+          },
+        },
+      };
+      fixture.componentRef.setInput('schema', laid);
+      fixture.componentRef.setInput('formGroup', buildFormFromSchema(laid));
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('nff-dynamic-recursive-form .fields') as HTMLElement;
+    }
+
+    it('a child group inherits the parent grid when it sets no layout of its own', () => {
+      const subFields = bindWithSub({ grid: { cols: 2 } });
+      expect(subFields.style.gridTemplateColumns).toBe('repeat(2, minmax(0px, 1fr))');
+    });
+
+    it('a child group choosing its own field sizing is not overridden by the inherited grid', () => {
+      const subFields = bindWithSub({ grid: { cols: 2 } }, { minFieldWidth: '10rem' });
+      expect(subFields.style.gridTemplateColumns).toBe('repeat(auto-fit, minmax(min(10rem, 100%), 1fr))');
+    });
+
+    it("a map's own appearance reaches its group-valued entries", () => {
+      const laid: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'laid',
+        root: true,
+        children: {
+          servers: {
+            kind: 'map',
+            name: 'servers',
+            appearance: { grid: { cols: 2 } },
+            value: {
+              kind: 'nodeGroup',
+              name: 'server',
+              children: {
+                url: { kind: 'leaf', type: 'string', name: 'url' },
+                port: { kind: 'leaf', type: 'number', name: 'port' },
+              },
+            },
+          },
+        },
+      };
+      fixture.componentRef.setInput('schema', laid);
+      fixture.componentRef.setInput('formGroup', buildFormFromSchema(laid, { servers: { s1: { url: 'http://a' } } }));
+      fixture.detectChanges();
+      const entryFields: HTMLElement = fixture.nativeElement.querySelector(
+        'nff-node-map-renderer nff-dynamic-recursive-form .fields',
+      );
+      expect(entryFields.style.gridTemplateColumns).toBe('repeat(2, minmax(0px, 1fr))');
+    });
+
+    it('a stacked leaf-list repeats the parent grid tracks for its entries', () => {
+      const laid: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'laid',
+        root: true,
+        appearance: { grid: { cols: 3 } },
+        children: {
+          tags: { kind: 'leafList', name: 'tags', type: 'string', default: ['a', 'b'] },
+        },
+      };
+      fixture.componentRef.setInput('schema', laid);
+      fixture.componentRef.setInput('formGroup', buildFormFromSchema(laid, { tags: ['a', 'b'] }));
+      fixture.detectChanges();
+      const list: HTMLElement = fixture.nativeElement.querySelector('nff-leaf-list-renderer');
+      expect(list.classList.contains('stacked')).toBe(true);
+      expect(list.style.gridTemplateColumns).toBe('repeat(3, minmax(0px, 1fr))');
+    });
+
+    it('a rows-only grid does not hand its layout to a stacked leaf-list', () => {
+      const laid: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'laid',
+        root: true,
+        appearance: { grid: { rows: 2 } },
+        children: {
+          tags: { kind: 'leafList', name: 'tags', type: 'string', default: ['a', 'b'] },
+        },
+      };
+      fixture.componentRef.setInput('schema', laid);
+      fixture.componentRef.setInput('formGroup', buildFormFromSchema(laid, { tags: ['a', 'b'] }));
+      fixture.detectChanges();
+      expect(fields().classList.contains('grid-cols')).toBe(false);
+      const list: HTMLElement = fixture.nativeElement.querySelector('nff-leaf-list-renderer');
+      expect(list.style.display).toBe('');
+    });
+  });
+
   it('toggleNodePresence adds then removes a presence group control', () => {
     const ntp: NodeGroup = {
       kind: 'nodeGroup',

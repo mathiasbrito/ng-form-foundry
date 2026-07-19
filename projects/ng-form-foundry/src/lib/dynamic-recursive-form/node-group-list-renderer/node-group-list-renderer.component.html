@@ -3,6 +3,7 @@
       @for (group of formArray.controls; track $index) {
         <div class="field-item">
         <nff-dynamic-recursive-form
+          [inheritedAppearance]="inheritedAppearance"
           [schema]="nodeGroupList.type"
           [formGroup]="asFormGroup(group)"
           [title]="getTitle($index)"

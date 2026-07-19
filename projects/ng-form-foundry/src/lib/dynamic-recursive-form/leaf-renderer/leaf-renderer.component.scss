@@ -10,6 +10,21 @@
   gap: 8px;
 }
 
+// Per-type flex minimums: `appearance.minTextFieldWidth` /
+// `minNumberFieldWidth` arrive as CSS custom properties from the parent
+// form's `.fields`; without them the 10% default applies. In grid layouts
+// the parent's `.grid-fields` rule wins (higher specificity) with 0.
+// Enum fields (a mat-select) are text-like in width and follow the text
+// minimum.
+:host(.leaf-type-string),
+:host(.leaf-type-enum) {
+  min-width: var(--nff-min-text-field-width, 10%);
+}
+:host(.leaf-type-number) {
+  min-width: var(--nff-min-number-field-width, 10%);
+  max-width: var(--nff-max-number-field-width, none);
+}
+
 mat-form-field {
   flex: 1;
   min-width: 0;

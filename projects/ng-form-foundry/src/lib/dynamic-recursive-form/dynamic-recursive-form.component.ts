@@ -1,6 +1,7 @@
 import { Component, computed, forwardRef, input, model, OnInit, output } from '@angular/core';
 import { LeafRendererComponent } from './leaf-renderer/leaf-renderer.component';
-import { CASE_KEY, Leaf, NodeChoice, NodeGroup, NodeType } from '../types/dynamic-recursive.types';
+import { Appearance, CASE_KEY, Leaf, NodeChoice, NodeGroup, NodeType } from '../types/dynamic-recursive.types';
+import { inheritableAppearance, mergeAppearance } from '../core/appearance';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { NodeGroupListRendererComponent } from './node-group-list-renderer/node-group-list-renderer.component';
 import { LeafListRendererComponent } from './leaf-list-renderer/leaf-list-renderer.component';
@@ -66,9 +67,117 @@ export class DynamicRecursiveFormComponent implements OnInit {
    * menu) hand focus to the new field, like the form's own add button does.
    */
   readonly focusLeaf = input<string | null>(null);
+  /**
+   * Field-layout appearance cascading down from the parent group. The node's
+   * own `appearance` wins per property — see {@link mergeAppearance}.
+   */
+  readonly inheritedAppearance = input<Appearance | null>(null);
 
   /** True when the schema is a root group (rendered flat, without a wrapping card). */
   readonly root = computed(() => this.schema().root ?? false);
+
+  /** The node's own `appearance` with inherited layout gaps filled in. */
+  protected readonly effectiveAppearance = computed<Appearance | undefined>(() =>
+    mergeAppearance(this.inheritedAppearance(), this.schema().appearance),
+  );
+
+  /** The layout subset this node's children inherit. */
+  protected readonly childAppearance = computed<Appearance | null>(() =>
+    inheritableAppearance(this.effectiveAppearance()),
+  );
+
+  /**
+   * The per-type width bounds are flex-flow-only, and their CSS custom
+   * properties inherit into leaf-list internals that the grid-mode resets
+   * cannot reach across the encapsulation boundary — so under a grid layout
+   * the variables are simply not set at all.
+   */
+  private flexOnly<T>(value: T | undefined): T | null {
+    return this.fieldsLayout() ? null : (value ?? null);
+  }
+
+  /** `minTextFieldWidth` for the `.fields` CSS custom property, or null. */
+  protected readonly textFieldMin = computed(() => this.flexOnly(this.effectiveAppearance()?.minTextFieldWidth));
+  /** `minNumberFieldWidth` for the `.fields` CSS custom property, or null. */
+  protected readonly numberFieldMin = computed(() => this.flexOnly(this.effectiveAppearance()?.minNumberFieldWidth));
+  /** `maxNumberFieldWidth` for the `.fields` CSS custom property, or null. */
+  protected readonly numberFieldMax = computed(() => this.flexOnly(this.effectiveAppearance()?.maxNumberFieldWidth));
+
+  /**
+   * True when the active grid defines explicit column tracks. Only then can a
+   * stacked leaf-list meaningfully span the row (`grid-column: 1 / -1`
+   * resolves `-1` to line 1 without an explicit column template) and repeat
+   * the tracks for its entries; in a rows-only grid the list stays a normal
+   * auto-flowed item.
+   */
+  protected readonly gridHasCols = computed(() => !!this.fieldsLayout()?.['grid-template-columns']);
+
+  /**
+   * Inline grid styles for the `.fields` area, from `appearance`: `grid`
+   * becomes explicit tracks (`cols` fields per row; `rows` alone fills
+   * top-to-bottom, adding columns as needed) and `minFieldWidth` becomes
+   * as-many-as-fit equal columns of at least that width. `grid` wins over
+   * `minFieldWidth`; with neither, `null` keeps the stylesheet's wrapping
+   * flex flow. Non-positive `rows`/`cols` are ignored.
+   */
+  protected readonly fieldsLayout = computed<Record<string, string> | null>(() => {
+    const appearance = this.effectiveAppearance();
+    // Non-positive / non-finite counts are absent — so a bogus `cols` can't
+    // half-enter grid mode (e.g. suppress the rows-only column flow).
+    const track = (count: number | undefined) => (Number.isFinite(count) && count! > 0 ? Math.floor(count!) : 0);
+    const cols = track(appearance?.grid?.cols);
+    const rows = track(appearance?.grid?.rows);
+    if (cols > 0 || rows > 0) {
+      const layout: Record<string, string> = { display: 'grid' };
+      if (cols > 0) layout['grid-template-columns'] = `repeat(${cols}, minmax(0, 1fr))`;
+      if (rows > 0) layout['grid-template-rows'] = `repeat(${rows}, auto)`;
+      if (rows > 0 && cols === 0) {
+        layout['grid-auto-flow'] = 'column';
+        // The columns this flow creates are implicit; without a bound they
+        // size to content and can overflow — match the cols-mode tracks.
+        layout['grid-auto-columns'] = 'minmax(0, 1fr)';
+      }
+      return layout;
+    }
+    if (appearance?.minFieldWidth) {
+      // min(…, 100%) keeps a narrow container to one column instead of overflowing.
+      return {
+        display: 'grid',
+        'grid-template-columns': `repeat(auto-fit, minmax(min(${appearance.minFieldWidth}, 100%), 1fr))`,
+      };
+    }
+    return null;
+  });
+
+  /**
+   * Where `appearance.booleanFields` places the checkbox fields: `'beginning'`
+   * or `'end'` renders them grouped in the `.boolean-fields` row and excludes
+   * them from the regular field flow; `'default'` (also when the group has no
+   * boolean leaf to move) leaves the flow untouched.
+   */
+  /**
+   * Whether the gathered boolean row would show anything: a plain boolean, an
+   * enabled presence boolean, or (while editable) an absent one's add button.
+   * Keeps a read-only form from rendering an empty `.boolean-fields` div,
+   * which would add a stray container gap.
+   */
+  protected booleanAreaVisible(): boolean {
+    return Object.entries(this.schema().children ?? {}).some(
+      ([key, child]) =>
+        child.kind === 'leaf' &&
+        child.type === 'boolean' &&
+        (!child.presence || !!this.formGroup().get(key) || this.editable()),
+    );
+  }
+
+  protected readonly booleanPlacement = computed<'beginning' | 'end' | 'default'>(() => {
+    const placement = this.effectiveAppearance()?.booleanFields ?? 'default';
+    if (placement === 'default') return 'default';
+    const hasBooleans = Object.values(this.schema().children ?? {}).some(
+      (child) => child.kind === 'leaf' && child.type === 'boolean',
+    );
+    return hasBooleans ? placement : 'default';
+  });
 
   ngOnInit() {
     const initial = this.initialValue();
@@ -144,13 +253,17 @@ export class DynamicRecursiveFormComponent implements OnInit {
     return (this.formGroup().get(key) as FormGroup | null)?.get(CASE_KEY)?.value ?? null;
   }
 
-  /** A synthetic flattened NodeGroup used to render the active case's fields against the choice's FormGroup. */
+  /**
+   * A synthetic flattened NodeGroup used to render the active case's fields
+   * against the choice's FormGroup. Carries the choice's own `appearance`
+   * (grid / field-width layout) onto the case fields.
+   */
   protected caseAsGroup(choice: NodeChoice, caseName: string): NodeGroup {
     return {
       kind: 'nodeGroup',
       name: choice.name,
       children: choice.cases[caseName] ? caseFields(choice.cases[caseName]) : {},
-      appearance: { flatten: true },
+      appearance: { ...choice.appearance, flatten: true },
     };
   }
 

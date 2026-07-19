@@ -33,6 +33,18 @@
   flex: 1 1 0;
 }
 
+// Entries honor the flex flow's per-type minimums — the CSS custom properties
+// set on the parent form's `.fields` inherit down to here. Enum entries
+// (mat-selects) are text-like in width and follow the text minimum.
+:host(.list-type-string) .field-item,
+:host(.list-type-enum) .field-item {
+  min-width: var(--nff-min-text-field-width, 0px);
+}
+:host(.list-type-number) .field-item {
+  min-width: var(--nff-min-number-field-width, 0px);
+  max-width: var(--nff-max-number-field-width, none);
+}
+
 .actions {
   z-index: 100;
   display: flex;

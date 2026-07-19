@@ -49,8 +49,65 @@
   flex: 1 1 0;
 }
 
+// CSS-grid layout, active when `appearance.grid` / `minFieldWidth` set the
+// track templates inline (see `fieldsLayout`). Each field sits in a track, so
+// the flex-flow minimum widths must not fight the track width; a stacked
+// (multi-entry) array leaf spans the full row as it did in flex flow; buttons
+// keep their natural width instead of stretching to the cell.
+.fields.grid-fields {
+  // The flex-flow `flex: 1 1 0` would let ancestors stretch the grid, and any
+  // excess height lands in the row tracks (`align-content: stretch`), reading
+  // as huge gaps between field rows — size strictly to content instead.
+  flex: 0 0 auto;
+  align-content: start;
+  nff-leaf-renderer,
+  nff-leaf-list-renderer {
+    min-width: 0;
+    // The flex flow's per-type width bounds don't apply: tracks size fields.
+    max-width: none;
+  }
+  > button {
+    justify-self: start;
+  }
+}
+
+// Only a grid with explicit column tracks (`.grid-cols`) lets a stacked
+// leaf-list span the full row — without a column template `1 / -1` resolves
+// to a definite single-cell placement that jumps ahead of auto-flowed
+// siblings.
+.fields.grid-cols {
+  nff-leaf-list-renderer.stacked {
+    grid-column: 1 / -1;
+  }
+}
+
+// The root group's edit toggle row, above the field flow (see the template
+// comment): compact, left-aligned, never part of the fields' flex/grid.
+.form-toolbar {
+  display: flex;
+  align-items: center;
+}
+
 nff-leaf-list-renderer {
   flex: 1;
+}
+
+// Checkbox fields gathered by `appearance.booleanFields`: a wrapping row of
+// natural-width items — a checkbox must not claim a field-sized slot, so the
+// field flow's grow/min-width sizing is switched off here.
+.boolean-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  nff-leaf-renderer {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  .presence-leaf-add {
+    margin-top: 0;
+    align-self: center;
+  }
 }
 
 .mat-expansion-panel-content {
@@ -62,8 +119,10 @@ nff-leaf-list-renderer {
 
 .form-content {
   display: flex;
+  // Must not wrap: heights are unconstrained so a column container never
+  // actually wraps, but a wrappable one reports an inflated intrinsic height
+  // (Chrome), which a grid `.fields` inside then stretches its rows to fill.
   flex-direction: column;
-  flex-wrap: wrap;
   width: 100%;
 }
 

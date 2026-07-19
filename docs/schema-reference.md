@@ -123,6 +123,23 @@ Shared layout options, honoured by `nodeGroup`, `choice`, and `map`.
 | `flatten` | `boolean` | {sub}`ui` | Render the group's fields inline, without a surrounding card. |
 | `noBorder` | `boolean` | {sub}`ui` | Render the group card without its border. |
 | `collapsed` | `boolean` | {sub}`ui` | Start the node's section panel collapsed; the user can expand it. Ignored when `flatten` is set. |
+| `grid` | `{ rows?, cols? }` | {sub}`ui` | Lay the node's scalar fields out on a CSS grid: `cols` fields per row, filling left-to-right; `rows` alone fills top-to-bottom into that many rows, adding columns as needed. Overrides `minFieldWidth`. |
+| `minFieldWidth` | `string` | {sub}`ui` | A CSS length (e.g. `'12rem'`): each row fits as many equal-width fields as stay at least this wide and wraps the rest. Ignored when `grid` is set. With neither option, fields share one wrapping row, shrinking down to 10% of it. |
+| `booleanFields` | `'beginning' \| 'end' \| 'default'` | {sub}`ui` | Gathers boolean (checkbox) fields into a compact wrapping row of natural-width items before (`beginning`) or after (`end`) the node's other fields — a checkbox doesn't need a field-sized slot and would claim a whole `grid` track. `default` (or unset) keeps them in declaration order within the flow. |
+| `minTextFieldWidth` | `string` | {sub}`ui` | **Flex flow only.** Narrowest a text (string) field may get (a CSS length): the row wraps rather than shrink it further. Enum fields (selects) are text-like and follow it too, as do string/enum leaf-list entries. No effect under `grid`/`minFieldWidth`, whose tracks size every field alike. |
+| `minNumberFieldWidth` | `string` | {sub}`ui` | **Flex flow only.** The number-field counterpart of `minTextFieldWidth`, typically smaller. Also bounds a number leaf-list's entries. |
+| `maxNumberFieldWidth` | `string` | {sub}`ui` | **Flex flow only.** Widest a number field may grow (a CSS length) — numbers are short, so capping them keeps a lone number from stretching across space a text field could use. Also caps a number leaf-list's entries. |
+
+The field-layout options (`grid`, `minFieldWidth`, `booleanFields`,
+`minTextFieldWidth`, `minNumberFieldWidth`, `maxNumberFieldWidth`) **cascade**: a group's children —
+nested groups, list items, map entry groups, and choice cases — inherit them
+unless they set their own. A node that sets either `grid` or `minFieldWidth`
+has chosen its own field sizing and inherits neither of that pair. The chrome
+flags (`flatten`, `noBorder`, `collapsed`) never cascade. Leaf-lists follow
+the layout too: a multi-entry (stacked) list spans the full row and repeats
+the parent's grid **column** tracks so its entries align with the columns
+above (in a rows-only grid it stays a normal cell). All of this applies in
+the tree editor's detail sections as well.
 
 ## `nodeGroupList` — a list of objects
 

@@ -86,6 +86,48 @@ export type Appearance = {
   noBorder?: boolean;
   /** Start this node's section panel collapsed. Ignored when `flatten` is set. */
   collapsed?: boolean;
+  /**
+   * Fixed grid for the node's scalar fields: `cols` fields per row, filling
+   * left-to-right; `rows` alone fills top-to-bottom into that many rows,
+   * adding columns as needed. Overrides {@link minFieldWidth}.
+   */
+  grid?: { rows?: number; cols?: number };
+  /**
+   * Narrowest a scalar field may get (a CSS length, e.g. `'12rem'`): each row
+   * fits as many equal-width fields as stay at least this wide and wraps the
+   * rest. Ignored when {@link grid} is set. With neither option the fields
+   * share one wrapping row, shrinking down to 10% of it.
+   */
+  minFieldWidth?: string;
+  /**
+   * Where boolean (checkbox-rendered) fields go. A checkbox doesn't need a
+   * field-sized slot — in a {@link grid} it would claim a whole track —
+   * so `'beginning'`/`'end'` gathers them into a compact wrapping row of
+   * natural-width items before/after the node's other fields. `'default'`
+   * (or unset) keeps them in declaration order within the field flow.
+   */
+  booleanFields?: 'beginning' | 'end' | 'default';
+  /**
+   * Narrowest a **text (string) field** may get in the flex flow (a CSS
+   * length): the row wraps rather than shrink such a field further. Enum
+   * fields (rendered as a select) are text-like and follow it too, as do a
+   * string/enum leaf-list's entries. No effect under {@link grid} /
+   * {@link minFieldWidth}, whose tracks size every field alike.
+   */
+  minTextFieldWidth?: string;
+  /**
+   * Narrowest a **number field** may get in the flex flow (a CSS length) —
+   * the numeric counterpart of {@link minTextFieldWidth}, typically smaller.
+   * Also bounds a number leaf-list's entries.
+   */
+  minNumberFieldWidth?: string;
+  /**
+   * Widest a **number field** may grow in the flex flow (a CSS length):
+   * numbers are short, so capping them keeps a lone number from stretching
+   * across space a text field could use. Also caps a number leaf-list's
+   * entries. No effect under {@link grid} / {@link minFieldWidth}.
+   */
+  maxNumberFieldWidth?: string;
 }
 
 export type Leaf = LeafString | LeafNumber | LeafBoolean | LeafEnum;

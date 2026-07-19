@@ -11,7 +11,7 @@ import {
   QueryList,
   ViewChildren
 } from '@angular/core';
-import { NodeGroupList } from '../../types/dynamic-recursive.types';
+import { Appearance, NodeGroupList } from '../../types/dynamic-recursive.types';
 import { FormArray, FormGroup } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -38,6 +38,8 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
   @Input() editable: boolean = true;
   @Input() minItems: number = 1;
   @Input() maxItems: number = 1;
+  /** Field-layout appearance from the enclosing group, forwarded to every item form. */
+  @Input() inheritedAppearance: Appearance | null = null;
   @Output() message = new EventEmitter();
   // forwardRef: DynamicRecursiveFormComponent and this component import each
   // other, so the class reference is undefined when this query is evaluated at

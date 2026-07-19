@@ -1,11 +1,52 @@
+<!-- Checkbox fields grouped by appearance.booleanFields: a compact wrapping
+     row of natural-width items, rendered before or after the field flow. -->
+<ng-template #booleanArea>
+  @if (booleanAreaVisible()) {
+  <div class="boolean-fields">
+    @for (childItem of nodeGroupChildrenList; track $index) {
+      @let child = childItem.value;
+      @if (child.kind == 'leaf' && child.type == 'boolean') {
+        @if (!child.presence) {
+          <nff-leaf-renderer
+            [leaf_]=child
+            [control]=asFormControl(formGroup().get(childItem.key))
+            [removable]=false
+            [editable]="editable()"
+          />
+        } @else if (formGroup().get(childItem.key)) {
+          <nff-leaf-renderer
+            [leaf_]=child
+            [control]=asFormControl(formGroup().get(childItem.key))
+            [removable]=true
+            [editable]="editable()"
+            [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
+            (remove)="toggleLeafPresence(childItem.key, child, false)"
+          />
+        } @else if (editable()) {
+          <button
+            matButton="outlined"
+            class="presence-leaf-add"
+            (click)="toggleLeafPresence(childItem.key, child, true)"
+          >
+            <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
+          </button>
+        }
+      }
+    }
+  </div>
+  }
+</ng-template>
 @if (!root()) {
   <ng-template #formRender>
     <div class="form-content" [formGroup]="formGroup()">
       <div class="leafs-container">
-        <div class="fields">
+        @if (booleanPlacement() === 'beginning') {
+          <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
+        }
+        <div class="fields" [class.grid-fields]="!!fieldsLayout()" [class.grid-cols]="gridHasCols()" [style]="fieldsLayout()" [style.--nff-min-text-field-width]="textFieldMin()" [style.--nff-min-number-field-width]="numberFieldMin()" [style.--nff-max-number-field-width]="numberFieldMax()">
           @for (childItem of nodeGroupChildrenList; track $index) {
             @let child = childItem.value;
-            @if (child.kind == 'leaf' && !child.presence) {
+            @if (child.kind == 'leaf' && !child.presence && (booleanPlacement() === 'default' || child.type != 'boolean')) {
               <nff-leaf-renderer
                 [leaf_]=child
                 [control]=asFormControl(formGroup().get(childItem.key))
@@ -18,6 +59,7 @@
             @let child = childItem.value;
             @if (child.kind == 'leafList') {
               <nff-leaf-list-renderer
+                [layout]="gridHasCols() ? fieldsLayout() : null"
                 [leaf_]="child"
                 [editable]="editable()"
                 [formArray]="asFormArray(formGroup().get(childItem.key))"
@@ -29,7 +71,7 @@
                interrupt the field flow; an enabled one keeps its trailing spot. -->
           @for (childItem of nodeGroupChildrenList; track $index) {
             @let child = childItem.value;
-            @if (child.kind == 'leaf' && child.presence) {
+            @if (child.kind == 'leaf' && child.presence && (booleanPlacement() === 'default' || child.type != 'boolean')) {
               @if (formGroup().get(childItem.key)) {
                 <nff-leaf-renderer
                   [leaf_]=child
@@ -54,6 +96,9 @@
             }
           }
         </div>
+        @if (booleanPlacement() === 'end') {
+          <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
+        }
       </div>
       @for (childItem of nodeGroupChildrenList; track $index) {
         @let child = childItem.value;
@@ -66,6 +111,7 @@
             >{{ child.label ?? child.name }}</mat-checkbox>
             @if (formGroup().get(childItem.key)) {
               <nff-dynamic-recursive-form
+                [inheritedAppearance]="childAppearance()"
                 [schema]="flatGroup(child)"
                 [formGroup]="asFormGroup(formGroup().get(childItem.key))"
                 [editable]="editable()"
@@ -75,6 +121,7 @@
         }
         @else if (child.kind == 'nodeGroup') {
           <nff-dynamic-recursive-form
+            [inheritedAppearance]="childAppearance()"
             [schema]="child"
             [formGroup]="asFormGroup(formGroup().get(childItem.key))"
             [initialValue]="formGroup().get(childItem.key)?.value"
@@ -114,6 +161,7 @@
                 </mat-form-field>
                 @if (selectedCase) {
                   <nff-dynamic-recursive-form
+                    [inheritedAppearance]="childAppearance()"
                     [schema]="caseAsGroup(child, selectedCase)"
                     [formGroup]="choiceGroup"
                     [editable]="editable()"
@@ -125,6 +173,7 @@
         }
         @else if (child.kind == 'nodeGroupList') {
           <nff-node-group-list-renderer
+            [inheritedAppearance]="childAppearance()"
             [nodeGroupList]="child"
             [formArray]="asFormArray(formGroup().get(childItem.key))"
             [initialValue]="formGroup().get(childItem.key)?.value"
@@ -150,6 +199,7 @@
             </mat-expansion-panel-header>
             @if (mapGroup) {
               <nff-node-map-renderer
+                [inheritedAppearance]="childAppearance()"
                 [nodeMap]="child"
                 [formGroup]="mapGroup"
                 [editable]="editable()"
@@ -205,13 +255,21 @@
 } @else {
   <div class="form-content" [formGroup]="formGroup()">
     <div class="leafs-container">
-      <div class="fields">
+      <!-- The edit toggle sits on its own row: inline it would offset the
+           first field row against the rows below (flex) or claim a whole
+           track (grid). -->
+      <div class="form-toolbar">
         <button matIconButton class="small-icon-button"  [class]="{ 'edit-icon': !editable() }"  [attr.aria-label]="editable() ? 'Stop editing' : 'Edit'" (click)="editable.set(!editable())">
           <mat-icon>edit</mat-icon>
         </button>
+      </div>
+      @if (booleanPlacement() === 'beginning') {
+        <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
+      }
+      <div class="fields" [class.grid-fields]="!!fieldsLayout()" [class.grid-cols]="gridHasCols()" [style]="fieldsLayout()" [style.--nff-min-text-field-width]="textFieldMin()" [style.--nff-min-number-field-width]="numberFieldMin()" [style.--nff-max-number-field-width]="numberFieldMax()">
         @for (childItem of nodeGroupChildrenList; track $index) {
           @let child = childItem.value;
-          @if (child.kind == 'leaf' && !child.presence) {
+          @if (child.kind == 'leaf' && !child.presence && (booleanPlacement() === 'default' || child.type != 'boolean')) {
             <nff-leaf-renderer
               [leaf_]=child
               [control]=asFormControl(formGroup().get(childItem.key))
@@ -224,6 +282,7 @@
           @let child = childItem.value;
           @if (child.kind == 'leafList') {
             <nff-leaf-list-renderer
+              [layout]="gridHasCols() ? fieldsLayout() : null"
               [leaf_]="child"
               [editable]="editable()"
               [formArray]="asFormArray(formGroup().get(childItem.key))"
@@ -235,7 +294,7 @@
              interrupt the field flow; an enabled one keeps its trailing spot. -->
         @for (childItem of nodeGroupChildrenList; track $index) {
           @let child = childItem.value;
-          @if (child.kind == 'leaf' && child.presence) {
+          @if (child.kind == 'leaf' && child.presence && (booleanPlacement() === 'default' || child.type != 'boolean')) {
             @if (formGroup().get(childItem.key)) {
               <nff-leaf-renderer
                 [leaf_]=child
@@ -257,6 +316,9 @@
           }
         }
       </div>
+      @if (booleanPlacement() === 'end') {
+        <ng-container *ngTemplateOutlet="booleanArea"></ng-container>
+      }
     </div>
     @for (childItem of nodeGroupChildrenList; track $index) {
       @let child = childItem.value;
@@ -293,6 +355,7 @@
               </mat-form-field>
               @if (selectedCase) {
                 <nff-dynamic-recursive-form
+                  [inheritedAppearance]="childAppearance()"
                   [schema]="caseAsGroup(child, selectedCase)"
                   [formGroup]="choiceGroup"
                   [editable]="editable()"
@@ -321,6 +384,7 @@
           </mat-expansion-panel-header>
           @if (mapGroup) {
             <nff-node-map-renderer
+              [inheritedAppearance]="childAppearance()"
               [nodeMap]="child"
               [formGroup]="mapGroup"
               [editable]="editable()"
@@ -336,6 +400,7 @@
             </mat-panel-title>
           </mat-expansion-panel-header>
           <nff-node-group-list-renderer
+            [inheritedAppearance]="childAppearance()"
             [nodeGroupList]="child"
             [formArray]="asFormArray(formGroup().get(childItem.key))"
             [initialValue]="formGroup().get(childItem.key)?.value"
@@ -357,6 +422,7 @@
           </mat-expansion-panel-header>
           @if (formGroup().get(childItem.key)) {
             <nff-dynamic-recursive-form
+              [inheritedAppearance]="childAppearance()"
               [schema]="flatGroup(child)"
               [formGroup]="asFormGroup(formGroup().get(childItem.key))"
               [editable]="editable()"
@@ -366,6 +432,7 @@
       }
       @else if (child.kind == 'nodeGroup') {
         <nff-dynamic-recursive-form
+          [inheritedAppearance]="childAppearance()"
           [schema]="child"
           [formGroup]="asFormGroup(formGroup().get(childItem.key))"
           [initialValue]="formGroup().get(childItem.key)?.value"

@@ -9,7 +9,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltip } from '@angular/material/tooltip';
-import { CASE_KEY, NodeChoice, NodeGroup, NodeMap, NodeType } from '../types/dynamic-recursive.types';
+import { Appearance, CASE_KEY, NodeChoice, NodeGroup, NodeMap, NodeType } from '../types/dynamic-recursive.types';
+import { inheritableAppearance, mergeAppearance } from '../core/appearance';
 import {
   addMapEntry,
   buildControl,
@@ -91,6 +92,8 @@ interface TreeNode {
   optionals?: OptionalEntry[];
   /** Present on a present optional child node: drives the row's remove control. */
   presenceRemovable?: { key: string };
+  /** Field-layout appearance inherited from ancestor groups, for the node's detail-section form. */
+  inherited?: Appearance | null;
   /** Present on a choice node: the choice schema and its FormGroup (holding `__case` + the active case's fields). */
   choice?: { schema: NodeChoice; group: FormGroup };
   /** Present on a map node. `complex` maps expand entries as child nodes. */
@@ -712,7 +715,9 @@ export class ConfigEditorComponent implements OnDestroy {
   /**
    * The node's own fields as a flattened schema: leaf and leafList children
    * only. Complex children are rendered as sections of their own, so the
-   * embedded form never draws nested section chrome. Null when there are none.
+   * embedded form never draws nested section chrome. The node's `appearance`
+   * (grid / field-width layout) carries into the slice. Null when there are
+   * no own fields.
    */
   private leafOnly(schema: NodeGroup): NodeGroup | null {
     const children: Record<string, NodeType> = {};
@@ -721,14 +726,23 @@ export class ConfigEditorComponent implements OnDestroy {
       if (child.kind === 'leaf' || child.kind === 'leafList') children[key] = child;
     }
     if (!Object.keys(children).length) return null;
-    return { ...schema, root: false, children, appearance: { flatten: true } };
+    return { ...schema, root: false, children, appearance: { ...schema.appearance, flatten: true } };
   }
 
   // --- tree construction -----------------------------------------------------
 
-  private buildTree(schema: NodeGroup, group: FormGroup, label: string, path: string): TreeNode {
+  private buildTree(
+    schema: NodeGroup,
+    group: FormGroup,
+    label: string,
+    path: string,
+    inherited: Appearance | null = null,
+  ): TreeNode {
     const children: TreeNode[] = [];
     const optionals: OptionalEntry[] = [];
+    // What this node's descendants inherit: the ancestors' layout with the
+    // node's own appearance merged over it.
+    const childInherited = inheritableAppearance(mergeAppearance(inherited, schema.appearance));
 
     for (const key of Object.keys(schema.children)) {
       const child = schema.children[key];
@@ -744,13 +758,13 @@ export class ConfigEditorComponent implements OnDestroy {
         optionals.push({ key, schema: child, label: this.labelOf(child, key) });
         continue;
       }
-      const node = this.buildChildNode(child, group.get(key), this.labelOf(child, key), this.join(path, key));
+      const node = this.buildChildNode(child, group.get(key), this.labelOf(child, key), this.join(path, key), childInherited);
       if (!node) continue;
       if (presence) node.presenceRemovable = { key };
       children.push(node);
     }
 
-    const node: TreeNode = { id: path, label, children, group, schema };
+    const node: TreeNode = { id: path, label, children, group, schema, inherited };
     if (optionals.length) node.optionals = optionals;
     return node;
   }
@@ -761,9 +775,10 @@ export class ConfigEditorComponent implements OnDestroy {
     control: AbstractControl | null,
     label: string,
     path: string,
+    inherited: Appearance | null = null,
   ): TreeNode | null {
     if (schema.kind === 'nodeGroup') {
-      return control instanceof FormGroup ? this.buildTree(schema, control, label, path) : null;
+      return control instanceof FormGroup ? this.buildTree(schema, control, label, path, inherited) : null;
     }
     if (schema.kind === 'nodeGroupList') {
       const array = control;
@@ -775,7 +790,7 @@ export class ConfigEditorComponent implements OnDestroy {
               .map((item, i) => {
                 // Just "#n": the item sits under its list node, so repeating the
                 // item name (e.g. "Interface #1") only echoes the parent.
-                const node = this.buildTree(schema.type, item, `#${i + 1}`, this.join(path, String(i)));
+                const node = this.buildTree(schema.type, item, `#${i + 1}`, this.join(path, String(i)), inherited);
                 node.removable = { index: i };
                 return node;
               })
@@ -796,8 +811,8 @@ export class ConfigEditorComponent implements OnDestroy {
       const active = control.get(CASE_KEY)?.value as string | null;
       const node =
         active && schema.cases[active]
-          ? this.buildTree(this.caseAsGroup(schema, active), control, label, path)
-          : ({ id: path, label, children: [], group: control } as TreeNode);
+          ? this.buildTree(this.caseAsGroup(schema, active), control, label, path, inherited)
+          : ({ id: path, label, children: [], group: control, inherited } as TreeNode);
       node.schema = undefined;
       node.choice = { schema, group: control };
       return node;
@@ -814,7 +829,14 @@ export class ConfigEditorComponent implements OnDestroy {
             .map((key) => {
               // Index access, not .get(): entry keys are arbitrary runtime data
               // and .get() would split a key like '10.0.0.1' into a dotted path.
-              const entryNode = this.buildChildNode(schema.value, control.controls[key], key, this.join(path, key));
+              // Entries inherit through the map node's own appearance.
+              const entryNode = this.buildChildNode(
+                schema.value,
+                control.controls[key],
+                key,
+                this.join(path, key),
+                inheritableAppearance(mergeAppearance(inherited, schema.appearance)),
+              );
               if (entryNode) {
                 entryNode.mapEntry = { mapGroup: control, mapSchema: schema, key };
               }
@@ -833,12 +855,17 @@ export class ConfigEditorComponent implements OnDestroy {
     return null;
   }
 
-  /** Synthetic group over a case's normalized fields, so a case body builds like any group. */
+  /**
+   * Synthetic group over a case's normalized fields, so a case body builds
+   * like any group. Carries the choice's own `appearance` so its layout
+   * reaches the case fields.
+   */
   private caseAsGroup(choice: NodeChoice, caseName: string): NodeGroup {
     return {
       kind: 'nodeGroup',
       name: choice.name,
       children: choice.cases[caseName] ? caseFields(choice.cases[caseName]) : {},
+      ...(choice.appearance ? { appearance: choice.appearance } : {}),
     };
   }
 

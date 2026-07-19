@@ -26,6 +26,10 @@ import { LeafEnumRendererComponent } from '../leaf-enum-renderer/leaf-enum-rende
   ],
   templateUrl: './leaf-renderer.component.html',
   styleUrl: './leaf-renderer.component.scss',
+  // The leaf's value type as a host class, so the type-scoped flex minimums
+  // (`--nff-min-text-field-width` / `--nff-min-number-field-width`) can size
+  // string and number fields differently — see the :host rules in the styles.
+  host: { '[class]': '"leaf-type-" + (leaf_?.type ?? "unknown")' },
 })
 export class LeafRendererComponent implements AfterViewInit {
   @Input() leaf_!: Leaf | AnonLeaf;

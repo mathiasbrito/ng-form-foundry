@@ -27,6 +27,13 @@ export class LeafListRendererComponent implements OnInit {
   @Input() formArray!: any;
   @Input() editable: boolean = true;
   @Input() minItems: number = 1;
+  /**
+   * The parent group's grid layout (its `fieldsLayout` styles). A stacked list
+   * spans the parent's full row, so its entries repeat the same tracks and
+   * stay aligned with the columns above; an inline (single-entry) list sits in
+   * one track and ignores it.
+   */
+  @Input() layout: Record<string, string> | null = null;
   @Output() message = new EventEmitter();
 
   matDialog = inject(MatDialog);
@@ -40,6 +47,18 @@ export class LeafListRendererComponent implements OnInit {
   @HostBinding('class.stacked')
   get stacked(): boolean {
     return (this.formArray?.length ?? 0) > 1;
+  }
+
+  /** The entries' value type as a host class, so type-scoped min-widths (`--nff-min-*-field-width`) can target them. */
+  @HostBinding('class')
+  get typeClass(): string {
+    return `list-type-${this.leaf_?.type ?? 'unknown'}`;
+  }
+
+  /** Applies {@link layout} to the host (the entries' container) while stacked. */
+  @HostBinding('style')
+  get hostLayout(): Record<string, string> | null {
+    return this.stacked ? this.layout : null;
   }
 
   ngOnInit() {
