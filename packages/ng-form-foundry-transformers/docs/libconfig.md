@@ -38,7 +38,8 @@ Setting names start with a letter or `*` and may contain letters, digits,
   homogeneous groups; the heterogeneous capability is rarely used.
 - **Scalars**:
   - *int* — decimal (`42`, `-7`), hex (`0x1A`), and the newer binary/octal
-    forms (`0b1010`, `0o17`);
+    forms (`0b1010`, `0o17`/`0q17`); a sign is legal on decimal only — the C
+    scanner has no sign on hex/binary/octal literals;
   - *int64* — an `L` or `LL` suffix (`9223372036854775807L`); large literals
     without a suffix auto-promote in libconfig ≥ 1.7;
   - *float* — `3.14`, `.5`, `5.`, `1.5e-3`;
@@ -62,12 +63,12 @@ that.
 ## The parser
 
 `parser.ts` is a hand-rolled, single-pass recursive-descent parser
-(~370 lines). It is implemented independently from the published libconfig
+(~400 lines). It is implemented independently from the published libconfig
 manual — not from the C library's `grammar.y`/`scanner.l` — which keeps this
 Apache-2.0 package clear of the C library's LGPL. There is no separate token
 stream; the parser scans the source directly with anchored regular
 expressions (`NAME_RE`, `INT_RE`, `FLOAT_RE`, `BOOL_RE`) and a `skipTrivia()`
-that consumes whitespace and all three comment forms.
+that consumes whitespace, all three comment forms, and `@include` lines.
 
 Two properties make it "lossless" for our purposes without modeling trivia:
 
@@ -79,10 +80,11 @@ Two properties make it "lossless" for our purposes without modeling trivia:
    unedited byte — comments, indentation, `=` vs `:`, terminator style,
    delimiter choice — survives verbatim by construction.
 2. **Every scalar carries emission metadata.** An integer records its
-   `IntMeta { radix, suffix, digits }` (radix 2/8/10/16, the verbatim
-   `L`/`LL` suffix, and the digit count for width-preserving hex edits). A
-   float is typed `float` even when its value is integral. This is what lets
-   an edit re-emit in the source's own style.
+   `IntMeta { radix, suffix, digits, prefix }` (radix 2/8/10/16, the verbatim
+   `L`/`LL` suffix, the digit count for width-preserving edits, and the radix
+   prefix as written — `0x`, `0B`, `0q`, …). A float is typed `float` even
+   when its value is integral. This is what lets an edit re-emit in the
+   source's own style.
 
 Scalar disambiguation runs bool → string → **float → int** (float first, so
 `1.5` does not lex as int `1` followed by junk). Integer literals are parsed
@@ -94,10 +96,14 @@ decimal-digit **string** — the same strategy the YAML/JSON transformers use
 The parser enforces what libconfig itself enforces, with positioned
 `LibconfigParseError`s (line and column): duplicate setting names in one
 group, non-scalar or mixed-type array elements, unterminated strings and
-block comments. `@include` is **rejected by default** — a parsed form would
-silently show less than the C reader sees; with `{ includes: 'opaque' }` the
-directive line is skipped (it survives verbatim in the source, and the
-included settings stay invisible to the form).
+block comments, signed non-decimal literals, and `\x` escapes without two hex
+digits. Nesting deeper than 256 levels is a parse error too, so a hostile
+document fails cleanly instead of exhausting the JS stack. `@include` is
+handled as trivia — legal anywhere the C scanner accepts it, list positions
+included — and **rejected by default**: a parsed form would silently show
+less than the C reader sees; with `{ includes: 'opaque' }` the directive line
+is skipped (it survives verbatim in the source, and the included settings
+stay invisible to the form).
 
 ## Forward: how ng-form-foundry consumes the output
 
@@ -173,8 +179,10 @@ Per shape:
 - **Scalar** — if the value differs, splice a replacement literal formatted
   by the node's own metadata:
   - a *float* slot always emits a float: `21` → `21.0`;
-  - an *int* slot re-emits in its source radix, hex zero-padded to the
-    original digit width (`0x0A` edited to 11 → `0x0B`), suffix appended;
+  - an *int* slot re-emits in its source radix and prefix spelling,
+    zero-padded to the original digit width (`0x0A` edited to 11 → `0x0B`),
+    suffix appended — except a **negative** edit, which emits decimal,
+    because the C scanner takes no sign on a hex/binary/octal literal;
   - the *int64 string carry* validates the incoming digits (junk throws —
     silent corruption is never an option) and re-appends the source suffix;
   - *bool* edits emit lowercase (readers are case-insensitive);
@@ -196,7 +204,8 @@ Per shape:
   simply never part of any edit.
 - **Read-only carries** (empty/heterogeneous collections in inferred mode)
   round-trip verbatim: the extracted value equals the raw source slice, so
-  the comparison finds nothing to change.
+  the comparison finds nothing to change. A carry string that comes back
+  *modified* throws — it is never spliced and never silently dropped.
 
 Only two situations synthesize text with no source anchor, via
 `serialize()`: a **newly added setting** and a **shape change** (the value's
@@ -205,7 +214,9 @@ integral numbers emit as ints, fractional as floats, arrays emit `( … )` when
 any element is a group or nested collection (libconfig arrays hold scalars
 only) and `[ … ]` otherwise — and any comments inside a regenerated subtree
 are lost, the same policy the YAML transformer applies when it must create
-fresh nodes.
+fresh nodes. `null`/`undefined` have no libconfig representation: a nulled
+existing setting throws, and a null key among additions is skipped rather
+than written.
 
 ## Guarantees and beta limitations
 

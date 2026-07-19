@@ -224,3 +224,69 @@ test('registers in the catalog under libconfig', () => {
   const registry = new TransformerRegistry().register(libconfigTransformer);
   assert.equal(registry.require('libconfig'), libconfigTransformer);
 });
+
+// —— battle-test regressions (radix conformance, fuzz, heterogeneous lists) ——
+
+test('0q/0Q octal parses like the C scanner and edits keep the spelling', () => {
+  const { schema, binding, initialValue } = libconfigTransformer.toSchema('perms = 0q17;\nmask = 0Q7L;\n');
+  assert.equal((schema.children['perms'] as any).integer, true);
+  assert.equal((initialValue as any).perms, 15);
+  assert.equal((initialValue as any).mask, 7);
+  const out = libconfigTransformer.toSource({ perms: 9, mask: 7 }, binding);
+  assert.equal(out, 'perms = 0q11;\nmask = 0Q7L;\n');
+});
+
+test('a sign on a hex/binary/octal literal is a parse error, never a raw SyntaxError', () => {
+  for (const src of ['x = -0x10;', 'x = +0b101;', 'x = -0q17;', 'x = [1, -0x2];']) {
+    assert.throws(() => parseLibconfig(src), LibconfigParseError);
+  }
+});
+
+test('a negative edit into a hex slot emits decimal: the C scanner takes no signed hex', () => {
+  const { binding } = libconfigTransformer.toSchema('h = 0xFF;\nb = 0b0011L;\n');
+  assert.equal(libconfigTransformer.toSource({ h: -26, b: -3 }, binding), 'h = -26;\nb = -3L;\n');
+});
+
+test('a collection mixing safe and beyond-2^53 ints survives untouched and edits exactly', () => {
+  const src = 'ids = [0x01, 9007199254740993L];\n';
+  const { binding, initialValue } = libconfigTransformer.toSchema(src);
+  assert.deepEqual(plain((initialValue as any).ids), ['1', '9007199254740993']);
+  // Untouched write-back is byte-exact — the digit-string carry is not an edit.
+  assert.equal(libconfigTransformer.toSource(plain(initialValue) as any, binding), src);
+  // An edited safe element goes back in its own literal style, not as a string.
+  const out = libconfigTransformer.toSource({ ids: ['2', '9007199254740993'] }, binding);
+  assert.equal(out, 'ids = [0x02, 9007199254740993L];\n');
+});
+
+test('null never writes a value: existing settings refuse it, added keys skip it', () => {
+  const { binding } = libconfigTransformer.toSchema('x = 5;\n');
+  assert.throws(() => libconfigTransformer.toSource({ x: null } as any, binding), /no libconfig representation/);
+  assert.equal(libconfigTransformer.toSource({ x: 5, y: null } as any, binding), 'x = 5;\n');
+});
+
+test('hostile nesting fails with a parse error instead of a stack overflow', () => {
+  const nested = (n: number) => `a = ${'('.repeat(n)}1${')'.repeat(n)};`;
+  assert.equal(parseLibconfig(nested(50)).settings.length, 1);
+  assert.throws(() => parseLibconfig(nested(300)), /nesting deeper than 256/);
+});
+
+test('\\x escapes need two hex digits, like the C scanner', () => {
+  assert.equal((libconfigTransformer.toSchema('s = "a\\x41b";\n').initialValue as any).s, 'aAb');
+  assert.throws(() => parseLibconfig('s = "a\\xZZ";\n'), /two hex digits/);
+  assert.throws(() => parseLibconfig('s = "a\\x4";\n'), LibconfigParseError);
+});
+
+test('@include is trivia anywhere, value positions included (opaque mode)', () => {
+  const src = 'l = ( 1,\n@include "more.cfg"\n2 );\n';
+  const { binding, initialValue } = libconfigTransformer.toSchema(src, { includes: 'opaque' });
+  assert.deepEqual(plain((initialValue as any).l), [1, 2]);
+  assert.equal(libconfigTransformer.toSource(plain(initialValue) as any, binding), src);
+  assert.throws(() => parseLibconfig(src), /'@include' is not supported/);
+});
+
+test('an edited raw carry throws instead of splicing or silently dropping', () => {
+  const het = libconfigTransformer.toSchema('l = ( 1, "x", true );\n');
+  assert.throws(() => libconfigTransformer.toSource({ l: '( 2, "y", false )' }, het.binding), /read-only/);
+  const empty = libconfigTransformer.toSchema('e = [ ];\n');
+  assert.throws(() => libconfigTransformer.toSource({ e: 'nonsense' }, empty.binding), /read-only/);
+});

@@ -229,16 +229,22 @@ against the original file before deploying a write-back.
 The revert splices edited value spans into the original text, so comments and
 formatting survive verbatim on every unedited byte, and emission is
 **type-preserving** — libconfig is statically typed, so a float slot keeps its
-`.0`, hex re-emits in hex at its original width, an int64 keeps its `L`
-suffix, and integers beyond 2^53 travel as exact decimal strings.
+`.0`, a hex/binary/octal literal (`0x`, `0b`, `0o`/`0q`) re-emits in its own
+radix, prefix spelling, and digit width, an int64 keeps its `L` suffix, and
+integers beyond 2^53 travel as exact decimal strings. A negative edit into a
+non-decimal slot emits decimal, because the C scanner accepts no sign on
+hex/binary/octal literals.
 
 Without a JSON Schema the form is inferred from the document's typed literals
 (a list of groups infers the union of entry keys; keys missing from some
 entries become presence toggles). Empty and heterogeneous collections are then
-**read-only** — no honest element type exists — and become editable when a
-JSON Schema types them (`{ schema, schemaOptions? }`). `@include` is rejected
-by default; `{ includes: 'opaque' }` keeps the directive line verbatim and
-edits only the file's own settings.
+**read-only** — no honest element type exists. A JSON Schema
+(`{ schema, schemaOptions? }`) makes typed **empty** collections editable;
+heterogeneous lists stay read-only, and an edited carry string is rejected
+with an error rather than spliced. `@include` is rejected by default;
+`{ includes: 'opaque' }` keeps the directive line verbatim (anywhere the C
+scanner allows it, list positions included) and edits only the file's own
+settings.
 
 The format, the parser design, and the full round-trip semantics are described
 in the package's

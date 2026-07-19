@@ -13,9 +13,13 @@
  * (https://hyperrealm.github.io/libconfig/libconfig_manual.html); the grammar
  * covers: groups `{}`, arrays `[]` (homogeneous scalars), lists `()`
  * (heterogeneous), settings `name = value;` / `name : value` with an optional
- * `;`/`,` terminator, int (decimal/hex/binary/octal), int64 (`L`/`LL`
+ * `;`/`,` terminator, int (decimal, `0x` hex, `0b` binary, `0o`/`0q` octal —
+ * a sign is legal on decimal only, as in the C scanner), int64 (`L`/`LL`
  * suffix), float, bool (case-insensitive), strings with escapes and adjacent
- * literal concatenation, `#`/`//`/`/* *​/` comments, and `@include` lines.
+ * literal concatenation, `#`/`//`/`/* *​/` comments, and `@include` lines
+ * (handled as trivia, so they are legal anywhere the C scanner accepts them).
+ * Nesting is capped at {@link MAX_DEPTH} levels so hostile documents fail
+ * with a parse error instead of exhausting the JS stack.
  */
 
 /** Half-open source range of a node, in code-unit offsets. */
@@ -31,6 +35,8 @@ export interface IntMeta {
   suffix: string;
   /** Hex/binary/octal digit count of the literal, for width-preserving edits. */
   digits: number;
+  /** Radix prefix verbatim (`0x`, `0B`, `0q`, …), empty for decimal. */
+  prefix: string;
 }
 
 export type CfgValue = CfgScalar | CfgGroup | CfgArray | CfgList;
@@ -101,7 +107,8 @@ export class LibconfigParseError extends Error {
 }
 
 const NAME_RE = /^[A-Za-z*][-A-Za-z0-9_*.]*/;
-const INT_RE = /^[-+]?(0[xX][0-9A-Fa-f]+|0[bB][01]+|0[oO][0-7]+|[0-9]+)(LL?)?/;
+// Like the C scanner: octal is `0o` or `0q`, and only decimal takes a sign.
+const INT_RE = /^(0[xX][0-9A-Fa-f]+|0[bB][01]+|0[oOqQ][0-7]+|[-+]?[0-9]+)(LL?)?/;
 const FLOAT_RE = /^[-+]?(([0-9]*\.[0-9]+|[0-9]+\.[0-9]*)([eE][-+]?[0-9]+)?|[0-9]+[eE][-+]?[0-9]+)/;
 const BOOL_RE = /^(true|false)(?![-A-Za-z0-9_*.])/i;
 
@@ -110,8 +117,12 @@ export function parseLibconfig(source: string, options?: ParseOptions): CfgGroup
   return new Parser(source, options?.includes ?? 'reject').parseRoot();
 }
 
+/** Deepest legal value nesting — far past real configs, well inside JS stack. */
+const MAX_DEPTH = 256;
+
 class Parser {
   private pos = 0;
+  private depth = 0;
 
   constructor(
     private readonly src: string,
@@ -138,10 +149,6 @@ class Parser {
         return settings;
       }
       if (closer && this.src[this.pos] === closer) return settings;
-      if (this.src[this.pos] === '@') {
-        this.handleInclude();
-        continue;
-      }
       settings.push(this.parseSetting(settings));
     }
   }
@@ -166,11 +173,16 @@ class Parser {
   }
 
   private parseValue(): CfgValue {
-    const c = this.src[this.pos];
-    if (c === '{') return this.parseGroup();
-    if (c === '[') return this.parseCollection('[', ']', 'array') as CfgArray;
-    if (c === '(') return this.parseCollection('(', ')', 'list') as CfgList;
-    return this.parseScalar();
+    if (++this.depth > MAX_DEPTH) this.fail(`nesting deeper than ${MAX_DEPTH} levels`);
+    try {
+      const c = this.src[this.pos];
+      if (c === '{') return this.parseGroup();
+      if (c === '[') return this.parseCollection('[', ']', 'array') as CfgArray;
+      if (c === '(') return this.parseCollection('(', ')', 'list') as CfgList;
+      return this.parseScalar();
+    } finally {
+      this.depth--;
+    }
   }
 
   private parseGroup(): CfgGroup {
@@ -252,16 +264,16 @@ class Parser {
   }
 
   private intScalar(lexeme: string, span: Span): CfgScalar {
-    const sign = lexeme[0] === '-' ? '-' : '';
-    const unsigned = lexeme.replace(/^[-+]/, '');
-    const suffix = /LL?$/i.exec(unsigned)?.[0] ?? '';
-    const body = suffix ? unsigned.slice(0, -suffix.length) : unsigned;
-    const prefix = body.slice(0, 2).toLowerCase();
-    const radix: IntMeta['radix'] =
-      prefix === '0x' ? 16 : prefix === '0b' ? 2 : prefix === '0o' ? 8 : 10;
-    const digits = radix === 10 ? body : body.slice(2);
-    const big = BigInt(sign + (radix === 10 ? digits : body.slice(0, 2) + digits));
-    const meta: IntMeta = { radix, suffix, digits: digits.length };
+    const suffix = /LL?$/i.exec(lexeme)?.[0] ?? '';
+    const body = suffix ? lexeme.slice(0, -suffix.length) : lexeme;
+    const prefix = /^0[xXbBoOqQ]/.test(body) ? body.slice(0, 2) : '';
+    const p = prefix.toLowerCase();
+    const radix: IntMeta['radix'] = p === '0x' ? 16 : p === '0b' ? 2 : p === '' ? 10 : 8;
+    const digits = prefix ? body.slice(2) : body.replace(/^[-+]/, '');
+    const sign = body[0] === '-' ? '-' : '';
+    // `0q`/`0O` normalize to a prefix BigInt understands; decimal keeps its sign.
+    const big = prefix ? BigInt((radix === 8 ? '0o' : p) + digits) : BigInt(sign + digits);
+    const meta: IntMeta = { radix, suffix, digits: digits.length, prefix };
     // Values past 2^53 ride as exact decimal strings (the core bigint strategy);
     // the suffix and radix stay in the metadata for the write-back.
     const safe = big >= BigInt(Number.MIN_SAFE_INTEGER) && big <= BigInt(Number.MAX_SAFE_INTEGER);
@@ -302,8 +314,10 @@ class Parser {
       }
       if (c === '\\') {
         const esc = this.src[this.pos + 1];
-        if (esc === 'x') {
-          out += String.fromCharCode(parseInt(this.src.slice(this.pos + 2, this.pos + 4), 16));
+        if (esc === 'x' || esc === 'X') {
+          const hex = this.src.slice(this.pos + 2, this.pos + 4);
+          if (!/^[0-9A-Fa-f]{2}$/.test(hex)) this.fail('\\x escape needs two hex digits');
+          out += String.fromCharCode(parseInt(hex, 16));
           this.pos += 4;
           continue;
         }
@@ -330,12 +344,18 @@ class Parser {
     this.pos = lineEnd === -1 ? this.src.length : lineEnd + 1;
   }
 
-  /** Skip whitespace and all three comment forms. */
+  /** Skip whitespace, all three comment forms, and `@include` lines. */
   private skipTrivia(): void {
     for (;;) {
       const c = this.src[this.pos];
       if (c === ' ' || c === '\t' || c === '\r' || c === '\n') {
         this.pos++;
+        continue;
+      }
+      // The C scanner handles `@include` at token level, so it is legal in any
+      // trivia position (even between list elements), not just between settings.
+      if (c === '@' && this.src.startsWith('@include', this.pos)) {
+        this.handleInclude();
         continue;
       }
       if (c === '#' || (c === '/' && this.src[this.pos + 1] === '/')) {

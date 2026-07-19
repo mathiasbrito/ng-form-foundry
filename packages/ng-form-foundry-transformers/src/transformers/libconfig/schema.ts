@@ -165,12 +165,16 @@ export function listShape(list: CfgList): ListShape {
 
 /** Read-only leaf carrying the collection's verbatim source text. */
 function rawLeaf(name: string, why: string): Leaf {
+  const hint =
+    why === 'empty collection'
+      ? 'Provide a JSON Schema to type its elements and make it editable.'
+      : 'It stays read-only: no single element type exists to edit by.';
   return {
     kind: 'leaf',
     name,
     type: 'string',
     readOnly: true,
-    description: `Shown verbatim (${why}): libconfig gives no element type to edit by. Provide a JSON Schema to make it editable.`,
+    description: `Shown verbatim (${why}). ${hint}`,
   };
 }
 

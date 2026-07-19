@@ -41,7 +41,8 @@ function patchGroup(src: string, group: CfgGroup, value: Record<string, unknown>
     patchValue(src, setting.value, value[setting.name], edits);
   }
   const known = new Set(group.settings.map((s) => s.name));
-  const added = Object.keys(value ?? {}).filter((k) => !known.has(k));
+  // null/undefined means "absent", never a value: such keys are not added.
+  const added = Object.keys(value ?? {}).filter((k) => !known.has(k) && value[k] != null);
   if (added.length) {
     edits.push(insertionEdit(src, group, added.map((k) => `${k} = ${serialize(value[k], '')};`)));
   }
@@ -51,6 +52,9 @@ function patchValue(src: string, node: CfgValue, value: unknown, edits: Edit[]):
   switch (node.kind) {
     case 'scalar': {
       if (node.value === value) return;
+      // The collection-wide bigint carry hands safe elements back as digit
+      // strings; a string spelling the same value is not an edit.
+      if (typeof value === 'string' && typeof node.value === 'number' && value === String(node.value)) return;
       edits.push({ ...node.span, text: emitScalar(value, node) });
       return;
     }
@@ -61,8 +65,12 @@ function patchValue(src: string, node: CfgValue, value: unknown, edits: Edit[]):
     }
     case 'array': {
       if (Array.isArray(value)) return patchElements(src, node.elements, node, value, edits);
-      // The read-only raw carry of an untyped empty array: leave verbatim.
-      if (typeof value === 'string' && value === raw(node, src)) return;
+      // A string here is the read-only raw carry of an untyped empty array:
+      // unchanged it stays verbatim, edited it is an error, never a splice.
+      if (typeof value === 'string') {
+        if (value === raw(node, src)) return;
+        throw new Error('this collection is read-only (no element type to edit by): the edited text was not applied');
+      }
       edits.push({ ...node.span, text: serialize(value, '') });
       return;
     }
@@ -81,10 +89,14 @@ function patchValue(src: string, node: CfgValue, value: unknown, edits: Edit[]):
         }
         return;
       }
-      // Heterogeneous (read-only raw carry) or unchanged empty: only replace on
-      // a genuine mismatch with a non-raw value shape — otherwise leave verbatim.
-      if (typeof value === 'string' && value === raw(node, src)) return;
-      if (value !== undefined && typeof value !== 'string') {
+      // Heterogeneous (read-only raw carry) or unchanged empty: the carry
+      // stays verbatim, an edited carry is an error, a non-string value is a
+      // genuine shape change and regenerates.
+      if (typeof value === 'string') {
+        if (value === raw(node, src)) return;
+        throw new Error('this list is read-only (heterogeneous): the edited text was not applied');
+      }
+      if (value !== undefined) {
         edits.push({ ...node.span, text: serialize(value, '') });
       }
       return;
@@ -161,11 +173,15 @@ function emitScalar(value: unknown, node: CfgScalar): string {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
 
   if (typeof value === 'string') {
-    // The int64 string carry: exact digits back, with the original suffix.
-    if (node.type === 'int64' && typeof node.value === 'string') {
+    if (node.type === 'int' || node.type === 'int64') {
       if (!/^[-+]?[0-9]+$/.test(value)) {
-        throw new Error(`'${value}' is not an integer: this setting carries a 64-bit integer as a string`);
+        throw new Error(`'${value}' is not an integer: this setting is integer-typed`);
       }
+      // The int64 string carry: exact digits back, with the original suffix.
+      if (typeof node.value === 'string') return value + (node.int?.suffix ?? '');
+      // A safe element of a carried collection: back to its own literal style.
+      const n = Number(value);
+      if (Number.isSafeInteger(n)) return intLiteral(n, node.int);
       return value + (node.int?.suffix ?? '');
     }
     return quote(value);
@@ -182,12 +198,16 @@ function emitScalar(value: unknown, node: CfgScalar): string {
   return serialize(value, '');
 }
 
-/** Integer in the source's radix and width, suffix preserved. */
+/**
+ * Integer in the source's radix, width, and prefix spelling, suffix preserved.
+ * Negatives always emit decimal: the C scanner accepts no sign on a
+ * hex/binary/octal literal, so `-0x1A` would not load.
+ */
 function intLiteral(value: number, meta: IntMeta | undefined): string {
-  if (!meta || meta.radix === 10) return String(value) + (meta?.suffix ?? '');
-  const prefix = meta.radix === 16 ? '0x' : meta.radix === 2 ? '0b' : '0o';
-  const digits = Math.abs(value).toString(meta.radix).toUpperCase().padStart(meta.digits, '0');
-  return (value < 0 ? '-' : '') + prefix + digits + meta.suffix;
+  if (!meta || meta.radix === 10 || value < 0) return String(value) + (meta?.suffix ?? '');
+  const prefix = meta.prefix || (meta.radix === 16 ? '0x' : meta.radix === 2 ? '0b' : '0o');
+  const digits = value.toString(meta.radix).toUpperCase().padStart(meta.digits, '0');
+  return prefix + digits + meta.suffix;
 }
 
 /** A float literal that stays a float: integral values gain `.0`. */
@@ -217,9 +237,13 @@ function quote(value: string): string {
  * grown collection). Typing is value-driven here: integral numbers emit as
  * ints, fractional as floats — a host that needs a float-typed `21.0` for a
  * fresh setting should send `21.0`-producing edits through an existing float
- * slot or accept the int typing (documented beta limitation).
+ * slot or accept the int typing. null/undefined have no libconfig literal
+ * and throw.
  */
 function serialize(value: unknown, indent: string): string {
+  if (value == null) {
+    throw new Error('null/undefined has no libconfig representation: omit the setting instead');
+  }
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (typeof value === 'number') return String(value);
   if (typeof value === 'string') return /^[-+]?[0-9]+$/.test(value) && isBigIntString(value) ? value + 'L' : quote(value);
@@ -234,7 +258,7 @@ function serialize(value: unknown, indent: string): string {
       .join(' ');
     return `{ ${body} }`;
   }
-  return 'true'; // null/undefined have no libconfig literal; unreachable via typed forms
+  throw new Error(`a ${typeof value} value has no libconfig representation`);
 }
 
 /** An integer string that exceeds the double-safe range (the bigint carry). */
