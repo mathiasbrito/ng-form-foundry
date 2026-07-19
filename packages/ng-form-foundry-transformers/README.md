@@ -294,6 +294,15 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.4.1` — libconfig hardening after a conformance battle test against the C
+library's own scanner, test corpus, and real srsRAN/OAI configs: `0q`/`0Q`
+octal, verbatim radix-prefix preservation on edits, sign accepted on decimal
+literals only, negative edits into hex/bin/oct slots emit decimal, exact
+round-trips for collections mixing safe and beyond-2^53 integers, `null`
+rejected instead of written as `true`, a 256-level nesting cap, strict `\x`
+escapes, `@include` legal in value positions, and modified read-only carries
+throw instead of corrupting.
+
 `0.4.0` — version-alignment release with the workspace (the paired
 `ng-form-foundry` 0.4.0 adds appearance-driven field layout); no transformer
 changes.
