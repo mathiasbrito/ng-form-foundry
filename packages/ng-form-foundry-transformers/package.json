@@ -1,6 +1,6 @@
 {
   "name": "ng-form-foundry-transformers",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Framework-agnostic Node + TypeScript catalog of source-format transformers: turn a YANG model (and more) into an ng-form-foundry schema and revert the edited form value back to the source format.",
   "keywords": [
     "ng-form-foundry",
