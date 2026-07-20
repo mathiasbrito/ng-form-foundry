@@ -13,8 +13,8 @@
  *   - `json` — JSON config → form → JSON ({@link jsonTransformer}); same builders
  *              as `yaml`, indent preserved.
  *   - `libconfig` — libconfig document (srsRAN/OAI-style `.cfg`/`.conf`) → form →
- *              libconfig ({@link libconfigTransformer}); **BETA**, warns once on
- *              first use; comment- and type-preserving span splicing on revert.
+ *              libconfig ({@link libconfigTransformer}); comment- and
+ *              type-preserving span splicing on revert.
  *
  * Look transformers up at runtime through {@link TransformerRegistry}, or import
  * the one you need directly.
@@ -27,4 +27,4 @@ export * from './core';
 export * from './transformers/yang';
 export * from './transformers/yaml';
 export * from './transformers/json';
-export * from './transformers/libconfig'; // BETA — warns once on first use
+export * from './transformers/libconfig';

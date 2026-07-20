@@ -1,9 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  libconfigTransformer,
-  resetLibconfigBetaWarning,
-} from '../src/transformers/libconfig';
+import { libconfigTransformer } from '../src/transformers/libconfig';
 import { LibconfigParseError, parseLibconfig } from '../src/transformers/libconfig/parser';
 import { TransformerRegistry } from '../src/core/registry';
 import type { JsonSchema } from '../src/core/json-schema';
@@ -44,20 +41,17 @@ prach_ids = [ 4, 12, 63 ];
 ledger_id = 9007199254740993L;
 `;
 
-test('beta: warns exactly once across repeated use', () => {
-  resetLibconfigBetaWarning();
-  const seen: string[] = [];
+test('never writes to the console: parse, extract, and revert are silent', () => {
+  const seen: unknown[] = [];
   const original = console.warn;
-  console.warn = (msg: string) => void seen.push(msg);
+  console.warn = (msg: unknown) => void seen.push(msg);
   try {
-    libconfigTransformer.toSchema('a = 1;');
-    const { binding } = libconfigTransformer.toSchema('b = 2;');
-    libconfigTransformer.toSource({ b: 2 }, binding);
+    const { binding, initialValue } = libconfigTransformer.toSchema(FIXTURE);
+    libconfigTransformer.toSource(plain(initialValue) as never, binding);
   } finally {
     console.warn = original;
   }
-  assert.equal(seen.length, 1);
-  assert.match(seen[0]!, /BETA/);
+  assert.deepEqual(seen, []);
 });
 
 test('infers statically-typed leaves: int, hex int, float, bool, string, int64 carry', () => {
@@ -282,6 +276,21 @@ test('@include is trivia anywhere, value positions included (opaque mode)', () =
   assert.deepEqual(plain((initialValue as any).l), [1, 2]);
   assert.equal(libconfigTransformer.toSource(plain(initialValue) as any, binding), src);
   assert.throws(() => parseLibconfig(src), /'@include' is not supported/);
+});
+
+test('non-decimal literals carry their base onto the schema as a radix display hint', () => {
+  const src = 'pci = 0x1A;\nmask = 0b0011;\nperm = 0q17;\ndec = 42;\nbig = 0xFFFFFFFFFFFFFFFFL;\nids = [0x01, 0x02];\nmixed = [0x01, 2];\n';
+  const { schema } = libconfigTransformer.toSchema(src);
+  const c = schema.children as any;
+  assert.equal(c.pci.radix, 16);
+  assert.equal(c.mask.radix, 2);
+  assert.equal(c.perm.radix, 8);
+  assert.equal(c.dec.radix, undefined);
+  assert.equal(c.big.type, 'string'); // beyond 2^53: the decimal-digit carry…
+  assert.equal(c.big.radix, 16); // …still displays in its source base
+  assert.equal(c.ids.kind, 'leafList');
+  assert.equal(c.ids.radix, 16);
+  assert.equal(c.mixed.radix, undefined); // no uniform base across elements
 });
 
 test('an edited raw carry throws instead of splicing or silently dropping', () => {

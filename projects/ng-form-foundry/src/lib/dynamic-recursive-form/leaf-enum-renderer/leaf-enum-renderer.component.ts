@@ -18,4 +18,6 @@ export class LeafEnumRendererComponent {
   @Input() removable: boolean = false;
   @Input() remove: any;
   @Input() editable: boolean = true;
+  /** Placeholder for the empty select — e.g. a ghost preview showing the schema default. */
+  @Input() placeholder = '';
 }

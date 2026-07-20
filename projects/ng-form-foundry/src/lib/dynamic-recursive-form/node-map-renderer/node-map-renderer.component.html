@@ -28,6 +28,7 @@
           } @else if (nodeMap.value.kind === 'nodeGroup') {
             <nff-dynamic-recursive-form
               [inheritedAppearance]="entryAppearance"
+              [showAbsentOptionals]="showAbsentOptionals"
               [schema]="valueGroup"
               [formGroup]="asFormGroup(formGroup.controls[key])"
               [editable]="editable"

@@ -207,3 +207,27 @@ test('a missing optional key stays absent through the schema-driven round-trip',
   const out = yamlTransformer.toSource(initialValue!, binding);
   assert.equal(out, 'host: prod # keep\n');
 });
+
+test('0x/0o literals carry their base onto the inferred schema as a radix hint', () => {
+  const src = 'cell_id: 0x1A\nperms: 0o17\nplain: 42\nbig: 0x7FFFFFFFFFFFFFFF\nmasks: [0x0F, 0xF0]\ncells:\n  - id: 0x01\n  - id: 0x02\n';
+  const { schema, initialValue } = yamlTransformer.toSchema(src);
+  const c = schema.children as any;
+  assert.equal(c.cell_id.radix, 16);
+  assert.equal(c.perms.radix, 8);
+  assert.equal(c.plain.radix, undefined);
+  assert.equal(c.big.type, 'string'); // beyond 2^53: the decimal-digit carry…
+  assert.equal(c.big.radix, 16); // …still displays in its source base
+  assert.equal(c.masks.kind, 'leafList');
+  assert.equal(c.masks.radix, 16);
+  assert.equal(c.cells.type.children.id.radix, 16);
+  // YAML 1.2 has no binary notation: 0b101 would simply be a string scalar.
+  assert.equal((initialValue as any).big, '9223372036854775807');
+});
+
+test('an edited hex value re-emits in hex, exact beyond 2^53', () => {
+  const { binding, initialValue } = yamlTransformer.toSchema('mask: 0x0F\nbig: 0x7FFFFFFFFFFFFFFF\n');
+  const v = JSON.parse(JSON.stringify(initialValue)) as Record<string, unknown>;
+  v['mask'] = 26;
+  v['big'] = '9223372036854775806';
+  assert.equal(yamlTransformer.toSource(v, binding), 'mask: 0x1a\nbig: 0x7ffffffffffffffe\n');
+});

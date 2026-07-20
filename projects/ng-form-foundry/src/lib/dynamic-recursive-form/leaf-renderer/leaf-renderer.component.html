@@ -2,13 +2,22 @@
   @if (leaf_.type === 'string') {
     <mat-form-field [appearance]="fieldEditable ? 'fill' : 'outline'">
       <mat-label>{{ leaf_.label ?? leaf_.name }}</mat-label>
-      <input [readonly]="!fieldEditable" matInput type="text" [formControl]="control">
+      @if (leaf_.radix) {
+        <!-- The bigint decimal-string carry, presented in its source base. -->
+        <input [readonly]="!fieldEditable" matInput type="text" [nffRadixInput]="leaf_.radix" nffRadixValueType="string" [placeholder]="placeholder" [formControl]="control">
+      } @else {
+        <input [readonly]="!fieldEditable" matInput type="text" [placeholder]="placeholder" [formControl]="control">
+      }
       <mat-error>{{ errorText }}</mat-error>
     </mat-form-field>
   } @else if (leaf_.type === 'number') {
     <mat-form-field [appearance]="fieldEditable ? 'fill' : 'outline'">
       <mat-label>{{ leaf_.label ?? leaf_.name  }}</mat-label>
-      <input [readonly]="!fieldEditable"  matInput type="number" [formControl]="control">
+      @if (leaf_.radix) {
+        <input [readonly]="!fieldEditable" matInput type="text" [nffRadixInput]="leaf_.radix" [placeholder]="placeholder" [formControl]="control">
+      } @else {
+        <input [readonly]="!fieldEditable"  matInput type="number" [placeholder]="placeholder" [formControl]="control">
+      }
       <mat-error>{{ errorText }}</mat-error>
     </mat-form-field>
   } @else if (leaf_.type === 'boolean') {
@@ -21,7 +30,7 @@
       <mat-checkbox [checked]="control.value === true" disabled>{{ leaf_.label ?? leaf_.name }}</mat-checkbox>
     }
   } @else if (leaf_.type === 'enum') {
-    <nff-leaf-enum-renderer [editable]="fieldEditable" [leafEnum]="leaf_" [control]="control"></nff-leaf-enum-renderer>
+    <nff-leaf-enum-renderer [editable]="fieldEditable" [leafEnum]="leaf_" [control]="control" [placeholder]="placeholder"></nff-leaf-enum-renderer>
   }
   @if (removable && editable) {
     <button matIconButton class="remove-button small-icon-button" [matTooltip]="'Remove ' + ('label' in leaf_ && leaf_.label ? leaf_.label : 'name' in leaf_ ? leaf_.name : 'field')" [attr.aria-label]="'Remove ' + ('label' in leaf_ && leaf_.label ? leaf_.label : 'name' in leaf_ ? leaf_.name : 'field')" (click)="remove.emit()">

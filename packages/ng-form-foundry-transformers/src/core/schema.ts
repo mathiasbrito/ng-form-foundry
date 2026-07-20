@@ -36,6 +36,13 @@ export interface Leaf {
   min?: number;
   max?: number;
   multipleOf?: number;
+  /**
+   * Present the value in this base (16 hex, 8 octal, 2 binary) instead of
+   * decimal — set when the source document wrote the literal that way. Purely
+   * a display hint: the value itself stays a plain number (or, on a string
+   * leaf, the exact decimal-digit carry of an integer beyond ±2^53).
+   */
+  radix?: 2 | 8 | 16;
   // --- optionality / display ---
   /** The value may be `null` (JSON Schema `type: [T, 'null']`). */
   nullable?: boolean;
@@ -53,6 +60,8 @@ export interface LeafList {
   label?: string;
   minItems?: number;
   maxItems?: number;
+  /** Present every item in this base — see {@link Leaf.radix}. */
+  radix?: 2 | 8 | 16;
 }
 
 export interface NodeGroup {

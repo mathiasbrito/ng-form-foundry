@@ -57,6 +57,13 @@ export type LeafString = LeafBase & {
   maxLength?: number;
   /** Semantic string format (JSON Schema `format`); adds a matching validator. */
   format?: 'email' | 'uri' | 'url';
+  /**
+   * Present the value in this base — for the string leaves that carry an
+   * integer beyond ±2^53 as its exact decimal digits. The control value stays
+   * that decimal-digit string (`pattern` keeps validating it); only the
+   * rendered text is based. See {@link LeafNumber.radix}.
+   */
+  radix?: 2 | 8 | 16;
 };
 export type LeafNumber = LeafBase & {
   type: 'number';
@@ -69,6 +76,14 @@ export type LeafNumber = LeafBase & {
   max?: number;
   /** Require the value to be an integer multiple of this number (JSON Schema `multipleOf`). */
   multipleOf?: number;
+  /**
+   * Present the value in this base (16 hex, 8 octal, 2 binary) instead of
+   * decimal — a display hint set by transformers when the source document
+   * wrote the literal that way (`0x1A`, `0o17`, `0b101`). The control value
+   * stays a plain number, so every numeric validator applies unchanged; only
+   * the rendered text is based. See `RadixInputDirective`.
+   */
+  radix?: 2 | 8 | 16;
 };
 export type LeafBoolean = LeafBase & {
   type: 'boolean';
@@ -141,6 +156,8 @@ export type LeafList<TKind extends Leaf['type'] = Leaf['type']> = {
   type: TKind;
   minItems?: number;
   maxItems?: number;
+  /** Present every item in this base — see {@link LeafNumber.radix}. */
+  radix?: 2 | 8 | 16;
 };
 
 export type NodeGroupList = {

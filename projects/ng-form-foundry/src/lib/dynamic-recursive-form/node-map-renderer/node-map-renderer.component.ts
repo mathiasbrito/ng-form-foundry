@@ -40,6 +40,8 @@ export class NodeMapRendererComponent implements OnChanges {
   @Input() nodeMap!: NodeMap;
   @Input() formGroup = new FormGroup<any>({});
   @Input() editable = true;
+  /** Forwarded to each entry's embedded form — see the form's input of the same name. */
+  @Input() showAbsentOptionals = false;
   /** Field-layout appearance from the enclosing group, forwarded to group-valued entry forms. */
   @Input() inheritedAppearance: Appearance | null = null;
 

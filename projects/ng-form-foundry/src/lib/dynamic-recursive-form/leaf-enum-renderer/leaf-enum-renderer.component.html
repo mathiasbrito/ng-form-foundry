@@ -1,14 +1,14 @@
 <mat-form-field [appearance]="editable ? 'fill' : 'outline'">
   <mat-label>{{ leafEnum.label ?? leafEnum.name }}</mat-label>
   @if (editable) {
-    <mat-select [formControl]="control">
+    <mat-select [formControl]="control" [placeholder]="placeholder">
       @for (option of leafEnum.enum; track $index) {
         <mat-option [value]="option">{{ leafEnum.enumLabel?.[$index] ?? option }}</mat-option>
       }
     </mat-select>
   } @else {
     <!-- Display-only: no formControl binding, so the wire value cannot change. -->
-    <mat-select [value]="control.value" disabled>
+    <mat-select [value]="control.value" disabled [placeholder]="placeholder">
       @for (option of leafEnum.enum; track $index) {
         <mat-option [value]="option">{{ leafEnum.enumLabel?.[$index] ?? option }}</mat-option>
       }

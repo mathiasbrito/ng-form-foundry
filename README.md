@@ -1,92 +1,121 @@
 # ng-form-foundry
 
-Build fully-typed Angular Reactive Forms and Angular Material UI from a single
-declarative, recursive **form-description schema**.
+Build fully-typed Angular Reactive Forms and a complete Angular Material UI
+from a single declarative **schema** — and, with the companion transformers,
+turn real configuration files (YAML, JSON, libconfig, YANG models) into
+editable forms that write back **without destroying comments, formatting, or
+types**.
 
-- **Library:** [`projects/ng-form-foundry`](projects/ng-form-foundry) — the
-  publishable Angular package.
-- **Transformers:** [`packages/ng-form-foundry-transformers`](packages/ng-form-foundry-transformers) —
-  a standalone Node + TypeScript catalog of source-format transformers that turn
-  a model or config (YANG, plus YAML and JSON config files, and libconfig
-  documents in beta) into an ng-form-foundry schema and revert the edited value
-  back to the source format.
-- **Demo:** [`projects/demo`](projects/demo) — example forms consuming the library.
-- **Documentation:** <https://ng-form-foundry.readthedocs.io> (source in
-  [`docs/`](docs)).
-- **AI agents:** [`AGENTS.md`](AGENTS.md) — a condensed guide to the schema
-  model, the library and transformer entry points, and this repo's conventions.
+**📚 Documentation: <https://ng-form-foundry.readthedocs.io>**
+
+```bash
+npm install ng-form-foundry              # the Angular library
+npm install ng-form-foundry-transformers # optional: config-file & model transformers
+```
+
+## Why ng-form-foundry
+
+You describe *what* the data looks like — nested groups, lists, optional
+fields, either/or selections, dictionaries — and the library derives both the
+typed `FormGroup` and the rendered Material UI from that one description. No
+hand-written form templates, no manual `FormGroup<...>` typing, no separate
+validation wiring.
 
 ```ts
+import { defineSchema, buildFormFromSchema } from 'ng-form-foundry';
+
 const schema = defineSchema({
   kind: 'nodeGroup',
   name: 'profile',
   children: {
     firstName: { kind: 'leaf', type: 'string', name: 'firstName', required: true },
-    age:       { kind: 'leaf', type: 'number', name: 'age' },
+    age:       { kind: 'leaf', type: 'number', name: 'age', min: 0, integer: true },
+    plan:      { kind: 'leaf', type: 'enum',   name: 'plan', enum: ['free', 'pro'] },
   },
 });
 
 form = buildFormFromSchema(schema);
-// FormGroup<{ firstName: FormControl<string>; age: FormControl<number> }>
+// FormGroup<{ firstName: FormControl<string>; age: FormControl<number>; plan: … }>
 ```
 
-Layout is declarative too. An `appearance` on any group (or choice, or map)
-lays its fields on a CSS grid (`grid: { cols: 2 }`), packs as many equal-width
-fields per row as fit (`minFieldWidth: '14rem'`), gathers checkboxes into a
-compact row (`booleanFields: 'end'`), and bounds text/number field widths in
-the default wrapping flow (`minTextFieldWidth`, `min`/`maxNumberFieldWidth`).
-The options **cascade** — declared once on the root they style nested groups,
-list items, map entries, and choice cases, and any descendant may override:
-
-```ts
-appearance: { grid: { cols: 2 }, booleanFields: 'end' }
+```html
+<nff-dynamic-recursive-form [schema]="schema" [formGroup]="form" [editable]="true" />
 ```
 
-See the [library README](projects/ng-form-foundry/README.md) for installation and
-a quickstart, and [Field layout](https://ng-form-foundry.readthedocs.io/en/latest/features.html#field-layout)
-in the docs for the full layout tour.
+The schema's constraints (`required`, `pattern`, `min`/`max`, `minLength`,
+`multipleOf`, …) become Angular validators with inline `mat-error` messages —
+`form.valid` and `form.getRawValue()` are all you read.
 
-## This is an Angular CLI workspace
+## Highlights
 
-| Task | Command |
-| --- | --- |
-| Run the demo app | `ng serve` → http://localhost:4200/ |
-| Build the library | `ng build ng-form-foundry` (output in `dist/ng-form-foundry`) |
-| Test the library | `ng test ng-form-foundry` |
-| Build/test the transformers | `cd packages/ng-form-foundry-transformers && npm ci && npm test` |
-| Build the docs | `pip install -r docs/requirements.txt && sphinx-build -b html docs docs/_build/html` |
+- **The full shape vocabulary.** Nested objects, primitive lists, repeatable
+  groups, discriminated **choice/case** selections, open **map** dictionaries,
+  and optional **presence** fields whose very absence is data — each with its
+  Material renderer: add/remove lists, collapsible sections, case selectors,
+  rename-able map entries.
+- **Two ready-made views.** The all-in-one recursive form
+  (`nff-dynamic-recursive-form`), or a tree + detail **config editor**
+  (`nff-config-editor`) with the document structure on the left and the
+  selected node's fields on the right — built for large configuration files.
+- **Declarative layout that cascades.** One `appearance` on the root lays
+  fields on a CSS grid, packs equal-width fields per row, gathers checkboxes
+  into a compact strip, and bounds field widths — inherited by nested groups,
+  list items, map entries, and choice cases, overridable per node:
 
-Continuous integration (build, test, pack, and docs build) runs on every push and
-pull request — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml). On pushes
-to `main` that same workflow triggers a Read the Docs rebuild of the `latest` version.
+  ```ts
+  appearance: { grid: { cols: 2 }, booleanFields: 'end' }
+  ```
 
-## Releasing
+- **Edit real config files, not JSON blobs.** The transformers package parses
+  a source document into a schema + initial value, and writes the edited value
+  back by patching the original text:
 
-Both packages are published to npm by
-[`.github/workflows/release.yml`](.github/workflows/release.yml) when a version tag
-is pushed. Each package publishes at the version in its own `package.json`; a version
-already on npm is skipped, so re-running a tag is safe.
+  ```ts
+  import { yamlTransformer } from 'ng-form-foundry-transformers';
 
-1. Bump the version in `projects/ng-form-foundry/package.json` and/or
-   `packages/ng-form-foundry-transformers/package.json`.
-2. Commit, then tag and push (both packages release together at the tag version;
-   a package version already on npm is skipped):
-   ```bash
-   git tag v0.4.1
-   git push origin v0.4.1
-   ```
+  const { schema, binding, initialValue } = yamlTransformer.toSchema(yamlText);
+  // …render the form, let the user edit…
+  const updated = yamlTransformer.toSource(form.getRawValue(), binding);
+  // comments, key order, and formatting of everything untouched: preserved
+  ```
 
-Required repository secrets (**Settings → Secrets and variables → Actions**):
+  - **YAML / JSON** — comment- and format-preserving edits, JSON-Schema-driven
+    or inferred forms, exact big-integer round-trips.
+  - **libconfig** — the `.cfg`/`.conf` format of srsRAN, OAI, and other
+    C/C++ software. Statically typed emission (a float slot stays a float, a
+    hex literal re-emits as hex at its original width, `L` suffixes survive),
+    byte-exact round-trips of untouched documents, comments intact.
+  - **YANG** — schema from a YANG model, write-back as RFC 7951 instance data
+    for NETCONF/RESTCONF datastores.
+  - **Thesaurus** — inject human-readable labels and descriptions into any
+    generated schema from a plain identifier → text catalog.
 
-| Secret | Used by | Purpose |
-| --- | --- | --- |
-| `NPM_TOKEN` | `release.yml` | npm **Automation** access token with publish rights for both packages. |
-| `READTHEDOCS_TOKEN` | `ci.yml` | Read the Docs API token used to trigger a docs rebuild on pushes to `main`. |
+- **Fully typed, modern Angular.** Standalone components, signal inputs,
+  Angular 20 + Material 20; the `FormGroup` type is inferred from your schema
+  literal.
 
-npm [provenance](https://docs.npmjs.com/generating-provenance-statements) is enabled,
-which requires a public repository; drop `--provenance` from `release.yml` if the
-repository is private. If you connect Read the Docs' native GitHub webhook instead,
-`READTHEDOCS_TOKEN` is optional and the trigger step no-ops when it is unset.
+## Documentation
+
+The full guide lives at **<https://ng-form-foundry.readthedocs.io>**:
+[quickstart](https://ng-form-foundry.readthedocs.io/en/latest/quickstart.html) ·
+[features](https://ng-form-foundry.readthedocs.io/en/latest/features.html) ·
+[schema reference](https://ng-form-foundry.readthedocs.io/en/latest/schema-reference.html) ·
+[transformers](https://ng-form-foundry.readthedocs.io/en/latest/transformers.html) ·
+[examples](https://ng-form-foundry.readthedocs.io/en/latest/examples.html)
+
+Installation details (peer dependencies, Material theme setup) are in each
+package's README: [`ng-form-foundry`](projects/ng-form-foundry/README.md) ·
+[`ng-form-foundry-transformers`](packages/ng-form-foundry-transformers/README.md).
+Release history: [CHANGELOG.md](CHANGELOG.md).
+
+## Repository
+
+This is an Angular CLI workspace: the library in
+[`projects/ng-form-foundry`](projects/ng-form-foundry), the transformers in
+[`packages/ng-form-foundry-transformers`](packages/ng-form-foundry-transformers),
+a demo app in [`projects/demo`](projects/demo) (`ng serve`), and the
+documentation source in [`docs/`](docs). CI builds, tests, and packs both
+packages on every push.
 
 ## License
 

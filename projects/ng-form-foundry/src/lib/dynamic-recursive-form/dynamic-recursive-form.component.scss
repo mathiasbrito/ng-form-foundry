@@ -35,6 +35,30 @@
   margin-top: 8px;
 }
 
+// A ghost field (showAbsentOptionals): the absent presence leaf previewed
+// read-only beside its (+) incorporate button. Sized like the enabled field
+// it stands in for (the inner leaf renderer keeps its own type-scoped
+// min-width), dimmed to read as "not part of the form yet".
+.ghost-field {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 10%;
+  gap: 8px;
+
+  nff-leaf-renderer {
+    opacity: 0.55;
+  }
+
+  .ghost-add {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-top: 4px;
+    background-color: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+    @include mat.elevation(1);
+  }
+}
+
 .fields {
   display: flex;
   flex-direction: row;
@@ -104,6 +128,16 @@ nff-leaf-list-renderer {
   .presence-leaf-add {
     margin-top: 0;
     align-self: center;
+  }
+  // Ghost checkboxes are natural-width like their enabled neighbours.
+  .ghost-field {
+    flex: 0 0 auto;
+    min-width: 0;
+    align-items: center;
+    .ghost-add {
+      margin-top: 0;
+      align-self: center;
+    }
   }
 }
 

@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
 import { LeafEnumRendererComponent } from '../leaf-enum-renderer/leaf-enum-renderer.component';
+import { RadixInputDirective } from '../radix-input/radix-input.directive';
 
 @Component({
   selector: 'nff-leaf-renderer',
@@ -23,6 +24,7 @@ import { LeafEnumRendererComponent } from '../leaf-enum-renderer/leaf-enum-rende
     MatButtonModule,
     MatTooltip,
     LeafEnumRendererComponent,
+    RadixInputDirective,
   ],
   templateUrl: './leaf-renderer.component.html',
   styleUrl: './leaf-renderer.component.scss',
@@ -38,6 +40,8 @@ export class LeafRendererComponent implements AfterViewInit {
   @Input() editable = true;
   /** Focus the field once rendered — for fields the user just added (e.g. an enabled presence leaf). */
   @Input() autofocus = false;
+  /** Placeholder for the empty field — e.g. a ghost preview showing the schema default. */
+  @Input() placeholder = '';
   /** Emitted when the user removes this field (e.g. an optional presence leaf). */
   readonly remove = output<void>();
 
@@ -66,6 +70,11 @@ export class LeafRendererComponent implements AfterViewInit {
     if (!e) return '';
     const label = 'name' in this.leaf_ ? this.leaf_.label ?? this.leaf_.name : 'Value';
     if (e['required']) return `${label} is required`;
+    if (e['radixFormat']) {
+      const names: Record<number, string> = { 16: 'hexadecimal (0x…)', 8: 'octal (0o…)', 2: 'binary (0b…)' };
+      return `Must be a ${names[e['radixFormat'].radix] ?? 'based'} number`;
+    }
+    if (e['radixRange']) return 'Too large to edit exactly (beyond ±2^53)';
     if (e['minlength']) return `Must be at least ${e['minlength'].requiredLength} characters`;
     if (e['maxlength']) return `Must be at most ${e['maxlength'].requiredLength} characters`;
     if (e['pattern']) return `Must match ${e['pattern'].requiredPattern ?? 'the required pattern'}`;

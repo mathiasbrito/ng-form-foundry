@@ -124,4 +124,73 @@ describe('DrfLeafRendererComponent', () => {
     const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
     expect(input.readOnly).toBe(true);
   });
+
+  it('a radix number leaf renders as a text input showing the value in its base', () => {
+    const pci: Leaf = { kind: 'leaf', type: 'number', name: 'pci', integer: true, radix: 16 } as Leaf;
+    fixture.componentRef.setInput('leaf_', pci);
+    fixture.componentRef.setInput('control', new FormControl(26));
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    expect(input.type).toBe('text');
+    expect(input.value).toBe('0x1A');
+  });
+
+  it('edited hex text lands on the control as a number, so numeric bounds still validate', () => {
+    const pci: Leaf = { kind: 'leaf', type: 'number', name: 'pci', integer: true, max: 100, radix: 16 } as Leaf;
+    const ctrl = buildControl(pci, 26) as FormControl;
+    fixture.componentRef.setInput('leaf_', pci);
+    fixture.componentRef.setInput('control', ctrl);
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    input.value = 'FF';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(ctrl.value).toBe(255);
+    expect(component.errorText).toContain('≤ 100');
+  });
+
+  it('unparseable radix text reports a base-specific error message', () => {
+    const pci: Leaf = { kind: 'leaf', type: 'number', name: 'pci', radix: 16 } as Leaf;
+    const ctrl = new FormControl(26);
+    fixture.componentRef.setInput('leaf_', pci);
+    fixture.componentRef.setInput('control', ctrl);
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    input.value = '0xZZ';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(component.errorText).toContain('hexadecimal');
+  });
+
+  it('a read-only radix leaf still displays in its base, input readonly', () => {
+    const pci: Leaf = { kind: 'leaf', type: 'number', name: 'pci', radix: 16 } as Leaf;
+    fixture.componentRef.setInput('leaf_', pci);
+    fixture.componentRef.setInput('control', new FormControl(26));
+    fixture.componentRef.setInput('editable', false);
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    expect(input.value).toBe('0x1A');
+    expect(input.readOnly).toBe(true);
+  });
+
+  it('a radix string leaf (bigint carry) keeps exact decimal digits behind a hex display', () => {
+    const mask: Leaf = { kind: 'leaf', type: 'string', name: 'mask', pattern: '^[-+]?[0-9]+$', radix: 16 } as Leaf;
+    const ctrl = new FormControl('9223372036854775807');
+    fixture.componentRef.setInput('leaf_', mask);
+    fixture.componentRef.setInput('control', ctrl);
+    fixture.detectChanges();
+
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    expect(input.value).toBe('0x7FFFFFFFFFFFFFFF');
+    input.value = '0x10';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(ctrl.value).toBe('16');
+  });
 });

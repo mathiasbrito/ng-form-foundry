@@ -2,7 +2,7 @@ import { Component, computed, forwardRef, input, model, OnInit, output } from '@
 import { LeafRendererComponent } from './leaf-renderer/leaf-renderer.component';
 import { Appearance, CASE_KEY, Leaf, NodeChoice, NodeGroup, NodeType } from '../types/dynamic-recursive.types';
 import { inheritableAppearance, LayoutStyles, mergeAppearance } from '../core/appearance';
-import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { NodeGroupListRendererComponent } from './node-group-list-renderer/node-group-list-renderer.component';
 import { LeafListRendererComponent } from './leaf-list-renderer/leaf-list-renderer.component';
 import { NodeMapRendererComponent } from './node-map-renderer/node-map-renderer.component';
@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgTemplateOutlet } from '@angular/common';
 import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
+import { formatRadix } from './radix-input/radix-input.directive';
 import {
   caseDisplayLabels, buildControl, caseFields, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -68,6 +69,17 @@ export class DynamicRecursiveFormComponent implements OnInit {
   readonly title = input<string>();
   /** Whether fields accept input. Two-way: also toggled by the built-in edit control. */
   readonly editable = model<boolean>(false);
+  /**
+   * Preview absent optional (presence) leaves as **ghost fields**: the field
+   * renders read-only and empty — its schema `default`, if any, shown as the
+   * placeholder — with a (+) button that incorporates it into the form, so the
+   * user sees the complete form surface. A ghost holds **no control in the
+   * form**: it never appears in `value`/`getRawValue()`/`serializeForm` output
+   * and never affects validity until incorporated. Replaces the default
+   * "Add <field>" button affordance; ignored while the form is not editable
+   * (read-only mode hides structural affordances, ghosts included).
+   */
+  readonly showAbsentOptionals = input<boolean>(false);
   /** Invoked with {@link index} to append a new sibling form to a parent list. */
   readonly addButtonCallback = input<((index: number) => void) | null>(null);
   /**
@@ -239,6 +251,43 @@ export class DynamicRecursiveFormComponent implements OnInit {
     } else if (group.get(key)) {
       group.removeControl(key);
     }
+    // Either way the key's ghost stand-in is stale: drop it, so a later
+    // re-ghosting renders a pristine one even if the old instance was mutated.
+    this.ghostControls.delete(key);
+  }
+
+  /**
+   * The detached stand-in control a ghost field renders against. Never added
+   * to {@link formGroup} — that detachment is the whole guarantee: a ghost
+   * cannot reach `value`, `getRawValue()`, or validity. Always `null`-valued
+   * (the schema default shows as a placeholder instead, see
+   * {@link ghostPlaceholder}); cached per key so change detection re-reads a
+   * stable instance.
+   */
+  protected ghostControl(key: string): FormControl {
+    let control = this.ghostControls.get(key);
+    if (!control) {
+      control = new FormControl(null);
+      this.ghostControls.set(key, control);
+    }
+    return control;
+  }
+  private readonly ghostControls = new Map<string, FormControl>();
+
+  /**
+   * A ghost field's placeholder: the leaf's `default`, or empty — spelled in
+   * the leaf's `radix` when it has one, matching how the incorporated field
+   * will display it.
+   */
+  protected ghostPlaceholder(schema: Leaf): string {
+    if (!('default' in schema) || schema.default == null) return '';
+    const radix = 'radix' in schema ? schema.radix : undefined;
+    const integral =
+      typeof schema.default === 'number'
+        ? Number.isInteger(schema.default)
+        : typeof schema.default === 'string' && /^[-+]?[0-9]+$/.test(schema.default);
+    if (radix && integral) return formatRadix(schema.default as number | string, radix);
+    return String(schema.default);
   }
 
   /**

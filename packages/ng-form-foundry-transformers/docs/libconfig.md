@@ -1,9 +1,8 @@
 # The libconfig transformer — format, parser, and round-trip design
 
-`libconfigTransformer` (**beta** — it logs a one-time console warning on first
-use) edits [libconfig](https://hyperrealm.github.io/libconfig/) documents: the
-`.cfg`/`.conf` files consumed by C/C++ software such as srsRAN and
-OpenAirInterface. This document describes the format, how the parser is
+`libconfigTransformer` edits [libconfig](https://hyperrealm.github.io/libconfig/)
+documents: the `.cfg`/`.conf` files consumed by C/C++ software such as srsRAN
+and OpenAirInterface. This document describes the format, how the parser is
 implemented, and how the transformer's output flows into and back out of
 `ng-form-foundry`.
 
@@ -130,11 +129,11 @@ values alone:
 | libconfig construct | schema node |
 | --- | --- |
 | group `{ }` | `nodeGroup` |
-| int / hex / binary / octal | number leaf, `integer: true` |
+| int / hex / binary / octal | number leaf, `integer: true`; non-decimal literals add `radix: 16/2/8` so the form displays the base the file wrote |
 | float | number leaf (no integer flag — a float slot) |
 | bool / string | boolean / string leaf |
-| int64 beyond ±2^53 | **string** leaf with an integer-digits `pattern` |
-| array `[ ]`, list `( )` of same-family scalars | `leafList` |
+| int64 beyond ±2^53 | **string** leaf with an integer-digits `pattern` (plus `radix` when the literal was non-decimal) |
+| array `[ ]`, list `( )` of same-family scalars | `leafList` (with `radix` when every element shares one non-decimal base) |
 | list `( )` of groups | `nodeGroupList` |
 | empty `[ ]` / `( )`, heterogeneous list | **read-only** string leaf carrying the verbatim source text |
 | `@include` (opaque mode) | not represented |
@@ -218,7 +217,7 @@ fresh nodes. `null`/`undefined` have no libconfig representation: a nulled
 existing setting throws, and a null key among additions is skipped rather
 than written.
 
-## Guarantees and beta limitations
+## Guarantees and limitations
 
 Guaranteed (and pinned in `test/libconfig.test.ts`):
 
@@ -227,7 +226,7 @@ Guaranteed (and pinned in `test/libconfig.test.ts`):
 - Types survive edits: float slots stay floats, hex stays hex at width,
   `L`/`LL` suffixes stay, int64 precision is exact end to end.
 
-Known beta limitations:
+Known limitations:
 
 - New settings are value-typed: a fresh integral number becomes an int even
   where the consumer expects a float (route such additions through a slot
@@ -237,7 +236,7 @@ Known beta limitations:
 - In `'opaque'` include mode the form edits only the parent file; included
   settings are invisible.
 - `minItems`/`maxItems`-style cardinality is not enforced on inferred lists.
+- Shrinking a list deletes the removed elements' source span; comments that
+  sat between those elements are deleted with it (comments outside any edited
+  span are never touched).
 
-Until the feature exits beta, diff every `toSource` output against the
-original file before deploying it — that is what the one-time startup warning
-is asking of you.

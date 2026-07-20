@@ -39,6 +39,29 @@ children: {
 | `number` | `min`, `max`, `multipleOf`, `integer` |
 | any | `required` |
 
+A `number` (or bigint-carry `string`) leaf and a `leafList` may also carry
+`radix: 16 | 8 | 2` — a display hint that renders the field as based text
+(`0x1A`, `0o17`, `0b101`) while the control value stays a plain number, so
+every numeric constraint above keeps validating unchanged. Operators used to
+hex-heavy configs (PCIs, masks, cell ids) read and type the base they know;
+typing accepts the digits with or without the prefix and normalizes on blur.
+Unparseable text sets the control to `null` and flags it (`radixFormat`), so
+an invalid entry can never reach the wire value; in number mode a magnitude
+beyond the safe integer range (±(2^53 − 1)) is likewise refused
+(`radixRange`) instead of silently rounded. The
+transformers set `radix` automatically when the source document wrote the
+literal in that base (libconfig `0x`/`0b`/`0o`/`0q`, YAML `0x`/`0o`); hosts
+building schemas by hand can set it directly, and the standalone
+`RadixInputDirective` (`input[nffRadixInput]`) is exported for custom
+renderers.
+
+Sizing-wise a radix field follows its *schema* type's appearance rules: a
+number leaf keeps `minNumberFieldWidth`/`maxNumberFieldWidth` even though it
+renders as text. Based values run longer than decimal (a 64-bit hex value is
+18 characters), so hosts whose configs carry wide masks should set
+`maxNumberFieldWidth` generously — or leave it unset — for those forms. (A
+beyond-2^53 carry is a string leaf and follows the text rules instead.)
+
 ```{admonition} `pattern` is unanchored
 :class: note
 `pattern` follows JSON Schema semantics — a `RegExp.test`, which matches
@@ -89,6 +112,22 @@ Disable the field to omit it instead.
 `presence` works on a `nodeGroup` too (an optional sub-object), and on a `map` (an
 optional dictionary). `form.value` also drops absent presence controls; use
 `getRawValue()` for the full nullable-inclusive object.
+
+### Ghost preview of absent optionals
+
+`<nff-dynamic-recursive-form [showAbsentOptionals]="true">` swaps the
+"Add *field*" buttons for **ghost fields**: each absent presence leaf renders
+as the field itself — read-only, dimmed, empty, its `default` shown as the
+placeholder on text, number, and enum fields (spelled in the leaf's `radix`
+when it has one; a boolean ghost simply renders unchecked) — with a (+)
+button that incorporates it, so the user previews the complete form surface
+before opting fields in. A ghost is backed by a
+detached stand-in control, never by one in the form: it appears in neither
+`value`, `getRawValue()`, nor `serializeForm` output, and its validators are
+inert until the field is incorporated (which seeds the schema `default`, like
+the Add button always has). The flag cascades into nested groups, list
+entries, and map entries; it changes nothing while the form is read-only,
+where structural affordances stay hidden.
 
 ## Constants and read-only fields
 

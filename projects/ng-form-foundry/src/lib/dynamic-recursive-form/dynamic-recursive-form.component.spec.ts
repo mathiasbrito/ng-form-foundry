@@ -2,7 +2,7 @@ import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testin
 import { FormControl, FormGroup } from '@angular/forms';
 
 import { DynamicRecursiveFormComponent } from './dynamic-recursive-form.component';
-import { buildFormFromSchema } from '../core/dynamic-recursive-forms-builder';
+import { buildFormFromSchema, serializeForm } from '../core/dynamic-recursive-forms-builder';
 import { CASE_KEY, Leaf, NodeChoice, NodeGroup, NodeMap } from '../types/dynamic-recursive.types';
 
 describe('DynamicRecursiveFormComponent', () => {
@@ -506,5 +506,353 @@ describe('DynamicRecursiveFormComponent', () => {
     };
     expect(component.caseLabel(scope, 'byUe')).toBe('By UE');
     expect(component.caseLabel(scope, 'unlabeled')).toBe('unlabeled');
+  });
+
+  describe('ghost preview of absent optionals (showAbsentOptionals)', () => {
+    // A presence leaf with a default AND a required marker plus bounds: the
+    // ghost must neutralize all of them until incorporated.
+    const ghosted: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'cfg',
+      root: true,
+      children: {
+        host: { kind: 'leaf', type: 'string', name: 'host', required: true },
+        timeout: { kind: 'leaf', type: 'number', name: 'timeout', presence: true, default: 30, min: 1, required: true },
+        verbose: { kind: 'leaf', type: 'boolean', name: 'verbose', presence: true, default: true },
+      },
+    };
+    let form: FormGroup;
+
+    function bindGhosted(schema: NodeGroup = ghosted, initial?: Record<string, unknown>): void {
+      form = buildFormFromSchema(schema, initial);
+      fixture.componentRef.setInput('schema', schema);
+      fixture.componentRef.setInput('formGroup', form);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('showAbsentOptionals', true);
+      fixture.detectChanges();
+    }
+
+    const ghostFields = (): NodeListOf<HTMLElement> => fixture.nativeElement.querySelectorAll('.ghost-field');
+    const ghostInput = (): HTMLInputElement | null => fixture.nativeElement.querySelector('.ghost-field input');
+    const ghostAdd = (): HTMLButtonElement | null => fixture.nativeElement.querySelector('.ghost-field .ghost-add');
+
+    it('renders the absent field itself instead of the Add button, read-only', () => {
+      bindGhosted();
+      expect(ghostFields().length).toBe(2); // timeout (field flow) + verbose (boolean area)
+      expect(fixture.nativeElement.querySelector('.presence-leaf-add')).toBeNull();
+      const input = ghostInput()!;
+      expect(input.readOnly).toBe(true);
+      expect(ghostAdd()).toBeTruthy();
+    });
+
+    it('the ghost holds no value: default shows as placeholder only, input empty', () => {
+      bindGhosted();
+      const input = ghostInput()!;
+      expect(input.placeholder).toBe('30');
+      expect(input.value).toBe('');
+    });
+
+    it('value integrity: ghosts appear in neither value, getRawValue, nor serializeForm', () => {
+      bindGhosted();
+      expect(form.value).toEqual({ host: null });
+      expect(form.getRawValue()).toEqual({ host: null });
+      expect(serializeForm(ghosted, form)).toEqual({ host: null });
+      expect('timeout' in form.controls).toBe(false);
+      expect('verbose' in form.controls).toBe(false);
+    });
+
+    it('value integrity: rendering ghosts produces the identical value a ghost-less form has', () => {
+      const plain = buildFormFromSchema(ghosted);
+      bindGhosted();
+      expect(form.getRawValue()).toEqual(plain.getRawValue());
+    });
+
+    it("a ghost's required/min validators cannot invalidate the form", () => {
+      bindGhosted();
+      form.get('host')!.setValue('gnb1');
+      expect(form.valid).toBe(true); // required+min on the absent timeout are inert
+    });
+
+    it('(+) incorporates the field: control appears, seeded with the schema default', () => {
+      bindGhosted();
+      ghostAdd()!.click();
+      fixture.detectChanges();
+      expect(form.getRawValue()).toEqual({ host: null, timeout: 30 });
+      // The ghost gave way to the real field (one ghost left: verbose).
+      expect(ghostFields().length).toBe(1);
+    });
+
+    it('an incorporated field is live: edits land in the value, validators apply', () => {
+      bindGhosted();
+      ghostAdd()!.click();
+      fixture.detectChanges();
+      form.get('timeout')!.setValue(0); // violates min: 1
+      expect(form.get('timeout')!.errors?.['min']).toBeTruthy();
+      form.get('timeout')!.setValue(45);
+      expect(form.getRawValue()['timeout']).toBe(45);
+    });
+
+    it('removing an incorporated field returns it to ghost and drops it from the value', () => {
+      bindGhosted(ghosted, { timeout: 45 });
+      expect(form.getRawValue()['timeout']).toBe(45);
+      component.toggleLeafPresence('timeout', ghosted.children['timeout'] as Leaf, false);
+      fixture.detectChanges();
+      expect('timeout' in form.getRawValue()).toBe(false);
+      expect(ghostFields().length).toBe(2);
+    });
+
+    it('typing cannot reach the form through a ghost: the stand-in control is detached', () => {
+      bindGhosted();
+      const before = JSON.stringify(form.getRawValue());
+      // Even a programmatic write to the rendered control must not touch the form.
+      const ghost = component['ghostControl']('timeout');
+      ghost.setValue(999);
+      fixture.detectChanges();
+      expect(JSON.stringify(form.getRawValue())).toBe(before);
+      expect(form.get('timeout')).toBeNull();
+    });
+
+    it('read-only mode renders neither ghosts nor add buttons', () => {
+      bindGhosted();
+      fixture.componentRef.setInput('editable', false);
+      fixture.detectChanges();
+      expect(ghostFields().length).toBe(0);
+      expect(fixture.nativeElement.querySelector('.presence-leaf-add')).toBeNull();
+    });
+
+    it('knob off keeps the Add-button affordance and the same absent value', () => {
+      bindGhosted();
+      fixture.componentRef.setInput('showAbsentOptionals', false);
+      fixture.detectChanges();
+      expect(ghostFields().length).toBe(0);
+      expect(fixture.nativeElement.querySelectorAll('.presence-leaf-add').length).toBe(2);
+      expect(form.getRawValue()).toEqual({ host: null });
+    });
+
+    it('a leaf without a default ghosts with an empty placeholder', () => {
+      const bare: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'cfg',
+        root: true,
+        children: { note: { kind: 'leaf', type: 'string', name: 'note', presence: true } },
+      };
+      bindGhosted(bare);
+      expect(ghostInput()!.placeholder).toBe('');
+      expect(form.getRawValue()).toEqual({});
+    });
+
+    it('edge: a presence leaf seeded by initial data renders live, not as a ghost', () => {
+      bindGhosted(ghosted, { timeout: 10 });
+      expect(ghostFields().length).toBe(1); // only verbose ghosts
+      expect(form.getRawValue()).toEqual({ host: null, timeout: 10 });
+    });
+
+    it('edge: ghosts inside group-list entries stay out of every entry value', () => {
+      const listed: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'cfg',
+        root: true,
+        children: {
+          cells: {
+            kind: 'nodeGroupList',
+            name: 'cells',
+            type: {
+              kind: 'nodeGroup',
+              name: 'cells',
+              children: {
+                id: { kind: 'leaf', type: 'number', name: 'id' },
+                gain: { kind: 'leaf', type: 'number', name: 'gain', presence: true, default: 20 },
+              },
+            },
+          },
+        },
+      };
+      bindGhosted(listed, { cells: [{ id: 1 }, { id: 2, gain: 30 }] });
+      // One ghost: entry #1's absent gain; entry #2 has it enabled.
+      expect(ghostFields().length).toBe(1);
+      expect(form.getRawValue()).toEqual({ cells: [{ id: 1 }, { id: 2, gain: 30 }] });
+      expect(serializeForm(listed, form)).toEqual({ cells: [{ id: 1 }, { id: 2, gain: 30 }] });
+    });
+
+    it('edge: incorporating in one list entry leaves sibling entries untouched', () => {
+      const listed: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'cfg',
+        root: true,
+        children: {
+          cells: {
+            kind: 'nodeGroupList',
+            name: 'cells',
+            type: {
+              kind: 'nodeGroup',
+              name: 'cells',
+              children: {
+                id: { kind: 'leaf', type: 'number', name: 'id' },
+                gain: { kind: 'leaf', type: 'number', name: 'gain', presence: true, default: 20 },
+              },
+            },
+          },
+        },
+      };
+      bindGhosted(listed, { cells: [{ id: 1 }, { id: 2 }] });
+      const adds = fixture.nativeElement.querySelectorAll('.ghost-field .ghost-add');
+      expect(adds.length).toBe(2);
+      (adds[0] as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(form.getRawValue()).toEqual({ cells: [{ id: 1, gain: 20 }, { id: 2 }] });
+    });
+
+    it('edge: the ghost stand-in is a stable instance across change detection', () => {
+      bindGhosted();
+      const first = component['ghostControl']('timeout');
+      fixture.detectChanges();
+      fixture.detectChanges();
+      expect(component['ghostControl']('timeout')).toBe(first);
+    });
+
+    it('a mutated stand-in is discarded on toggle: re-ghosting renders pristine', () => {
+      bindGhosted();
+      component['ghostControl']('timeout').setValue(999);
+      ghostAdd()!.click(); // incorporate…
+      fixture.detectChanges();
+      component.toggleLeafPresence('timeout', ghosted.children['timeout'] as Leaf, false); // …and remove
+      fixture.detectChanges();
+      expect(component['ghostControl']('timeout').value).toBeNull();
+      expect(ghostInput()!.value).toBe('');
+    });
+
+    it('turning the knob off after incorporation keeps the field live with its value', () => {
+      bindGhosted();
+      ghostAdd()!.click();
+      fixture.detectChanges();
+      fixture.componentRef.setInput('showAbsentOptionals', false);
+      fixture.detectChanges();
+      expect(form.getRawValue()).toEqual({ host: null, timeout: 30 });
+      form.get('timeout')!.setValue(45);
+      expect(form.getRawValue()['timeout']).toBe(45);
+      expect(ghostFields().length).toBe(0);
+    });
+
+    it('a radix presence leaf ghosts with its default spelled in its base', () => {
+      const hexed: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'cfg',
+        root: true,
+        children: { mask: { kind: 'leaf', type: 'number', name: 'mask', presence: true, default: 26, radix: 16 } },
+      };
+      bindGhosted(hexed);
+      expect(ghostInput()!.placeholder).toBe('0x1A');
+      expect(form.getRawValue()).toEqual({});
+    });
+
+    it('an enum presence leaf ghosts as a display-only select carrying its default as placeholder', () => {
+      const withEnum: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'cfg',
+        root: true,
+        children: {
+          level: { kind: 'leaf', type: 'enum', name: 'level', presence: true, enum: ['low', 'medium', 'high'], default: 'medium' },
+        },
+      };
+      bindGhosted(withEnum);
+      const select: HTMLElement | null = fixture.nativeElement.querySelector('.ghost-field mat-select');
+      expect(select).toBeTruthy();
+      expect(select!.getAttribute('aria-disabled')).toBe('true');
+      expect(select!.textContent).toContain('medium');
+      expect(form.getRawValue()).toEqual({});
+    });
+
+    it('a default-true boolean ghosts unchecked and contributes no value', () => {
+      bindGhosted(); // `verbose` has default: true
+      const box: HTMLInputElement | null = fixture.nativeElement.querySelector('.ghost-field input[type="checkbox"]');
+      expect(box).toBeTruthy();
+      expect(box!.checked).toBe(false);
+      expect('verbose' in form.getRawValue()).toBe(false);
+    });
+
+    it('edge: ghosts cascade into an active choice case and stay out of its value', () => {
+      const chosen: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'cfg',
+        root: true,
+        children: {
+          scope: {
+            kind: 'choice',
+            name: 'scope',
+            cases: {
+              byUe: {
+                ueId: { kind: 'leaf', type: 'string', name: 'ueId' },
+                priority: { kind: 'leaf', type: 'number', name: 'priority', presence: true, default: 5 },
+              },
+            },
+          },
+        },
+      };
+      bindGhosted(chosen, { scope: { [CASE_KEY]: 'byUe', ueId: 'ue-1' } });
+      expect(ghostFields().length).toBe(1);
+      expect(form.getRawValue()).toEqual({ scope: { [CASE_KEY]: 'byUe', ueId: 'ue-1' } });
+      const add: HTMLButtonElement = fixture.nativeElement.querySelector('.ghost-field .ghost-add');
+      add.click();
+      fixture.detectChanges();
+      expect(form.getRawValue()).toEqual({ scope: { [CASE_KEY]: 'byUe', ueId: 'ue-1', priority: 5 } });
+    });
+
+    it('edge: ghosts cascade into map entries and stay out of every entry value', () => {
+      const mapped: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'cfg',
+        root: true,
+        children: {
+          servers: {
+            kind: 'map',
+            name: 'servers',
+            value: {
+              kind: 'nodeGroup',
+              name: 'server',
+              children: {
+                url: { kind: 'leaf', type: 'string', name: 'url' },
+                weight: { kind: 'leaf', type: 'number', name: 'weight', presence: true, default: 1 },
+              },
+            },
+          } as NodeMap,
+        },
+      };
+      bindGhosted(mapped, { servers: { web1: { url: 'http://a' } } });
+      expect(ghostFields().length).toBe(1);
+      expect(form.getRawValue()).toEqual({ servers: { web1: { url: 'http://a' } } });
+    });
+  });
+
+  describe('radix wire-value integrity under invalid input', () => {
+    it('an unparseable hex entry serializes as null, never as the raw text', () => {
+      const schema: NodeGroup = {
+        kind: 'nodeGroup',
+        name: 'cfg',
+        root: true,
+        children: { mask: { kind: 'leaf', type: 'number', name: 'mask', radix: 16 } },
+      };
+      const form: FormGroup = buildFormFromSchema(schema, { mask: 15 });
+      fixture.componentRef.setInput('schema', schema);
+      fixture.componentRef.setInput('formGroup', form);
+      fixture.componentRef.setInput('editable', true);
+      fixture.detectChanges();
+
+      const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+      input.value = 'xyz';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+
+      expect(form.get('mask')!.value).toBeNull();
+      expect(form.getRawValue()).toEqual({ mask: null });
+      expect(serializeForm(schema, form)).toEqual({ mask: null });
+      expect(form.get('mask')!.errors?.['radixFormat']).toBeTruthy();
+      expect(form.valid).toBe(false);
+
+      input.value = '0x2A'; // correction restores the numeric path
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(form.getRawValue()).toEqual({ mask: 42 });
+      expect(serializeForm(schema, form)).toEqual({ mask: 42 });
+    });
   });
 });

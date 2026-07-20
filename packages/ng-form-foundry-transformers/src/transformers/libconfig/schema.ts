@@ -93,13 +93,20 @@ function scalarLeaf(name: string, scalar: CfgScalar): Leaf {
     case 'float':
       return { kind: 'leaf', name, type: 'number' };
     case 'int':
-      return { kind: 'leaf', name, type: 'number', integer: true };
+      return withRadix({ kind: 'leaf', name, type: 'number', integer: true }, scalar);
     case 'int64':
       // Beyond 2^53 the value rides as an exact decimal string.
       return typeof scalar.value === 'string'
-        ? { kind: 'leaf', name, type: 'string', pattern: INTEGER_STRING_PATTERN }
-        : { kind: 'leaf', name, type: 'number', integer: true };
+        ? withRadix({ kind: 'leaf', name, type: 'string', pattern: INTEGER_STRING_PATTERN }, scalar)
+        : withRadix({ kind: 'leaf', name, type: 'number', integer: true }, scalar);
   }
+}
+
+/** Carry a non-decimal literal's base onto the leaf as its display radix. */
+function withRadix(leaf: Leaf, scalar: CfgScalar): Leaf {
+  const radix = scalar.int?.radix;
+  if (radix && radix !== 10) leaf.radix = radix;
+  return leaf;
 }
 
 /**
@@ -110,10 +117,23 @@ function scalarLeaf(name: string, scalar: CfgScalar): Leaf {
 function listLeaf(name: string, elements: CfgScalar[]): NodeType {
   if (elements.length === 0) return rawLeaf(name, 'empty collection');
   const f = family(elements[0]!.type);
+  const radix = f === 'integer' ? sharedRadix(elements) : undefined;
   if (f === 'integer' && elements.some((e) => typeof e.value === 'string')) {
-    return { kind: 'leafList', name, type: 'string' };
+    return { kind: 'leafList', name, type: 'string', ...(radix && { radix }) };
   }
-  return { kind: 'leafList', name, type: f === 'integer' || f === 'float' ? 'number' : f === 'bool' ? 'boolean' : 'string' };
+  return {
+    kind: 'leafList',
+    name,
+    type: f === 'integer' || f === 'float' ? 'number' : f === 'bool' ? 'boolean' : 'string',
+    ...(radix && { radix }),
+  };
+}
+
+/** The display radix shared by every element, when uniform and non-decimal. */
+function sharedRadix(elements: CfgScalar[]): 2 | 8 | 16 | undefined {
+  const first = elements[0]?.int?.radix ?? 10;
+  if (first === 10) return undefined;
+  return elements.every((e) => (e.int?.radix ?? 10) === first) ? first : undefined;
 }
 
 function arrayValue(elements: CfgScalar[]): unknown[] {

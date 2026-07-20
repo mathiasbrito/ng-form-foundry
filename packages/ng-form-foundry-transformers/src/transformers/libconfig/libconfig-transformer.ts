@@ -1,5 +1,5 @@
 /**
- * A libconfig {@link Transformer} (BETA): turn a libconfig document
+ * A libconfig {@link Transformer}: turn a libconfig document
  * (srsRAN/OAI-style `.cfg`/`.conf`) into a form and write the edited value
  * back with comments, formatting, and — critically — scalar *types*
  * preserved (libconfig is statically typed; see {@link import('./revert')}).
@@ -53,27 +53,10 @@ export interface LibconfigBinding {
   root: CfgGroup;
 }
 
-let warnedBeta = false;
-
-function warnBeta(): void {
-  if (warnedBeta) return;
-  warnedBeta = true;
-  console.warn(
-    '[ng-form-foundry-transformers] The libconfig transformer is a BETA feature. ' +
-      'Verify every write-back (diff toSource output against the original file) before deploying it.',
-  );
-}
-
-/** Test seam: makes the one-time beta warning observable per test. */
-export function resetLibconfigBetaWarning(): void {
-  warnedBeta = false;
-}
-
 export const libconfigTransformer = {
   id: 'libconfig',
 
   toSchema(source: string, options?: LibconfigOptions): TransformResult<LibconfigBinding> {
-    warnBeta();
     const root = parseLibconfig(source, { includes: options?.includes });
     const schema = options?.schema
       ? jsonSchemaToNodeGroup(options.schema, options.rootName, options.schemaOptions)
@@ -84,7 +67,6 @@ export const libconfigTransformer = {
   },
 
   toSource(value: FormValue, binding: LibconfigBinding): string {
-    warnBeta();
     return applyValueToSource(binding.source, binding.root, value);
   },
 } satisfies Transformer<string, string, LibconfigBinding, LibconfigOptions>;

@@ -16,7 +16,7 @@ or a CLI just as easily.
 | `yang` | YANG model (via an engine) | RFC 7951 instance data | available |
 | `yaml` | YAML config (optionally a JSON Schema) | YAML (comments preserved) | available |
 | `json` | JSON config (optionally a JSON Schema) | JSON (indent preserved) | available |
-| `libconfig` | libconfig document (optionally a JSON Schema) | libconfig (comments **and scalar types** preserved) | **beta** — warns on first use |
+| `libconfig` | libconfig document (optionally a JSON Schema) | libconfig (comments **and scalar types** preserved) | available |
 
 The YAML and JSON transformers share the same format-agnostic form builders in
 `core` (`inferNodeGroup`, `jsonSchemaToNodeGroup`) — a JSON Schema is an *option*
@@ -169,12 +169,10 @@ const { schema, binding, initialValue } = jsonTransformer.toSchema(configText);
 const out = jsonTransformer.toSource({ ...initialValue, replicas: 5 }, binding);
 ```
 
-## libconfig transformer (beta)
+## libconfig transformer
 
 Edit a **libconfig document** — the `.cfg`/`.conf` format of srsRAN, OAI, and
 other C/C++ software using [libconfig](https://hyperrealm.github.io/libconfig/).
-**Beta**: it logs a one-time warning on first use; diff `toSource` output
-against the original before deploying a write-back.
 
 ```ts
 import { libconfigTransformer } from 'ng-form-foundry-transformers';
@@ -293,6 +291,14 @@ npm test        # node:test on the compiled output (no Python needed)
 ```
 
 ## Status
+
+`0.5.0` — the **libconfig transformer is stable**: the one-time beta warning
+is gone (and with it the `resetLibconfigBetaWarning` helper), and the format's
+guarantees and known limitations are documented in the transformers guide.
+Non-decimal integer literals (`0x`, `0b`, `0o`/`0q`) now set a `radix` display
+hint on the generated schema — the paired `ng-form-foundry` release renders
+those fields as hex/octal/binary editors, and the YAML transformer does the
+same for its hex and octal literals.
 
 `0.4.1` — libconfig hardening after a conformance battle test against the C
 library's own scanner, test corpus, and real srsRAN/OAI configs: `0q`/`0Q`

@@ -23,13 +23,35 @@
             (remove)="toggleLeafPresence(childItem.key, child, false)"
           />
         } @else if (editable()) {
-          <button
-            matButton="outlined"
-            class="presence-leaf-add"
-            (click)="toggleLeafPresence(childItem.key, child, true)"
-          >
-            <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
-          </button>
+          @if (showAbsentOptionals()) {
+            <!-- Ghost preview of an absent boolean: unchecked, display-only,
+                 no control in the form; (+) incorporates it. -->
+            <div class="ghost-field">
+              <nff-leaf-renderer
+                [leaf_]=child
+                [control]="ghostControl(childItem.key)"
+                [removable]=false
+                [editable]=false
+              />
+              <button
+                matIconButton
+                class="ghost-add small-icon-button"
+                [matTooltip]="'Add ' + (child.label ?? child.name)"
+                [attr.aria-label]="'Add ' + (child.label ?? child.name)"
+                (click)="toggleLeafPresence(childItem.key, child, true)"
+              >
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+          } @else {
+            <button
+              matButton="outlined"
+              class="presence-leaf-add"
+              (click)="toggleLeafPresence(childItem.key, child, true)"
+            >
+              <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
+            </button>
+          }
         }
       }
     }
@@ -84,13 +106,37 @@
           <!-- Read-only mode renders nothing for an absent presence leaf:
                the key is simply absent, and add affordances are hidden
                like every other structural control. -->
-          <button
-            matButton="outlined"
-            class="presence-leaf-add"
-            (click)="toggleLeafPresence(childItem.key, child, true)"
-          >
-            <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
-          </button>
+          @if (showAbsentOptionals()) {
+            <!-- Ghost preview: the field itself, read-only against a detached
+                 null control (never part of the form value), default as
+                 placeholder; (+) incorporates it. -->
+            <div class="ghost-field">
+              <nff-leaf-renderer
+                [leaf_]=child
+                [control]="ghostControl(childItem.key)"
+                [removable]=false
+                [editable]=false
+                [placeholder]="ghostPlaceholder(child)"
+              />
+              <button
+                matIconButton
+                class="ghost-add small-icon-button"
+                [matTooltip]="'Add ' + (child.label ?? child.name)"
+                [attr.aria-label]="'Add ' + (child.label ?? child.name)"
+                (click)="toggleLeafPresence(childItem.key, child, true)"
+              >
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+          } @else {
+            <button
+              matButton="outlined"
+              class="presence-leaf-add"
+              (click)="toggleLeafPresence(childItem.key, child, true)"
+            >
+              <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
+            </button>
+          }
         }
       }
     }
@@ -116,7 +162,7 @@
             >{{ child.label ?? child.name }}</mat-checkbox>
             @if (formGroup().get(childItem.key)) {
               <nff-dynamic-recursive-form
-                [inheritedAppearance]="childAppearance()"
+                [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
                 [schema]="flatGroup(child)"
                 [formGroup]="asFormGroup(formGroup().get(childItem.key))"
                 [editable]="editable()"
@@ -126,7 +172,7 @@
         }
         @else if (child.kind == 'nodeGroup') {
           <nff-dynamic-recursive-form
-            [inheritedAppearance]="childAppearance()"
+            [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
             [schema]="child"
             [formGroup]="asFormGroup(formGroup().get(childItem.key))"
             [initialValue]="formGroup().get(childItem.key)?.value"
@@ -166,7 +212,7 @@
                 </mat-form-field>
                 @if (selectedCase) {
                   <nff-dynamic-recursive-form
-                    [inheritedAppearance]="childAppearance()"
+                    [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
                     [schema]="caseAsGroup(child, selectedCase)"
                     [formGroup]="choiceGroup"
                     [editable]="editable()"
@@ -178,7 +224,7 @@
         }
         @else if (child.kind == 'nodeGroupList') {
           <nff-node-group-list-renderer
-            [inheritedAppearance]="childAppearance()"
+            [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
             [nodeGroupList]="child"
             [formArray]="asFormArray(formGroup().get(childItem.key))"
             [initialValue]="formGroup().get(childItem.key)?.value"
@@ -204,7 +250,7 @@
             </mat-expansion-panel-header>
             @if (mapGroup) {
               <nff-node-map-renderer
-                [inheritedAppearance]="childAppearance()"
+                [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
                 [nodeMap]="child"
                 [formGroup]="mapGroup"
                 [editable]="editable()"
@@ -305,7 +351,7 @@
               </mat-form-field>
               @if (selectedCase) {
                 <nff-dynamic-recursive-form
-                  [inheritedAppearance]="childAppearance()"
+                  [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
                   [schema]="caseAsGroup(child, selectedCase)"
                   [formGroup]="choiceGroup"
                   [editable]="editable()"
@@ -334,7 +380,7 @@
           </mat-expansion-panel-header>
           @if (mapGroup) {
             <nff-node-map-renderer
-              [inheritedAppearance]="childAppearance()"
+              [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
               [nodeMap]="child"
               [formGroup]="mapGroup"
               [editable]="editable()"
@@ -350,7 +396,7 @@
             </mat-panel-title>
           </mat-expansion-panel-header>
           <nff-node-group-list-renderer
-            [inheritedAppearance]="childAppearance()"
+            [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
             [nodeGroupList]="child"
             [formArray]="asFormArray(formGroup().get(childItem.key))"
             [initialValue]="formGroup().get(childItem.key)?.value"
@@ -372,7 +418,7 @@
           </mat-expansion-panel-header>
           @if (formGroup().get(childItem.key)) {
             <nff-dynamic-recursive-form
-              [inheritedAppearance]="childAppearance()"
+              [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
               [schema]="flatGroup(child)"
               [formGroup]="asFormGroup(formGroup().get(childItem.key))"
               [editable]="editable()"
@@ -382,7 +428,7 @@
       }
       @else if (child.kind == 'nodeGroup') {
         <nff-dynamic-recursive-form
-          [inheritedAppearance]="childAppearance()"
+          [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
           [schema]="child"
           [formGroup]="asFormGroup(formGroup().get(childItem.key))"
           [initialValue]="formGroup().get(childItem.key)?.value"

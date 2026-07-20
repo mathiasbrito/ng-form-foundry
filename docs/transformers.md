@@ -2,7 +2,7 @@
 
 `ng-form-foundry-transformers` is a companion **Node/TypeScript** package that
 generates schemas from an existing source — a **YAML** or **JSON** config file, a
-**YANG** model, or (in beta) a **libconfig** document — and reverts the edited
+**YANG** model, or a **libconfig** document — and reverts the edited
 form value back to that source format. It
 is framework-agnostic (no framework imports); NestJS is the likely host, but it
 runs just as well in Express, a worker, or a CLI.
@@ -38,14 +38,17 @@ directly (tree-shakeable).
 | --- | --- | --- |
 | `yaml` | YAML config (optionally a JSON Schema) | YAML — comments & key order preserved |
 | `json` | JSON config (optionally a JSON Schema) | JSON — indent & trailing newline preserved |
-| `libconfig` | libconfig document (optionally a JSON Schema); **beta** | libconfig — comments & scalar types preserved |
+| `libconfig` | libconfig document (optionally a JSON Schema) | libconfig — comments & scalar types preserved |
 | `yang` | YANG model (via an engine) | RFC 7951 instance data |
 
 ## YAML
 
 Turn a YAML config into a form, then write the edited value back with comments, key
 order, and formatting preserved. Pass a JSON Schema to drive types/required/enums,
-or omit it to infer the form from the data itself.
+or omit it to infer the form from the data itself. Inferred forms keep hex and
+octal literals (`0x1A`, `0o17` — YAML 1.2 has no binary notation) in their own
+base: the leaf gets a `radix` display hint and an edited value re-emits as the
+same kind of literal.
 
 ```ts
 import { yamlTransformer } from 'ng-form-foundry-transformers';
@@ -219,12 +222,10 @@ JSON-Schema-driven or inferred alike.
 win, and `applyThesaurus` never mutates its input — it returns a decorated
 copy.
 
-## libconfig (beta)
+## libconfig
 
 `libconfigTransformer` edits **libconfig documents** — the `.cfg`/`.conf`
-format of srsRAN, OAI, and other C/C++ software. It is a **beta** feature and
-logs a one-time console warning on first use: diff the `toSource` output
-against the original file before deploying a write-back.
+format of srsRAN, OAI, and other C/C++ software.
 
 The revert splices edited value spans into the original text, so comments and
 formatting survive verbatim on every unedited byte, and emission is
@@ -234,6 +235,11 @@ radix, prefix spelling, and digit width, an int64 keeps its `L` suffix, and
 integers beyond 2^53 travel as exact decimal strings. A negative edit into a
 non-decimal slot emits decimal, because the C scanner accepts no sign on
 hex/binary/octal literals.
+
+Non-decimal literals also set the leaf's `radix` display hint in the inferred
+schema, so the form *shows and edits* the value in the base the file wrote it
+in (`0x1A` renders as `0x1A`, not `26`) — see the library's radix rendering in
+`features.md`. The value itself stays a plain number end to end.
 
 Without a JSON Schema the form is inferred from the document's typed literals
 (a list of groups infers the union of entry keys; keys missing from some
@@ -245,6 +251,35 @@ with an error rather than spliced. `@include` is rejected by default;
 `{ includes: 'opaque' }` keeps the directive line verbatim (anywhere the C
 scanner allows it, list positions included) and edits only the file's own
 settings.
+
+### Guarantees
+
+Pinned by the package's test suite:
+
+- An untouched form round-trips **byte-identically** — comments, formatting,
+  and all.
+- A single scalar edit changes exactly one literal in the output.
+- Types survive edits: float slots stay floats, hex/binary/octal literals
+  keep their base, prefix spelling, and digit width, `L`/`LL` suffixes stay,
+  and 64-bit integer precision is exact end to end.
+
+### Known limitations
+
+- **New settings are value-typed.** A setting added by the form (one with no
+  counterpart in the source file) is emitted from its JavaScript value: an
+  integral number becomes an int even where the consuming program expects a
+  float. Route such additions through a slot that exists in the source, or
+  accept the typing.
+- **Heterogeneous lists are read-only**, and empty collections are read-only
+  without a JSON Schema — libconfig gives no element type to edit by.
+- **In `'opaque'` include mode the form edits only the parent file**; settings
+  from included files are invisible to it.
+- `minItems`/`maxItems`-style cardinality is not enforced on inferred lists
+  (a JSON Schema adds it).
+- **Shrinking a list can drop comments inside it.** Removing trailing
+  elements deletes their source span; a comment sitting between the removed
+  elements goes with them. Comments outside the edited span are never
+  touched.
 
 The format, the parser design, and the full round-trip semantics are described
 in the package's

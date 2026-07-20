@@ -36,6 +36,8 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
   @Input() initialValue!: number[] | string[] | boolean[];
   @Input() formArray = new FormArray<any>([]);
   @Input() editable: boolean = true;
+  /** Forwarded to each entry's embedded form — see the form's input of the same name. */
+  @Input() showAbsentOptionals = false;
   @Input() minItems: number = 1;
   @Input() maxItems: number = 1;
   /** Field-layout appearance from the enclosing group, forwarded to every item form. */

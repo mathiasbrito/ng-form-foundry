@@ -2,18 +2,31 @@
 @if (AnonLeaf.type === 'string') {
   <mat-form-field [appearance]="editable ? 'fill' : 'outline'">
     <mat-label>{{ label }} #{{ index + 1}}</mat-label>
-    <input [readonly]="!editable"
-           [formControl]="control"
-           matInput type="text" >
-    @if (removable) {
+    @if (radix) {
+      <!-- The bigint decimal-string carry, presented in its source base. -->
+      <input [readonly]="!editable"
+             [nffRadixInput]="radix" nffRadixValueType="string"
+             [formControl]="control"
+             matInput type="text" >
+    } @else {
+      <input [readonly]="!editable"
+             [formControl]="control"
+             matInput type="text" >
     }
   </mat-form-field>
 } @else if (AnonLeaf.type === 'number') {
   <mat-form-field [appearance]="editable ? 'fill' : 'outline'">
     <mat-label>{{ label }} #{{ index + 1}}</mat-label>
-    <input [readonly]="!editable"
-           [formControl]="control"
-           matInput type="number">
+    @if (radix) {
+      <input [readonly]="!editable"
+             [nffRadixInput]="radix"
+             [formControl]="control"
+             matInput type="text">
+    } @else {
+      <input [readonly]="!editable"
+             [formControl]="control"
+             matInput type="number">
+    }
   </mat-form-field>
 } @else if (AnonLeaf.type === 'boolean') {
   @if (editable) {
