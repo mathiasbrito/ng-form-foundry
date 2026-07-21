@@ -13,8 +13,8 @@
  * under an `integer` schema is a legitimate wild-file shape the form can
  * carry and edit.
  */
-import type { NodeGroup, NodeType } from './schema';
-import { childrenOf } from './schema-keys';
+import type { Choice, NodeGroup, NodeType } from './schema';
+import { childrenOf, isSingleNodeBody } from './schema-keys';
 
 /** A document/schema container-shape disagreement, pointing at the key path. */
 export class SchemaShapeError extends Error {
@@ -51,12 +51,16 @@ export function assertSchemaShapes(data: unknown, schema: NodeGroup): void {
 }
 
 function checkNode(value: unknown, node: NodeType, path: string): void {
-  if (value === undefined) return; // absent: presence semantics, never a shape
+  // Absent is presence semantics; null is either a nullable leaf's value or
+  // the empty-container idiom (YAML `section:`) — nothing exists to erase.
+  if (value == null) return;
   switch (node.kind) {
     case 'leaf':
-      // Any primitive is carryable (string carries, quoted ints, null).
+      // Any primitive is carryable (string carries, quoted ints). An *empty*
+      // collection is too: the libconfig empty-collection carry under a
+      // string leaf round-trips as a no-op — only content can be erased.
       if (isRecord(value)) throw new SchemaShapeError(path, 'object', 'scalar');
-      if (Array.isArray(value)) throw new SchemaShapeError(path, 'array', 'scalar');
+      if (Array.isArray(value) && value.length > 0) throw new SchemaShapeError(path, 'array', 'scalar');
       return;
     case 'leafList':
       if (!Array.isArray(value)) throw new SchemaShapeError(path, shapeOf(value), 'array');
@@ -78,12 +82,56 @@ function checkNode(value: unknown, node: NodeType, path: string): void {
       if (!isRecord(value)) throw new SchemaShapeError(path, shapeOf(value), 'object');
       checkChildren(value, node, path);
       return;
-    case 'choice':
-      // A record checks its case fields; a primitive is legal for
-      // leaf-bodied cases, so it passes without deeper knowledge.
+    case 'choice': {
+      // The document's shape must be one some case can carry: a record for
+      // record-bodied cases, an array for a collection-bodied case, a scalar
+      // for a leaf-bodied case. An array under object-only cases (or a
+      // record under scalar-only cases) is exactly the uncarryable-section
+      // erasure this check exists to refuse.
+      const allowed = caseShapes(node);
+      const found = shapeOf(value);
+      if (!allowed.has(found)) {
+        throw new SchemaShapeError(path, found, preferredShape(allowed));
+      }
       if (isRecord(value)) checkChildren(value, node, path);
       return;
+    }
   }
+}
+
+/** The container shapes a choice's cases can carry, unioned across cases. */
+function caseShapes(choice: Choice): Set<'object' | 'array' | 'scalar'> {
+  const shapes = new Set<'object' | 'array' | 'scalar'>();
+  for (const body of Object.values(choice.cases)) {
+    if (!isSingleNodeBody(body)) {
+      shapes.add('object'); // a record of named fields
+      continue;
+    }
+    switch (body.kind) {
+      case 'nodeGroup':
+      case 'map':
+        shapes.add('object');
+        break;
+      case 'nodeGroupList':
+      case 'leafList':
+        shapes.add('array');
+        break;
+      case 'leaf':
+        shapes.add('scalar');
+        break;
+      case 'choice': // a nested choice's own cases are unknowable here: permissive
+        shapes.add('object').add('array').add('scalar');
+        break;
+    }
+  }
+  return shapes;
+}
+
+/** A single representative shape for the error message, objects first. */
+function preferredShape(allowed: Set<'object' | 'array' | 'scalar'>): 'object' | 'array' | 'scalar' {
+  if (allowed.has('object')) return 'object';
+  if (allowed.has('array')) return 'array';
+  return 'scalar';
 }
 
 /** Recurse a record's own keys through the node's schema-born children. */

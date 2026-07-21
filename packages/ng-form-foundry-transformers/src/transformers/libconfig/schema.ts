@@ -219,6 +219,9 @@ export function raw(value: CfgValue, source: string): string {
 export function annotateSchemaRadix(node: CfgValue, schema: NodeType): void {
   switch (schema.kind) {
     case 'leaf': {
+      // Only number/string leaves render radix; a boolean/enum leaf covering
+      // an int literal is a scalar-type mismatch the form handles otherwise.
+      if (schema.type !== 'number' && schema.type !== 'string') return;
       if (node.kind === 'scalar' && node.int && node.int.radix !== 10 && !schema.radix) {
         schema.radix = node.int.radix;
       }

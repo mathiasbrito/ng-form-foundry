@@ -7,3 +7,6 @@
 
 export { jsonTransformer } from './json-transformer';
 export type { JsonOptions, JsonFormat } from './json-transformer';
+// Thrown by schema-driven toSchema; re-exported so subpath consumers can
+// catch it by instance.
+export { SchemaShapeError } from '../../core/shape-check';

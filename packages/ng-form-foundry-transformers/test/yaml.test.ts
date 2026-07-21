@@ -334,3 +334,37 @@ test('a container-shape mismatch between document and schema throws, naming the 
     /'cells'.*document holds an object.*schema expects an array/s,
   );
 });
+
+test('the YAML empty-key idiom passes the shape check: null carries nothing to erase', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      section: { type: 'object', properties: { port: { type: 'integer' } } },
+      servers: { type: 'array', items: { type: 'string' } },
+    },
+  };
+  const { binding, initialValue } = yamlTransformer.toSchema('section:\nservers:\nother: 1\n', { schema });
+  assert.ok(initialValue);
+  // Materializing content into the empty section still works on save.
+  const out = yamlTransformer.toSource({ section: { port: 5 }, servers: ['a'] }, binding);
+  assert.match(out, /port: 5/);
+  assert.match(out, /- a/);
+});
+
+test('an array at a choice-covered key throws when every case is an object', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      mode: {
+        anyOf: [
+          { type: 'object', properties: { a: { type: 'integer' } }, required: ['a'] },
+          { type: 'object', properties: { b: { type: 'string' } }, required: ['b'] },
+        ],
+      },
+    },
+  };
+  assert.throws(
+    () => yamlTransformer.toSchema('mode:\n  - 1\n  - 2\n', { schema }),
+    /'mode'.*document holds an array.*schema expects an object/s,
+  );
+});

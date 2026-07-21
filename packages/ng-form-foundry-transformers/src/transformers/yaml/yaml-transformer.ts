@@ -134,6 +134,8 @@ const RADIX_BY_FORMAT: Record<string, 2 | 8 | 16> = { BIN: 2, OCT: 8, HEX: 16 };
 function annotateRadix(node: unknown, schema: NodeType): void {
   switch (schema.kind) {
     case 'leaf': {
+      // Only number/string leaves render radix.
+      if (schema.type !== 'number' && schema.type !== 'string') return;
       const radix = scalarRadix(node);
       if (radix && !schema.radix) schema.radix = radix;
       return;

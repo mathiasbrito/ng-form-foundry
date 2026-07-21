@@ -517,6 +517,73 @@ test('matching shapes never throw: the whole OAI fixture passes the shape check'
   assert.ok(initialValue);
 });
 
+test('a collection at a choice-covered key throws when no case can carry it', () => {
+  const choiceSchema: JsonSchema = {
+    type: 'object',
+    properties: {
+      mode: {
+        anyOf: [
+          { type: 'object', properties: { a: { type: 'integer' } }, required: ['a'] },
+          { type: 'object', properties: { b: { type: 'string' } }, required: ['b'] },
+        ],
+      },
+    },
+  };
+  // The doc holds a list where every case is an object: uncarryable.
+  assert.throws(
+    () => libconfigTransformer.toSchema('mode = ( 1, 2 );\n', { schema: choiceSchema }),
+    /'mode'.*document holds an array.*schema expects an object/s,
+  );
+  // A record still recurses and passes (the R1-era behavior, unchanged).
+  const ok = libconfigTransformer.toSchema('mode = { a = 1; };\n', { schema: choiceSchema });
+  assert.ok(ok.initialValue);
+});
+
+test('a case field literally named "kind" does not blind the shape check', () => {
+  const k8sish: JsonSchema = {
+    type: 'object',
+    properties: {
+      deploy: {
+        anyOf: [
+          {
+            type: 'object',
+            properties: {
+              kind: { type: 'string' },
+              replicas: { type: 'array', items: { type: 'integer' } },
+            },
+            required: ['kind'],
+          },
+        ],
+      },
+    },
+  };
+  // replicas is declared an array; the doc holds a group inside the choice.
+  assert.throws(
+    () => libconfigTransformer.toSchema('deploy = { kind = "web"; replicas = { a = 1; }; };\n', { schema: k8sish }),
+    /'deploy\.replicas'/,
+  );
+});
+
+test('an empty collection under a string-typed schema leaf passes (the carry no-op)', () => {
+  const { initialValue } = libconfigTransformer.toSchema('empty = ( );\n', {
+    schema: { type: 'object', properties: { empty: { type: 'string' } } },
+  });
+  assert.ok(initialValue);
+});
+
+test('SchemaShapeError is catchable by instance from the libconfig subpath export', () => {
+  const { SchemaShapeError: SubpathError } = require('../src/transformers/libconfig');
+  try {
+    libconfigTransformer.toSchema('gNBs = { gNB_ID = 1; };\n', {
+      schema: { type: 'object', properties: { gNBs: { type: 'array', items: { type: 'object' } } } },
+    });
+    assert.fail('expected a throw');
+  } catch (e) {
+    assert.ok(e instanceof SubpathError);
+    assert.equal((e as { path: string }).path, 'gNBs');
+  }
+});
+
 test('a type-changing integral edit emits an int literal, never a float', () => {
   // Quoted-hex ints exist in wild OAI configs: string slot, integer schema.
   const { binding } = libconfigTransformer.toSchema('gNB_ID = "0xe00";\n', {

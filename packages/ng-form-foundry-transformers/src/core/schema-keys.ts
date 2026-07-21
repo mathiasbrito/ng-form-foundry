@@ -51,10 +51,20 @@ export function itemSchemaOf(node: NodeType | undefined): NodeGroup | undefined 
   return node?.kind === 'nodeGroupList' ? node.type : undefined;
 }
 
+/**
+ * A case body is a single node exactly when its `kind` is a *string* — a
+ * record body whose fields include one literally named `kind` (k8s-style
+ * schemas) holds a NodeType there, not a string. The `in` operator cannot
+ * tell the two apart.
+ */
+export function isSingleNodeBody(body: Choice['cases'][string]): body is NodeType {
+  return typeof (body as { kind?: unknown }).kind === 'string';
+}
+
 /** Field name → schema across every case of a choice (leaf-bodied cases too). */
 function* caseEntries(choice: Choice): Generator<[string, NodeType]> {
   for (const body of Object.values(choice.cases)) {
-    if ('kind' in body) yield [(body as NodeType).name, body as NodeType];
+    if (isSingleNodeBody(body)) yield [body.name, body];
     else for (const [name, field] of Object.entries(body as Record<string, NodeType>)) yield [name, field];
   }
 }

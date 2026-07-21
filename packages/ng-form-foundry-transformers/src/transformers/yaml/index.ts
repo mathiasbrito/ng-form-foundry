@@ -10,3 +10,6 @@
 export { yamlTransformer } from './yaml-transformer';
 export type { YamlOptions, YamlBinding } from './yaml-transformer';
 export { applyValueToDocument } from './revert';
+// Thrown by schema-driven toSchema; re-exported so subpath consumers can
+// catch it by instance.
+export { SchemaShapeError } from '../../core/shape-check';
