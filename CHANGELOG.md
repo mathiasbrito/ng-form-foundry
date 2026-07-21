@@ -4,7 +4,7 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.5.2] — 2026-07-21
 
 ### Fixed
 - **A container-shape mismatch between document and schema now throws
@@ -180,7 +180,7 @@ Baseline for this changelog: the tree/detail config editor covering the full
 node model (choices, maps, optional-field menus), and the
 `ng-form-foundry-transformers` package with YANG, YAML, and JSON transformers.
 
-[Unreleased]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.1...HEAD
+[0.5.2]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.4.0...v0.4.1

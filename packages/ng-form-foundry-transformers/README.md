@@ -309,6 +309,15 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.5.2` — **shape safety and operator-friendly display**: a container-shape
+disagreement between document and schema (array declared where the document
+holds an object, or scalar where it holds a collection — inside choices
+included) throws a `SchemaShapeError` naming the path instead of producing
+an empty form whose save would erase the section; a type-changing integral
+edit writes an integer literal, never a float; and schema-driven fields
+display hex/octal/binary values in the base the document wrote them, in
+every `unknownKeys` mode. Adversarially proof-tested before release.
+
 `0.5.1` — **partial JSON Schemas edit safely**: the new `unknownKeys` option
 (YAML, JSON, libconfig) governs keys the schema does not cover — `'preserve'`
 (default) keeps them verbatim on save, `'drop'` deletes them for
