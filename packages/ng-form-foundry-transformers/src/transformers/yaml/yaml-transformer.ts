@@ -1,9 +1,10 @@
 import { type Document, isMap, isScalar, isSeq, parseDocument } from 'yaml';
-import type { FormValue, NodeType, Thesaurus } from '../../core/schema';
+import type { FormValue, NodeGroup, NodeType, Thesaurus } from '../../core/schema';
 import { applyThesaurus } from '../../core/thesaurus';
 import type { Transformer, TransformResult } from '../../core/transformer';
 import { inferNodeGroup } from '../../core/infer';
 import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '../../core/json-schema';
+import { mergeInferred } from '../../core/merge-inferred';
 import { isUnsafeBigInt } from '../../core/bigint';
 import { applyValueToDocument } from './revert';
 
@@ -26,6 +27,33 @@ export interface YamlOptions {
    * case-insensitively; never paths.
    */
   thesaurus?: Thesaurus;
+  /**
+   * Schema-driven mode only: what happens to keys the JSON Schema does not
+   * cover. `'preserve'` (default) keeps them verbatim — the form never
+   * carried them, so a partial schema edits its slice without erasing the
+   * rest. `'drop'` makes the edited value authoritative for the whole
+   * document, deleting uncovered keys — for consumers whose schema is
+   * intentionally complete. `'edit'` surfaces them instead: uncovered keys
+   * render as editable fields typed by the data (the inferred schema merged
+   * under the JSON Schema), so nothing is invisible and the value covers the
+   * whole document. Ignored without a `schema`.
+   */
+  unknownKeys?: 'preserve' | 'drop' | 'edit';
+}
+
+/**
+ * The revert context: the parsed {@link Document} and — in schema-driven
+ * mode with `unknownKeys: 'preserve'` or `'edit'` — the NodeGroup the form
+ * was built from (the JSON Schema's own under `'preserve'`, the
+ * inferred-merged one under `'edit'`), so `toSource` treats the value as
+ * authoritative for schema-born paths only. Under `'edit'` that is almost
+ * the whole document; the gate still protects the keys no form field can
+ * carry (e.g. a key inside a covered choice's object that no case names).
+ * Treat it as opaque: build it with `toSchema`, hand it back to `toSource`.
+ */
+export interface YamlBinding {
+  doc: Document;
+  schema?: NodeGroup;
 }
 
 /**
@@ -34,8 +62,9 @@ export interface YamlOptions {
  * preserves comments, key order, and formatting by applying edits onto the parsed
  * document (see {@link applyValueToDocument}).
  *
- * The `binding` it round-trips is the parsed {@link Document}; `toSource` clones
- * it before applying, so a single `toSchema` result can serve many edits.
+ * The `binding` it round-trips is a {@link YamlBinding}; `toSource` clones the
+ * document inside it before applying, so a single `toSchema` result can serve
+ * many edits.
  *
  * With a JSON Schema in {@link YamlOptions}, the form is schema-driven; without
  * one it is inferred from the data.
@@ -43,28 +72,43 @@ export interface YamlOptions {
 export const yamlTransformer = {
   id: 'yaml',
 
-  toSchema(source: string, options?: YamlOptions): TransformResult<Document> {
+  toSchema(source: string, options?: YamlOptions): TransformResult<YamlBinding> {
     // Parse integers as BigInt so the document nodes keep full precision; the
     // revert re-emits them verbatim. The form value can't carry a BigInt, so
     // out-of-range integers become strings there (safe ones become plain numbers).
     const doc = parseDocument(source, { intAsBigInt: true });
     const data = (normalizeBigInts(doc.toJS()) ?? {}) as FormValue;
-    const schema = options?.schema
+    const unknownKeys = options?.unknownKeys ?? 'preserve';
+    const fromJsonSchema = options?.schema
       ? jsonSchemaToNodeGroup(options.schema, options.rootName, options.schemaOptions)
-      : inferNodeGroup(data, options?.rootName);
-    if (!options?.schema && doc.contents) annotateRadix(doc.contents, schema);
+      : undefined;
+    const schema =
+      fromJsonSchema && unknownKeys === 'edit'
+        ? mergeInferred(fromJsonSchema, inferNodeGroup(data, options?.rootName))
+        : fromJsonSchema ?? inferNodeGroup(data, options?.rootName);
+    // Inferred leaves (the whole schema, or the uncovered slice under 'edit')
+    // pick up the document's hex/octal presentation.
+    if ((!fromJsonSchema || unknownKeys === 'edit') && doc.contents) annotateRadix(doc.contents, schema);
     const labeled = options?.thesaurus ? applyThesaurus(schema, options.thesaurus) : schema;
-    return { schema: labeled, binding: doc, initialValue: data };
+    return {
+      schema: labeled,
+      // 'preserve' gates the revert on the JSON Schema's NodeGroup; 'edit' on
+      // the merged one (schema-born ≈ everything, but keys no form field can
+      // carry stay protected); 'drop' and inferred mode leave the value
+      // authoritative for the whole document.
+      binding: { doc, schema: fromJsonSchema && unknownKeys !== 'drop' ? schema : undefined },
+      initialValue: data,
+    };
   },
 
-  toSource(value: FormValue, binding: Document): string {
-    const doc = binding.clone();
-    applyValueToDocument(doc, value);
+  toSource(value: FormValue, binding: YamlBinding): string {
+    const doc = binding.doc.clone();
+    applyValueToDocument(doc, value, binding.schema);
     return String(doc);
   },
   // `satisfies` verifies conformance to the catalog contract while keeping the
   // concrete sync return types, so direct callers need no `await`.
-} satisfies Transformer<string, string, Document, YamlOptions>;
+} satisfies Transformer<string, string, YamlBinding, YamlOptions>;
 
 const RADIX_BY_FORMAT: Record<string, 2 | 8 | 16> = { BIN: 2, OCT: 8, HEX: 16 };
 
@@ -131,7 +175,8 @@ function normalizeBigInts(value: unknown): unknown {
   if (typeof value === 'bigint') return isUnsafeBigInt(value) ? value.toString() : Number(value);
   if (Array.isArray(value)) return value.map(normalizeBigInts);
   if (value && typeof value === 'object') {
-    const out: Record<string, unknown> = {};
+    // Null prototype: a `__proto__` document key must stay a data key.
+    const out: Record<string, unknown> = Object.create(null);
     for (const key of Object.keys(value)) out[key] = normalizeBigInts((value as Record<string, unknown>)[key]);
     return out;
   }

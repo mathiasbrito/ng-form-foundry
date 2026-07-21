@@ -3,8 +3,9 @@ import type { Leaf, LeafList, LeafType, NodeGroup, NodeGroupList, NodeType } fro
 const ROOT = '__root__';
 
 /**
- * Infer a root {@link NodeGroup} from a parsed data object when no schema is
- * given. Structure and types come from the values themselves:
+ * Infer a root {@link NodeGroup} from a parsed data object — the whole form
+ * when no JSON Schema is given, and the layer `mergeInferred` overlays under
+ * `unknownKeys: 'edit'`. Structure and types come from the values themselves:
  *
  *   - object            → nodeGroup (recursed)
  *   - array of objects  → nodeGroupList (item schema = union of the items' keys)
@@ -22,7 +23,9 @@ export function inferNodeGroup(data: Record<string, unknown>, name: string = ROO
 }
 
 function objectToNodeGroup(data: Record<string, unknown>, name: string): NodeGroup {
-  const children: Record<string, NodeType> = {};
+  // Null prototype: data keys are arbitrary, and assigning a `__proto__` key
+  // onto a plain object would silently set the record's prototype instead.
+  const children: Record<string, NodeType> = Object.create(null);
   for (const [key, value] of Object.entries(data)) {
     children[key] = inferNode(key, value);
   }
@@ -47,7 +50,7 @@ function inferArray(name: string, items: unknown[]): NodeGroupList | LeafList {
 
 /** A representative object with every key seen across `items`, each mapped to the first non-null sample. */
 function unionKeys(items: Record<string, unknown>[]): Record<string, unknown> {
-  const merged: Record<string, unknown> = {};
+  const merged: Record<string, unknown> = Object.create(null);
   for (const item of items) {
     for (const [key, value] of Object.entries(item)) {
       if (!(key in merged) || (merged[key] == null && value != null)) merged[key] = value;

@@ -96,6 +96,25 @@ Schema (draft 2020-12, back-compatible with draft-07)** to shape the form; witho
 one, the form is inferred from the data's structure and value types. The exported
 `jsonSchemaToNodeGroup(schema)` does the mapping and can be used on its own.
 
+The schema **may cover any slice of the document**. On save, the edited value
+is authoritative for schema-covered paths only: every key the schema does not
+mention — top-level or nested inside covered objects and array entries —
+survives verbatim, so a real-world config can be edited through a partial
+schema without enumerating every key the deployed software writes. Removing
+a schema-covered optional still deletes it. This is the
+`unknownKeys: 'preserve'` default (YAML, JSON, and libconfig alike). The
+other two answers to "what about keys outside the schema?": pass
+`unknownKeys: 'drop'` when the schema is intentionally complete and
+uncovered keys should be deleted on save (sanitizing a config, enforcing a
+strict template), or `unknownKeys: 'edit'` to **surface** them — the
+inferred schema is merged under the JSON Schema, so uncovered keys render
+as editable fields typed by the document's own values (in document order,
+radix hints included), covered keys keep their typed, validated schema
+nodes, and nothing in the file is invisible. On save, `'edit'` is
+authoritative for the merged schema's paths — effectively the whole
+document, while the rare keys no form field can carry (say, a key inside a
+covered choice's object that no case names) still survive verbatim.
+
 | JSON Schema | Maps to |
 | --- | --- |
 | `object` with `properties` | `nodeGroup` (children keyed by property; `required` marks fields) |
@@ -245,7 +264,20 @@ Without a JSON Schema the form is inferred from the document's typed literals
 (a list of groups infers the union of entry keys; keys missing from some
 entries become presence toggles). Empty and heterogeneous collections are then
 **read-only** — no honest element type exists. A JSON Schema
-(`{ schema, schemaOptions? }`) makes typed **empty** collections editable;
+(`{ schema, schemaOptions? }`) may cover **any slice of the document**: the
+edited value is authoritative for schema-covered paths only, and every
+setting the schema does not mention — top-level or nested inside covered
+groups and list entries — survives byte-verbatim in its original position.
+A real-world config can therefore be edited through a partial schema without
+enumerating every key the deployed software (or a newer version of it)
+writes. Absence of a schema-covered key still removes it, so presence
+toggles keep their meaning. As in the YAML/JSON transformers this is the
+`unknownKeys: 'preserve'` default, `unknownKeys: 'drop'` opts an
+intentionally complete schema back into whole-document authority, and
+`unknownKeys: 'edit'` surfaces uncovered settings as editable fields typed
+by the document's own literals (uncovered empty and heterogeneous
+collections stay read-only carries, as in inferred mode). A JSON
+Schema also makes typed **empty** collections editable;
 heterogeneous lists stay read-only, and an edited carry string is rejected
 with an error rather than spliced. `@include` is rejected by default;
 `{ includes: 'opaque' }` keeps the directive line verbatim (anywhere the C

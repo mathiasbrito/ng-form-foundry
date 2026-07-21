@@ -19,6 +19,7 @@
  *   empty collections editable.
  */
 import type { Leaf, NodeGroup, NodeType, FormValue } from '../../core/schema';
+import { type SchemaKeys, childrenOf, itemSchemaOf } from '../../core/schema-keys';
 import { type CfgGroup, type CfgList, type CfgScalar, type CfgValue, family } from './parser';
 
 /** Digits only — the constraint for int64 values carried as strings. */
@@ -201,4 +202,63 @@ function rawLeaf(name: string, why: string): Leaf {
 /** The verbatim source slice of a node. */
 export function raw(value: CfgValue, source: string): string {
   return source.slice(value.span.start, value.span.end);
+}
+
+/**
+ * `unknownKeys: 'edit'` extraction fixup. The whole-document extraction runs
+ * with `emptyAsArrays` (schema-covered empty collections are typed and
+ * editable), but collections the JSON Schema does **not** cover merge as
+ * read-only raw-carry leaves — their value must be the verbatim source
+ * slice, not `[]`. Walks the document alongside the original (pre-merge)
+ * schema coverage and restores the carry on every uncovered empty
+ * collection, at any depth.
+ */
+export function carryUncoveredEmpties(
+  group: CfgGroup,
+  source: string,
+  value: unknown,
+  keys: SchemaKeys,
+): void {
+  if (!isRecord(value)) return;
+  for (const setting of group.settings) {
+    if (keys && !keys.has(setting.name)) {
+      restoreEmptyCarries(setting.value, source, value, setting.name);
+      continue;
+    }
+    const child = keys?.get(setting.name);
+    const v = value[setting.name];
+    if (setting.value.kind === 'group' && child) {
+      carryUncoveredEmpties(setting.value, source, v, childrenOf(child));
+    } else if (setting.value.kind === 'list' && Array.isArray(v)) {
+      const itemSchema = itemSchemaOf(child);
+      if (!itemSchema) continue;
+      const itemKeys = childrenOf(itemSchema);
+      setting.value.elements.forEach((el, i) => {
+        if (el.kind === 'group') carryUncoveredEmpties(el, source, v[i], itemKeys);
+      });
+    }
+  }
+}
+
+/** In a fully uncovered subtree, every empty collection reverts to its carry. */
+function restoreEmptyCarries(node: CfgValue, source: string, parent: Record<string, unknown> | unknown[], key: string | number): void {
+  if ((node.kind === 'array' || node.kind === 'list') && node.elements.length === 0) {
+    (parent as Record<string, unknown>)[key as string] = raw(node, source);
+    return;
+  }
+  if (node.kind === 'group') {
+    const v = (parent as Record<string, unknown>)[key as string];
+    if (!isRecord(v)) return;
+    for (const s of node.settings) restoreEmptyCarries(s.value, source, v, s.name);
+    return;
+  }
+  if (node.kind === 'list') {
+    const v = (parent as Record<string, unknown>)[key as string];
+    if (!Array.isArray(v)) return;
+    node.elements.forEach((el, i) => restoreEmptyCarries(el, source, v as unknown[], i));
+  }
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }

@@ -13,6 +13,8 @@
  * literal re-emits in hex at its original digit width, an int64 keeps its
  * `L`/`LL` suffix, and values beyond 2^53 travel as exact decimal strings.
  */
+import type { NodeGroup, NodeType } from '../../core/schema';
+import { type SchemaKeys, childrenOf, itemSchemaOf } from '../../core/schema-keys';
 import type { CfgGroup, CfgScalar, CfgValue, CfgSetting, IntMeta } from './parser';
 import { listShape, raw } from './schema';
 
@@ -22,33 +24,55 @@ interface Edit {
   text: string;
 }
 
-/** Apply `value` onto the parsed `root` of `source`, returning the new text. */
-export function applyValueToSource(source: string, root: CfgGroup, value: Record<string, unknown>): string {
+/**
+ * Apply `value` onto the parsed `root` of `source`, returning the new text.
+ *
+ * Without `schema` (inferred mode) the value is authoritative for the whole
+ * document: it was extracted from every setting, so a key it lacks is a
+ * deletion. With `schema` (the NodeGroup the form was built from) the value
+ * is authoritative for **schema-born paths only** — the form never carried
+ * the other settings, so they survive byte-verbatim in their original
+ * positions. A partial schema thus edits its slice of an OAI/srsRAN config
+ * without erasing keys the schema does not enumerate; absence of a
+ * schema-born key still deletes (a presence toggle turned off).
+ */
+export function applyValueToSource(
+  source: string,
+  root: CfgGroup,
+  value: Record<string, unknown>,
+  schema?: NodeGroup,
+): string {
   const edits: Edit[] = [];
-  patchGroup(source, root, value, edits);
+  patchGroup(source, root, value, edits, schema && childrenOf(schema));
   edits.sort((a, b) => b.start - a.start);
   let out = source;
   for (const e of edits) out = out.slice(0, e.start) + e.text + out.slice(e.end);
   return out;
 }
 
-function patchGroup(src: string, group: CfgGroup, value: Record<string, unknown>, edits: Edit[]): void {
+function patchGroup(src: string, group: CfgGroup, value: Record<string, unknown>, edits: Edit[], schema: SchemaKeys): void {
   for (const setting of group.settings) {
-    if (!value || !(setting.name in value)) {
+    if (schema && !schema.has(setting.name)) continue; // not schema-born: verbatim
+    // Own-key check: `in` would resolve setting names like `toString` through
+    // the prototype chain, making them undeletable (and their "value" a function).
+    if (!value || !Object.prototype.hasOwnProperty.call(value, setting.name)) {
       edits.push(deleteSetting(src, setting));
       continue;
     }
-    patchValue(src, setting.value, value[setting.name], edits);
+    patchValue(src, setting.value, value[setting.name], edits, schema?.get(setting.name));
   }
   const known = new Set(group.settings.map((s) => s.name));
-  // null/undefined means "absent", never a value: such keys are not added.
-  const added = Object.keys(value ?? {}).filter((k) => !known.has(k) && value[k] != null);
+  // null/undefined means "absent", never a value: such keys are not added —
+  // and under a schema, only schema-born keys may be added at all.
+  const added = Object.keys(value ?? {}).filter(
+    (k) => !known.has(k) && value[k] != null && (!schema || schema.has(k)),
+  );
   if (added.length) {
     edits.push(insertionEdit(src, group, added.map((k) => `${k} = ${serialize(value[k], '')};`)));
   }
 }
 
-function patchValue(src: string, node: CfgValue, value: unknown, edits: Edit[]): void {
+function patchValue(src: string, node: CfgValue, value: unknown, edits: Edit[], schema?: NodeType): void {
   switch (node.kind) {
     case 'scalar': {
       if (node.value === value) return;
@@ -59,7 +83,7 @@ function patchValue(src: string, node: CfgValue, value: unknown, edits: Edit[]):
       return;
     }
     case 'group': {
-      if (isRecord(value)) return patchGroup(src, node, value, edits);
+      if (isRecord(value)) return patchGroup(src, node, value, edits, schema && childrenOf(schema));
       edits.push({ ...node.span, text: serialize(value, '') }); // shape change: regenerate
       return;
     }
@@ -77,7 +101,7 @@ function patchValue(src: string, node: CfgValue, value: unknown, edits: Edit[]):
     case 'list': {
       const shape = listShape(node);
       if (shape === 'groups' && Array.isArray(value)) {
-        return patchElements(src, node.elements, node, value, edits);
+        return patchElements(src, node.elements, node, value, edits, itemSchemaOf(schema));
       }
       if (shape === 'scalars' && Array.isArray(value)) {
         return patchElements(src, node.elements, node, value, edits);
@@ -105,9 +129,9 @@ function patchValue(src: string, node: CfgValue, value: unknown, edits: Edit[]):
 }
 
 /** Element-wise patch of an array/list: edit in place, then grow or shrink. */
-function patchElements(src: string, elements: CfgValue[], collection: { innerSpan: { start: number; end: number } }, value: unknown[], edits: Edit[]): void {
+function patchElements(src: string, elements: CfgValue[], collection: { innerSpan: { start: number; end: number } }, value: unknown[], edits: Edit[], itemSchema?: NodeGroup): void {
   const shared = Math.min(elements.length, value.length);
-  for (let i = 0; i < shared; i++) patchValue(src, elements[i]!, value[i], edits);
+  for (let i = 0; i < shared; i++) patchValue(src, elements[i]!, value[i], edits, itemSchema);
   if (value.length > elements.length) {
     const items = value.slice(elements.length).map((v) => serialize(v, ''));
     const at = elements.length ? elements[elements.length - 1]!.span.end : collection.innerSpan.start;

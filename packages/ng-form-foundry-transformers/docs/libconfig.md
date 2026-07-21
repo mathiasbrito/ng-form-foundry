@@ -173,6 +173,22 @@ by node** and collects text edits `{ start, end, text }`, applied in
 descending position order. Nothing is regenerated wholesale; the original
 text is the substrate.
 
+Authority over keys depends on the mode. In inferred mode the value was
+extracted from every setting, so it is authoritative for the whole document:
+a key it lacks is a deletion. In schema-driven mode with
+`unknownKeys: 'preserve'` (the default) the binding carries the produced
+`NodeGroup`, and the value is authoritative for **schema-born paths only** —
+`serializeForm` never emits anything else, so every setting outside the
+schema (at any depth, list entries and choice groups included) is preserved
+byte-verbatim in place. A schema-born key absent from the value is still
+deleted (a presence toggle turned off), and only schema-born keys can be
+inserted. `unknownKeys: 'drop'` opts a complete schema back into whole-
+document authority: uncovered settings are deleted on save.
+`unknownKeys: 'edit'` gates on the **merged** (JSON Schema ∪ inferred)
+NodeGroup instead — effectively the whole document, while settings no form
+field can carry (say, a key inside a covered choice's group that no case
+names) still survive verbatim.
+
 Per shape:
 
 - **Scalar** — if the value differs, splice a replacement literal formatted

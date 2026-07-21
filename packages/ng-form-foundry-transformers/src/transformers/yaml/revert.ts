@@ -1,5 +1,7 @@
 import { type Document, type Node, type Pair, type YAMLMap, type YAMLSeq, isMap, isScalar, isSeq } from 'yaml';
 import { isIntegerString } from '../../core/bigint';
+import type { NodeGroup, NodeType } from '../../core/schema';
+import { type SchemaKeys, childrenOf, itemSchemaOf } from '../../core/schema-keys';
 
 /**
  * Apply an edited form value onto a parsed YAML {@link Document} in place,
@@ -12,17 +14,23 @@ import { isIntegerString } from '../../core/bigint';
  * {@link import('./json-schema')}. Callers should clone the document first if the
  * original must be preserved.
  *
+ * With `schema` (the NodeGroup the form was built from) the
+ * value is authoritative for **schema-born paths only**: keys the schema does
+ * not cover — at any depth — are preserved verbatim, their comments included.
+ * Without it the value covers the whole document and a key it lacks is a
+ * deletion.
+ *
  * Map keys are matched by the *same string form* `doc.toJS()` produced when the
  * form value was built, so non-string keys (a `80:` port map, a `true:` flag)
  * reconcile against their original typed key nodes instead of being appended as
  * duplicate string-keyed pairs.
  */
-export function applyValueToDocument(doc: Document, value: unknown): void {
+export function applyValueToDocument(doc: Document, value: unknown, schema?: NodeGroup): void {
   if (doc.contents == null) {
     doc.contents = doc.createNode(value) as unknown as Document['contents'];
     return;
   }
-  doc.contents = applyToNode(doc, doc.contents as unknown, value) as Document['contents'];
+  doc.contents = applyToNode(doc, doc.contents as unknown, value, schema) as Document['contents'];
 }
 
 /**
@@ -31,22 +39,26 @@ export function applyValueToDocument(doc: Document, value: unknown): void {
  * a map/sequence is reconciled child-by-child; a shape change (or a brand-new
  * position) allocates a fresh node.
  */
-function applyToNode(doc: Document, node: unknown, value: unknown): unknown {
+function applyToNode(doc: Document, node: unknown, value: unknown, schema?: NodeType): unknown {
   if (isPlainObject(value)) {
     if (!isMap(node)) return doc.createNode(value);
-    reconcileMap(doc, node, value);
+    reconcileMap(doc, node, value, schema && childrenOf(schema));
     return node;
   }
 
   if (Array.isArray(value)) {
     if (!isSeq(node)) return doc.createNode(value);
-    reconcileSeq(doc, node, value);
+    reconcileSeq(doc, node, value, itemSchemaOf(schema));
     return node;
   }
 
   // scalar (string / number / boolean / null)
   if (isScalar(node)) {
-    node.value = coerceScalarValue(value, node.value);
+    const next = coerceScalarValue(value, node.value);
+    // An unchanged value keeps the node untouched — the parsed BigInt and the
+    // form's number compare by numeric value, so an identity pass never
+    // downgrades a BigInt-held integer to a lossy JS number.
+    if (!sameScalar(node.value, next)) node.value = next;
     return node;
   }
   return doc.createNode(value);
@@ -56,13 +68,22 @@ function applyToNode(doc: Document, node: unknown, value: unknown): unknown {
  * Update a map node against the value object: drop pairs whose key is gone,
  * recurse into the ones that remain (matched by their `toJS` key string, so
  * typed keys line up), and append a fresh pair for each genuinely new key.
+ * Under `schema`, keys that are not schema-born are exempt from all three —
+ * never dropped, never recursed into, never addable.
  */
-function reconcileMap(doc: Document, node: YAMLMap, value: Record<string, unknown>): void {
-  node.items = node.items.filter((pair) => keyString(pair.key) in value);
+function reconcileMap(doc: Document, node: YAMLMap, value: Record<string, unknown>, schema: SchemaKeys): void {
+  node.items = node.items.filter((pair) => {
+    const key = keyString(pair.key);
+    if (schema && !schema.has(key)) return true; // not schema-born: verbatim
+    // Own-key check: `in` would resolve doc keys like `toString` through the
+    // prototype chain and make them undeletable.
+    return Object.prototype.hasOwnProperty.call(value, key);
+  });
   for (const key of Object.keys(value)) {
+    if (schema && !schema.has(key)) continue; // not schema-born: never written
     const pair = node.items.find((p) => keyString(p.key) === key);
     if (pair) {
-      pair.value = applyToNode(doc, pair.value, value[key]) as Node | null;
+      pair.value = applyToNode(doc, pair.value, value[key], schema?.get(key)) as Node | null;
     } else {
       node.items.push(doc.createPair(key, value[key]) as Pair);
     }
@@ -70,11 +91,11 @@ function reconcileMap(doc: Document, node: YAMLMap, value: Record<string, unknow
 }
 
 /** Update a sequence node: shrink/grow to the value's length, recurse per item. */
-function reconcileSeq(doc: Document, node: YAMLSeq, value: unknown[]): void {
+function reconcileSeq(doc: Document, node: YAMLSeq, value: unknown[], itemSchema?: NodeGroup): void {
   while (node.items.length > value.length) node.items.pop();
   for (let i = 0; i < value.length; i++) {
     if (i < node.items.length) {
-      node.items[i] = applyToNode(doc, node.items[i], value[i]) as Node;
+      node.items[i] = applyToNode(doc, node.items[i], value[i], itemSchema) as Node;
     } else {
       node.items.push(doc.createNode(value[i]) as Node);
     }
@@ -94,6 +115,15 @@ function coerceScalarValue(value: unknown, current: unknown): unknown {
     return BigInt(value);
   }
   return value;
+}
+
+/** Numeric equality across the BigInt/number divide, `===` otherwise. */
+function sameScalar(current: unknown, next: unknown): boolean {
+  if (current === next) return true;
+  if (typeof current === 'bigint' && typeof next === 'number' && Number.isInteger(next)) {
+    return current === BigInt(next);
+  }
+  return false;
 }
 
 /**

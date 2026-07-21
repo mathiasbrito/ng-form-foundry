@@ -4,6 +4,36 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Fixed
+- **A partial JSON Schema no longer deletes uncovered keys on save** — in
+  the libconfig, YAML, and JSON transformers alike. In schema-driven mode
+  the edited value is now authoritative only for schema-covered paths: keys
+  the schema does not mention — top-level or nested inside covered groups
+  and list entries — survive verbatim (comments included where the format
+  has them), so a config can be edited through a schema that covers just the
+  fields of interest. Removing a schema-covered optional still deletes it.
+  The new `unknownKeys` option makes the behavior explicit: `'preserve'` is
+  the default, `'drop'` opts an intentionally complete schema back into
+  deleting uncovered keys (sanitizing a config, enforcing a strict
+  template).
+
+### Added
+- **`unknownKeys: 'edit'`** (YAML, JSON, libconfig): surface the keys a
+  partial JSON Schema does not cover instead of hiding them — they render as
+  editable fields typed by the document's own values (in document order,
+  hex/octal display hints included), while covered keys keep their typed,
+  validated schema nodes. Nothing in the file is invisible, and the whole
+  document is editable through one form.
+
+### Changed
+- The YAML transformer's binding is now an object (`{ doc, schema? }`)
+  instead of the bare parsed document, and the JSON transformer's binding
+  gained optional fields. Bindings are opaque — build them with `toSchema`
+  and hand them back to `toSource` — so code doing exactly that is
+  unaffected.
+
 ## [0.5.0] — 2026-07-20
 
 ### Changed
@@ -128,6 +158,7 @@ Baseline for this changelog: the tree/detail config editor covering the full
 node model (choices, maps, optional-field menus), and the
 `ng-form-foundry-transformers` package with YANG, YAML, and JSON transformers.
 
+[Unreleased]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.0...HEAD
 [0.5.0]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.3.5...v0.4.0

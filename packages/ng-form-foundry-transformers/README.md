@@ -155,6 +155,15 @@ enabled, so the output validates against the source schema (opt out with
 `schemaOptions: { optionalPresence: false }`); a required property mapping to a
 choice is marked `mandatory`.
 
+**The schema may cover any slice of the document.** Keys it does not mention
+are governed by `unknownKeys` (YAML, JSON, and libconfig alike):
+`'preserve'` (default) keeps them verbatim on save — a partial schema edits
+its fields without erasing the rest of a real-world config; `'drop'` deletes
+them — for an intentionally complete schema (sanitizing, template
+enforcement); `'edit'` surfaces them as editable fields typed by the
+document's own values, merged under the JSON Schema in document order, so
+nothing in the file is invisible.
+
 ## JSON transformer
 
 Same as YAML, for **JSON config files** — `jsonTransformer.toSchema(json, { schema? })`

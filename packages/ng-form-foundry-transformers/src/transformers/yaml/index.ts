@@ -8,5 +8,5 @@
  */
 
 export { yamlTransformer } from './yaml-transformer';
-export type { YamlOptions } from './yaml-transformer';
+export type { YamlOptions, YamlBinding } from './yaml-transformer';
 export { applyValueToDocument } from './revert';

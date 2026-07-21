@@ -4,6 +4,11 @@ import { yamlTransformer } from '../src/transformers/yaml/yaml-transformer';
 import type { JsonSchema } from '../src/core/json-schema';
 import { TransformerRegistry } from '../src/core/registry';
 
+/** Prototype-free extraction output normalized for deepEqual against literals. */
+function plain(v: unknown): unknown {
+  return JSON.parse(JSON.stringify(v));
+}
+
 test('infers a schema from data: groups, typed leaves, leaf-list, group-list', () => {
   const text = `
 server:
@@ -34,7 +39,7 @@ users:
   assert.equal(users.kind, 'nodeGroupList');
   assert.equal(users.type.children.name.type, 'string');
 
-  assert.deepEqual(initialValue, {
+  assert.deepEqual(plain(initialValue), {
     server: { host: 'localhost', port: 8080, tls: true },
     tags: ['a', 'b'],
     users: [{ name: 'alice' }, { name: 'bob' }],
@@ -202,7 +207,7 @@ test('a missing optional key stays absent through the schema-driven round-trip',
   };
   const { schema, binding, initialValue } = yamlTransformer.toSchema('host: prod # keep\n', { schema: jsonSchema });
   assert.equal((schema.children['port'] as any).presence, true);
-  assert.deepEqual(initialValue, { host: 'prod' }); // no port key to seed a control from
+  assert.deepEqual(plain(initialValue), { host: 'prod' }); // no port key to seed a control from
   // An untouched form round-trips the initial value; port must not appear as null.
   const out = yamlTransformer.toSource(initialValue!, binding);
   assert.equal(out, 'host: prod # keep\n');
@@ -230,4 +235,78 @@ test('an edited hex value re-emits in hex, exact beyond 2^53', () => {
   v['mask'] = 26;
   v['big'] = '9223372036854775806';
   assert.equal(yamlTransformer.toSource(v, binding), 'mask: 0x1a\nbig: 0x7ffffffffffffffe\n');
+});
+
+test('schema mode: keys the schema does not cover survive a save, comments included', () => {
+  const src = 'covered: 1\nuncovered: keep me # and my comment\nnested:\n  known: a\n  extra: stays\n';
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      covered: { type: 'integer' },
+      nested: { type: 'object', properties: { known: { type: 'string' } } },
+    },
+  };
+  const { binding } = yamlTransformer.toSchema(src, { schema });
+  // serializeForm-shaped: only schema-covered fields.
+  const out = yamlTransformer.toSource({ covered: 2, nested: { known: 'b' } }, binding);
+  assert.equal(out, 'covered: 2\nuncovered: keep me # and my comment\nnested:\n  known: b\n  extra: stays\n');
+});
+
+test("schema mode: unknownKeys 'drop' restores whole-document authority", () => {
+  const src = 'covered: 1\nuncovered: gone\n';
+  const schema: JsonSchema = { type: 'object', properties: { covered: { type: 'integer' } } };
+  const { binding } = yamlTransformer.toSchema(src, { schema, unknownKeys: 'drop' });
+  assert.equal(yamlTransformer.toSource({ covered: 2 }, binding), 'covered: 2\n');
+});
+
+test('schema mode: uncovered keys inside covered list entries survive', () => {
+  const src = 'cells:\n  - id: 1\n    vendor_x: keep\n  - id: 2\n';
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      cells: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' } } } },
+    },
+  };
+  const { binding } = yamlTransformer.toSchema(src, { schema });
+  const out = yamlTransformer.toSource({ cells: [{ id: 10 }, { id: 2 }] }, binding);
+  assert.equal(out, 'cells:\n  - id: 10\n    vendor_x: keep\n  - id: 2\n');
+});
+
+test("unknownKeys: 'edit' surfaces uncovered keys as inferred fields, in document order", () => {
+  const src = 'first: keep # comment\ncovered: 1\nmask: 0xf\n';
+  const schema: JsonSchema = { type: 'object', properties: { covered: { type: 'integer' } } };
+  const { schema: merged, binding, initialValue } = yamlTransformer.toSchema(src, { schema, unknownKeys: 'edit' });
+  assert.deepEqual(Object.keys(merged.children), ['first', 'covered', 'mask']); // document order
+  assert.equal((merged.children['first'] as any).type, 'string');
+  assert.equal((merged.children['mask'] as any).radix, 16); // inferred hint on the uncovered key
+  // The value covers everything: identity round-trips, and uncovered keys edit.
+  assert.equal(yamlTransformer.toSource(initialValue!, binding), src);
+  const v = JSON.parse(JSON.stringify(initialValue)) as Record<string, unknown>;
+  v['first'] = 'changed';
+  assert.equal(yamlTransformer.toSource(v, binding), src.replace('keep', 'changed'));
+});
+
+test('a document key named like an Object.prototype member is deletable', () => {
+  const src = 'toString: gone\nstay: 1\n';
+  const { binding } = yamlTransformer.toSchema(src); // inferred: whole-value authority
+  assert.equal(yamlTransformer.toSource({ stay: 1 }, binding), 'stay: 1\n');
+});
+
+test("unknownKeys: 'edit' still preserves keys no form field can carry (inside a covered choice)", () => {
+  const src = 'mode:\n  a: 1\n  vendor: keep # comment\n';
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      mode: {
+        anyOf: [
+          { type: 'object', properties: { a: { type: 'integer' } }, required: ['a'] },
+          { type: 'object', properties: { b: { type: 'string' } }, required: ['b'] },
+        ],
+      },
+    },
+  };
+  const { binding } = yamlTransformer.toSchema(src, { schema, unknownKeys: 'edit' });
+  // "vendor" is invisible to the form (no case names it): preserved, comment included.
+  const out = yamlTransformer.toSource({ mode: { a: 2 } }, binding);
+  assert.equal(out, 'mode:\n  a: 2\n  vendor: keep # comment\n');
 });

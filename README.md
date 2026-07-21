@@ -80,7 +80,10 @@ The schema's constraints (`required`, `pattern`, `min`/`max`, `minLength`,
   ```
 
   - **YAML / JSON** — comment- and format-preserving edits, JSON-Schema-driven
-    or inferred forms, exact big-integer round-trips.
+    or inferred forms, exact big-integer round-trips. A schema may cover just
+    a slice of the document: uncovered keys survive saves untouched
+    (`unknownKeys: 'preserve'`), or render as inferred editable fields
+    (`'edit'`).
   - **libconfig** — the `.cfg`/`.conf` format of srsRAN, OAI, and other
     C/C++ software. Statically typed emission (a float slot stays a float, a
     hex literal re-emits as hex at its original width, `L` suffixes survive),

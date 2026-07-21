@@ -120,3 +120,86 @@ test('schemaOptions ride through jsonTransformer.toSchema', () => {
   });
   assert.equal((off.schema.children['note'] as any).presence, undefined);
 });
+
+test('schema mode: keys the schema does not cover survive a save, key order intact', () => {
+  const src = '{\n  "covered": 1,\n  "uncovered": "keep",\n  "nested": {\n    "known": "a",\n    "extra": "stays"\n  }\n}\n';
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      covered: { type: 'integer' },
+      nested: { type: 'object', properties: { known: { type: 'string' } } },
+    },
+  };
+  const { binding } = jsonTransformer.toSchema(src, { schema });
+  const out = jsonTransformer.toSource({ covered: 2, nested: { known: 'b' } }, binding);
+  assert.equal(out, src.replace('"covered": 1', '"covered": 2').replace('"known": "a"', '"known": "b"'));
+});
+
+test("schema mode: unknownKeys 'drop' restores whole-document authority", () => {
+  const src = '{\n  "covered": 1,\n  "uncovered": "gone"\n}\n';
+  const schema: JsonSchema = { type: 'object', properties: { covered: { type: 'integer' } } };
+  const { binding } = jsonTransformer.toSchema(src, { schema, unknownKeys: 'drop' });
+  assert.equal(jsonTransformer.toSource({ covered: 2 }, binding), '{\n  "covered": 2\n}\n');
+});
+
+test('schema mode: uncovered entry keys survive inside covered arrays; covered-absent deletes', () => {
+  const src = '{\n  "cells": [\n    {\n      "id": 1,\n      "vendor_x": "keep"\n    }\n  ],\n  "opt": true\n}\n';
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      cells: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' } } } },
+      opt: { type: 'boolean' },
+    },
+  };
+  const { binding } = jsonTransformer.toSchema(src, { schema });
+  // opt is covered but absent from the value: a presence toggle turned off.
+  const out = jsonTransformer.toSource({ cells: [{ id: 7 }] }, binding);
+  assert.equal(out, '{\n  "cells": [\n    {\n      "id": 7,\n      "vendor_x": "keep"\n    }\n  ]\n}\n');
+});
+
+test("unknownKeys: 'edit' surfaces uncovered keys as inferred, editable fields", () => {
+  const src = '{\n  "uncovered": "keep",\n  "covered": 1\n}\n';
+  const schema: JsonSchema = { type: 'object', properties: { covered: { type: 'integer' } } };
+  const { schema: merged, binding, initialValue } = jsonTransformer.toSchema(src, { schema, unknownKeys: 'edit' });
+  assert.deepEqual(Object.keys(merged.children), ['uncovered', 'covered']); // document order
+  assert.equal((merged.children['covered'] as any).integer, true); // schema node won
+  assert.equal(jsonTransformer.toSource(initialValue!, binding), src);
+  const v = { ...(initialValue as Record<string, unknown>), uncovered: 'changed' };
+  assert.equal(jsonTransformer.toSource(v as never, binding), src.replace('"keep"', '"changed"'));
+});
+
+test('schema mode: hostile key names — __proto__ survives, prototype members are addable', () => {
+  // "__proto__" is a legal JSON key; uncovered, it must survive a save. Keys
+  // named after Object.prototype members must behave as plain data keys.
+  const src = '{\n  "covered": 1,\n  "__proto__": {\n    "x": 1\n  }\n}\n';
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: { covered: { type: 'integer' }, constructor: { type: 'integer' as const }, toString: { type: 'string' as const } },
+  };
+  const { binding } = jsonTransformer.toSchema(src, { schema });
+  const out = jsonTransformer.toSource({ covered: 2, constructor: 5, toString: 'hi' }, binding);
+  assert.match(out, /"__proto__": \{\n    "x": 1\n  \}/); // uncovered: verbatim
+  assert.match(out, /"constructor": 5/); // covered addition lands
+  assert.match(out, /"toString": "hi"/);
+});
+
+test("unknownKeys: 'edit' still preserves keys no form field can carry (inside a covered choice)", () => {
+  const src = '{\n  "mode": {\n    "a": 1,\n    "vendor": "keep"\n  }\n}\n';
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      mode: {
+        anyOf: [
+          { type: 'object', properties: { a: { type: 'integer' } }, required: ['a'] },
+          { type: 'object', properties: { b: { type: 'string' } }, required: ['b'] },
+        ],
+      },
+    },
+  };
+  const { binding } = jsonTransformer.toSchema(src, { schema, unknownKeys: 'edit' });
+  // serializeForm emits only the active case's fields; "vendor" is invisible
+  // to the form (no case names it) and must not be deleted by the save.
+  const out = jsonTransformer.toSource({ mode: { a: 2 } }, binding);
+  assert.match(out, /"a": 2/);
+  assert.match(out, /"vendor": "keep"/);
+});

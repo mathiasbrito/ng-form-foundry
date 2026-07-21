@@ -1,9 +1,11 @@
-import type { FormValue, Thesaurus } from '../../core/schema';
+import type { FormValue, NodeGroup, NodeType, Thesaurus } from '../../core/schema';
 import { applyThesaurus } from '../../core/thesaurus';
 import type { Transformer, TransformResult } from '../../core/transformer';
 import { inferNodeGroup } from '../../core/infer';
 import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '../../core/json-schema';
 import { isIntegerString, isUnsafeIntegerString } from '../../core/bigint';
+import { type SchemaKeys, childrenOf, itemSchemaOf } from '../../core/schema-keys';
+import { mergeInferred } from '../../core/merge-inferred';
 
 /** Options for {@link jsonTransformer}'s `toSchema`. */
 export interface JsonOptions {
@@ -23,6 +25,18 @@ export interface JsonOptions {
    * case-insensitively; never paths.
    */
   thesaurus?: Thesaurus;
+  /**
+   * Schema-driven mode only: what happens to keys the JSON Schema does not
+   * cover. `'preserve'` (default) keeps them — the form never carried them,
+   * so a partial schema edits its slice without erasing the rest. `'drop'`
+   * makes the edited value authoritative for the whole document, deleting
+   * uncovered keys — for consumers whose schema is intentionally complete.
+   * `'edit'` surfaces them instead: uncovered keys render as editable fields
+   * typed by the data (the inferred schema merged under the JSON Schema), so
+   * nothing is invisible and the value covers the whole document. Ignored
+   * without a `schema`.
+   */
+  unknownKeys?: 'preserve' | 'drop' | 'edit';
 }
 
 /** How the source was formatted, so `toSource` re-emits it the same way. */
@@ -37,6 +51,19 @@ export interface JsonFormat {
    * them back as unquoted numbers so precision survives the round-trip.
    */
   bigInts: string[];
+  /**
+   * Present in schema-driven mode with `unknownKeys: 'preserve'` (the
+   * default) or `'edit'`: the original parsed data and the NodeGroup the
+   * form was built from (the JSON Schema's own under `'preserve'`, the
+   * inferred-merged one under `'edit'`). `toSource` then treats the value as
+   * authoritative for schema-born paths only and merges it over the
+   * original, so uncovered keys survive in their original key order — under
+   * `'edit'` that protection is left covering only the keys no form field
+   * can carry (e.g. a key inside a covered choice's object that no case
+   * names).
+   */
+  original?: FormValue;
+  schema?: NodeGroup;
 }
 
 /**
@@ -45,12 +72,15 @@ export interface JsonFormat {
  * `core` builders the YAML transformer uses — only parsing (`JSON.parse`) and
  * serialization (`JSON.stringify`) are JSON-specific.
  *
- * Standard JSON has no comments, so revert re-serializes the edited value,
- * preserving the source's indent width and trailing newline. Key order follows
- * the form value (which follows the schema, derived from the original), so it is
- * preserved for untouched keys. For JSON **with comments** (JSONC), parse and
- * edit it as YAML with {@link import('../yaml/yaml-transformer').yamlTransformer}
- * instead — `JSON.parse` rejects comments.
+ * Standard JSON has no comments, so revert re-serializes, preserving the
+ * source's indent width and trailing newline. In schema-driven mode with
+ * `unknownKeys: 'preserve'` or `'edit'` the value is merged over the original
+ * data at schema-born paths ({@link mergeSchemaBorn}), so uncovered keys and
+ * the original key order survive; otherwise the edited value is serialized
+ * as-is, key order following the form value. For JSON **with comments**
+ * (JSONC), parse and edit it as YAML with
+ * {@link import('../yaml/yaml-transformer').yamlTransformer} instead —
+ * `JSON.parse` rejects comments.
  *
  * Integers beyond 2^53 can't survive a `number` round-trip, so they are carried
  * as strings in the form value and re-emitted verbatim as unquoted numbers (the
@@ -63,26 +93,83 @@ export const jsonTransformer = {
     const bigInts: string[] = [];
     const parsed = JSON.parse(source, bigIntReviver);
     const data = collectBigInts(parsed ?? {}, [], bigInts) as FormValue;
-    const schema = options?.schema
+    const unknownKeys = options?.unknownKeys ?? 'preserve';
+    const fromJsonSchema = options?.schema
       ? jsonSchemaToNodeGroup(options.schema, options.rootName, options.schemaOptions)
-      : inferNodeGroup(data, options?.rootName);
+      : undefined;
+    const schema =
+      fromJsonSchema && unknownKeys === 'edit'
+        ? mergeInferred(fromJsonSchema, inferNodeGroup(data, options?.rootName))
+        : fromJsonSchema ?? inferNodeGroup(data, options?.rootName);
     const labeled = options?.thesaurus ? applyThesaurus(schema, options.thesaurus) : schema;
+    // 'preserve' gates the revert on the JSON Schema's NodeGroup; 'edit' on
+    // the merged one (schema-born ≈ everything, but keys no form field can
+    // carry stay protected); 'drop' and inferred mode leave the value
+    // authoritative for the whole document.
+    const preserveUnknown = fromJsonSchema != null && unknownKeys !== 'drop';
     const binding: JsonFormat = {
       indent: detectIndent(source),
       trailingNewline: source.endsWith('\n'),
       bigInts,
+      original: preserveUnknown ? data : undefined,
+      schema: preserveUnknown ? schema : undefined,
     };
     return { schema: labeled, binding, initialValue: data };
   },
 
   toSource(value: FormValue, binding: JsonFormat): string {
+    const merged =
+      binding.schema && binding.original !== undefined
+        ? (mergeSchemaBorn(binding.original, value, childrenOf(binding.schema)) as FormValue)
+        : value;
     const paths = new Set(binding.bigInts);
-    const prepared = paths.size ? markBigInts(value, [], paths) : value;
+    const prepared = paths.size ? markBigInts(merged, [], paths) : merged;
     let text = JSON.stringify(prepared, null, binding.indent);
     if (paths.size) text = text.replace(BIGINT_MARK_RE, '$1');
     return binding.trailingNewline ? text + '\n' : text;
   },
 } satisfies Transformer<string, string, JsonFormat, JsonOptions>;
+
+/**
+ * Merge the edited value over the original data, value-authoritative for
+ * schema-born keys only: an uncovered key keeps its original value and its
+ * position in the key order; a covered key takes the edited value (recursing
+ * where both sides are objects, and per index into arrays of groups); a
+ * covered key absent from the value is omitted (a presence toggle off);
+ * covered keys new to the document append after the originals.
+ */
+function mergeSchemaBorn(original: unknown, value: unknown, schema: SchemaKeys): unknown {
+  if (!isPlainObject(original) || !isPlainObject(value) || !schema) return value;
+  // Null-prototype output and own-key checks: document keys are arbitrary, so
+  // `__proto__` must stay a data key and `toString`/`constructor` must not
+  // resolve through the prototype chain (which would drop or fabricate keys).
+  const out: Record<string, unknown> = Object.create(null);
+  for (const key of Object.keys(original)) {
+    if (!schema.has(key)) {
+      out[key] = original[key]; // not schema-born: verbatim, in place
+    } else if (hasOwn(value, key)) {
+      out[key] = mergeChild(original[key], value[key], schema.get(key));
+    } // covered + absent: deleted
+  }
+  for (const key of Object.keys(value)) {
+    if (!(key in out) && !hasOwn(original, key) && schema.has(key)) out[key] = value[key];
+  }
+  return out;
+}
+
+/** Per-key recursion: objects merge by their child schema, group arrays per index. */
+function mergeChild(original: unknown, value: unknown, schema: NodeType | undefined): unknown {
+  if (schema && isPlainObject(original) && isPlainObject(value)) {
+    return mergeSchemaBorn(original, value, childrenOf(schema));
+  }
+  const itemSchema = itemSchemaOf(schema);
+  if (itemSchema && Array.isArray(original) && Array.isArray(value)) {
+    return value.map((item, i) =>
+      i < original.length ? mergeChild(original[i], item, itemSchema) : item,
+    );
+  }
+  return value;
+}
 
 /** Indent width (in spaces) of the first indented line, or 2 if none/tabs. */
 function detectIndent(source: string): number {
@@ -142,7 +229,8 @@ function collectBigInts(node: unknown, path: (string | number)[], out: string[])
   }
   if (Array.isArray(node)) return node.map((v, i) => collectBigInts(v, [...path, i], out));
   if (isPlainObject(node)) {
-    const res: Record<string, unknown> = {};
+    // Null prototype: a `__proto__` document key must stay a data key.
+    const res: Record<string, unknown> = Object.create(null);
     for (const key of Object.keys(node)) res[key] = collectBigInts(node[key], [...path, key], out);
     return res;
   }
@@ -160,7 +248,7 @@ function markBigInts(node: unknown, path: (string | number)[], paths: Set<string
   }
   if (Array.isArray(node)) return node.map((v, i) => markBigInts(v, [...path, i], paths));
   if (isPlainObject(node)) {
-    const res: Record<string, unknown> = {};
+    const res: Record<string, unknown> = Object.create(null);
     for (const key of Object.keys(node)) res[key] = markBigInts(node[key], [...path, key], paths);
     return res;
   }
@@ -169,4 +257,9 @@ function markBigInts(node: unknown, path: (string | number)[], paths: Set<string
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Own-key membership, immune to `Object.prototype` members and null-prototype objects. */
+function hasOwn(obj: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(obj, key);
 }

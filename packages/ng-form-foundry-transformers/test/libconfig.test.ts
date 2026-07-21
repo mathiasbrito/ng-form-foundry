@@ -293,9 +293,206 @@ test('non-decimal literals carry their base onto the schema as a radix display h
   assert.equal(c.mixed.radix, undefined); // no uniform base across elements
 });
 
+// —— schema-mode partial coverage: non-schema keys survive verbatim ——
+
+// OAI-flavored fixture: a partial schema will cover gNBs and Asn1_verbosity
+// only; every other key (and all comments) must survive a schema-mode save.
+const OAI_FIXTURE = `Active_gNBs = ( "cu-rfsim" ); # do not touch
+Asn1_verbosity = "none";
+sa = 1; // non-schema scalar between schema-born keys
+gNBs = (
+  { gNB_ID = 0xe00;
+    gNB_name = "cu-rfsim";
+    tracking_area_code = 1; # entry key outside the item schema
+  }
+);
+security = { ciphering_algorithms = ( "nea0" ); }; /* non-schema group */
+`;
+
+const OAI_PARTIAL_SCHEMA: JsonSchema = {
+  type: 'object',
+  required: ['gNBs'],
+  properties: {
+    gNBs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['gNB_ID', 'gNB_name'],
+        properties: { gNB_ID: { type: 'integer' }, gNB_name: { type: 'string' } },
+      },
+    },
+    Asn1_verbosity: { type: 'string' },
+  },
+};
+
+test('schema mode: a serializeForm-shaped value preserves every non-schema key verbatim', () => {
+  const { binding } = libconfigTransformer.toSchema(OAI_FIXTURE, { schema: OAI_PARTIAL_SCHEMA });
+  // Only schema-covered fields, all unedited — what serializeForm emits.
+  const value = { gNBs: [{ gNB_ID: 3584, gNB_name: 'cu-rfsim' }], Asn1_verbosity: 'none' };
+  assert.equal(libconfigTransformer.toSource(value, binding), OAI_FIXTURE);
+});
+
+test('schema mode: editing a covered field touches one literal, non-schema keys and order intact', () => {
+  const { binding } = libconfigTransformer.toSchema(OAI_FIXTURE, { schema: OAI_PARTIAL_SCHEMA });
+  const value = { gNBs: [{ gNB_ID: 3584, gNB_name: 'cu-2' }], Asn1_verbosity: 'annoying' };
+  const out = libconfigTransformer.toSource(value, binding);
+  assert.equal(
+    out,
+    OAI_FIXTURE.replace('"cu-rfsim";', '"cu-2";').replace('"none"', '"annoying"'),
+  );
+});
+
+test('schema mode: entry-level keys outside the item schema survive inside list entries', () => {
+  const { binding } = libconfigTransformer.toSchema(OAI_FIXTURE, { schema: OAI_PARTIAL_SCHEMA });
+  const out = libconfigTransformer.toSource(
+    { gNBs: [{ gNB_ID: 26, gNB_name: 'cu-rfsim' }], Asn1_verbosity: 'none' },
+    binding,
+  );
+  assert.match(out, /tracking_area_code = 1; # entry key outside the item schema/);
+  assert.match(out, /gNB_ID = 0x01A;/); // edited, in its own radix and width
+});
+
+test('schema mode: a schema-born key absent from the value is still deleted (presence off)', () => {
+  const { binding } = libconfigTransformer.toSchema(OAI_FIXTURE, { schema: OAI_PARTIAL_SCHEMA });
+  const out = libconfigTransformer.toSource({ gNBs: [{ gNB_ID: 3584, gNB_name: 'cu-rfsim' }] }, binding);
+  assert.doesNotMatch(out, /Asn1_verbosity/); // covered + absent → removed
+  assert.match(out, /Active_gNBs/); // not covered → untouched
+  assert.match(out, /security = \{/);
+});
+
+test('schema mode: only schema-born keys can be inserted', () => {
+  const { binding } = libconfigTransformer.toSchema('a = 1;\n', {
+    schema: { type: 'object', properties: { a: { type: 'integer' }, b: { type: 'integer' } } },
+  });
+  const out = libconfigTransformer.toSource({ a: 1, b: 2, rogue: 9 } as never, binding);
+  assert.match(out, /b = 2;/); // schema-born addition lands
+  assert.doesNotMatch(out, /rogue/); // non-schema key never inserted
+});
+
+test('schema mode: a choice keeps its key; switching cases swaps fields, unknown keys survive', () => {
+  const src = 'mode = { a = 1; keep_me = 7; };\nuncovered = 1;\n';
+  const choiceSchema: JsonSchema = {
+    type: 'object',
+    properties: {
+      mode: {
+        anyOf: [
+          { type: 'object', properties: { a: { type: 'integer' } }, required: ['a'] },
+          { type: 'object', properties: { b: { type: 'string' } }, required: ['b'] },
+        ],
+      },
+    },
+  };
+  const { binding } = libconfigTransformer.toSchema(src, { schema: choiceSchema });
+  // Same case, edited: only `a` changes; keep_me and uncovered stay.
+  assert.equal(
+    libconfigTransformer.toSource({ mode: { a: 2 } }, binding),
+    'mode = { a = 2; keep_me = 7; };\nuncovered = 1;\n',
+  );
+  // Case switch: `a` (schema-born, absent) goes, `b` arrives, keep_me stays.
+  const switched = libconfigTransformer.toSource({ mode: { b: 'x' } }, binding);
+  assert.doesNotMatch(switched, /a = /);
+  assert.match(switched, /b = "x";/);
+  assert.match(switched, /keep_me = 7;/);
+  assert.match(switched, /uncovered = 1;/);
+});
+
+test("unknownKeys: 'drop' makes the value authoritative for the whole document", () => {
+  const { binding } = libconfigTransformer.toSchema(OAI_FIXTURE, {
+    schema: OAI_PARTIAL_SCHEMA,
+    unknownKeys: 'drop',
+  });
+  const out = libconfigTransformer.toSource(
+    { gNBs: [{ gNB_ID: 3584, gNB_name: 'cu-rfsim' }], Asn1_verbosity: 'none' },
+    binding,
+  );
+  assert.doesNotMatch(out, /Active_gNBs|security|tracking_area_code/); // uncovered: deleted
+  assert.match(out, /Asn1_verbosity = "none";/); // covered: kept
+});
+
+test("unknownKeys: 'preserve' is the default and may also be passed explicitly", () => {
+  const explicit = libconfigTransformer.toSchema(OAI_FIXTURE, {
+    schema: OAI_PARTIAL_SCHEMA,
+    unknownKeys: 'preserve',
+  });
+  const value = { gNBs: [{ gNB_ID: 3584, gNB_name: 'cu-rfsim' }], Asn1_verbosity: 'none' };
+  assert.equal(libconfigTransformer.toSource(value, explicit.binding), OAI_FIXTURE);
+});
+
+test("unknownKeys: 'edit' surfaces uncovered settings as inferred, editable fields", () => {
+  const { schema, binding, initialValue } = libconfigTransformer.toSchema(OAI_FIXTURE, {
+    schema: OAI_PARTIAL_SCHEMA,
+    unknownKeys: 'edit',
+  });
+  const c = schema.children as any;
+  // Uncovered keys render, typed by the document's own literals.
+  assert.equal(c.Active_gNBs.kind, 'leafList');
+  assert.equal(c.sa.integer, true);
+  assert.equal(c.security.kind, 'nodeGroup');
+  // Covered keys keep their schema nodes; entry types merge per key.
+  const entry = c.gNBs.type.children;
+  assert.equal(entry.gNB_ID.integer, true);
+  assert.equal(entry.gNB_ID.radix, 16); // inferred display hint carried onto the schema leaf
+  assert.equal(entry.tracking_area_code.integer, true); // uncovered entry key, editable
+  // The value covers the whole document, so identity round-trips byte-exact.
+  assert.equal(libconfigTransformer.toSource(plain(initialValue) as any, binding), OAI_FIXTURE);
+  // …and an uncovered setting is genuinely editable.
+  const v = plain(initialValue) as any;
+  v.sa = 0;
+  assert.equal(
+    libconfigTransformer.toSource(v, binding),
+    OAI_FIXTURE.replace('sa = 1;', 'sa = 0;'),
+  );
+});
+
+test("unknownKeys: 'edit' keeps uncovered empty collections as read-only raw carries", () => {
+  const src = 'covered = 1;\nnothing = ( );\n';
+  const { schema, binding, initialValue } = libconfigTransformer.toSchema(src, {
+    schema: { type: 'object', properties: { covered: { type: 'integer' } } },
+    unknownKeys: 'edit',
+  });
+  const leaf = (schema.children as any)['nothing'];
+  assert.equal(leaf.readOnly, true);
+  assert.equal((initialValue as any).nothing, '( )'); // the carry, not []
+  assert.equal(libconfigTransformer.toSource(plain(initialValue) as any, binding), src);
+});
+
+test('inferred mode is unchanged: the value stays authoritative for every key', () => {
+  const { binding, initialValue } = libconfigTransformer.toSchema('a = 1;\nb = 2;\n');
+  const v = plain(initialValue) as Record<string, unknown>;
+  delete v['b'];
+  assert.equal(libconfigTransformer.toSource(v, binding), 'a = 1;\n');
+});
+
 test('an edited raw carry throws instead of splicing or silently dropping', () => {
   const het = libconfigTransformer.toSchema('l = ( 1, "x", true );\n');
   assert.throws(() => libconfigTransformer.toSource({ l: '( 2, "y", false )' }, het.binding), /read-only/);
   const empty = libconfigTransformer.toSchema('e = [ ];\n');
   assert.throws(() => libconfigTransformer.toSource({ e: 'nonsense' }, empty.binding), /read-only/);
+});
+
+test('a setting named like an Object.prototype member is deletable', () => {
+  const { binding } = libconfigTransformer.toSchema('toString = 1;\nstay = 2;\n');
+  assert.equal(libconfigTransformer.toSource({ stay: 2 }, binding), 'stay = 2;\n');
+});
+
+test("unknownKeys: 'edit' still preserves settings no form field can carry (inside a covered choice)", () => {
+  const src = 'mode = { a = 1; keep_me = 7; };\n';
+  const choiceSchema: JsonSchema = {
+    type: 'object',
+    properties: {
+      mode: {
+        anyOf: [
+          { type: 'object', properties: { a: { type: 'integer' } }, required: ['a'] },
+          { type: 'object', properties: { b: { type: 'string' } }, required: ['b'] },
+        ],
+      },
+    },
+  };
+  const { binding } = libconfigTransformer.toSchema(src, { schema: choiceSchema, unknownKeys: 'edit' });
+  // serializeForm emits only the active case's fields; keep_me is invisible
+  // to the form (no case names it) and must not be deleted by the save.
+  assert.equal(
+    libconfigTransformer.toSource({ mode: { a: 2 } }, binding),
+    'mode = { a = 2; keep_me = 7; };\n',
+  );
 });
