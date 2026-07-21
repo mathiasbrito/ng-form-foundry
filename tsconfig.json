@@ -14,6 +14,9 @@
       ],
       "ng-form-foundry-transformers": [
         "./packages/ng-form-foundry-transformers/src/core/index.ts"
+      ],
+      "ng-form-foundry-transformers/libconfig": [
+        "./packages/ng-form-foundry-transformers/src/transformers/libconfig/index.ts"
       ]
     },
     "noFallthroughCasesInSwitch": true,

@@ -1,0 +1,57 @@
+<h2>Partial-schema editing — <code>unknownKeys</code></h2>
+<p>
+  A hand-written, srsRAN-flavored libconfig file is edited through a JSON Schema
+  that covers only <code>pci</code>, <code>dl_arfcn</code>, and an optional
+  <code>log_level</code> the file doesn't have yet. The
+  <code>unknownKeys</code> option decides what happens to everything else:
+  <strong>preserve</strong> keeps uncovered settings verbatim on save,
+  <strong>drop</strong> deletes them, and <strong>edit</strong> surfaces them as
+  editable fields typed by the document's own literals. In every mode, a value
+  the file writes in hex displays and edits as hex — the document, not the
+  schema, decides the base.
+</p>
+
+<div class="controls">
+  <mat-button-toggle-group [value]="mode()" (change)="setMode($event.value)" aria-label="unknownKeys mode">
+    <mat-button-toggle value="preserve">'preserve' (default)</mat-button-toggle>
+    <mat-button-toggle value="drop">'drop'</mat-button-toggle>
+    <mat-button-toggle value="edit">'edit'</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <mat-slide-toggle [checked]="ghosts()" (change)="ghosts.set($event.checked)">
+    Ghost preview of absent optionals (<code>log_level</code>)
+  </mat-slide-toggle>
+
+  <button matButton="filled" (click)="save()">Save (serializeForm → toSource)</button>
+</div>
+
+<p class="blurb">{{ modeBlurb() }}</p>
+
+<div class="panes">
+  <section class="pane">
+    <h3>Original file</h3>
+    <pre>{{ source }}</pre>
+    <h3>Partial JSON Schema</h3>
+    <pre>{{ schemaJson }}</pre>
+  </section>
+
+  <section class="pane form-pane">
+    <h3>The form (<code>unknownKeys: '{{ mode() }}'</code>)</h3>
+    <nff-dynamic-recursive-form
+      [schema]="schema()"
+      [formGroup]="form()"
+      [editable]="true"
+      [showAbsentOptionals]="ghosts()"
+    />
+  </section>
+
+  <section class="pane">
+    <h3>Written file</h3>
+    @if (output(); as out) {
+      <pre>{{ out }}</pre>
+    } @else {
+      <p class="placeholder">Edit the form, then <em>Save</em> to see what
+        <code>toSource</code> writes back.</p>
+    }
+  </section>
+</div>
