@@ -309,6 +309,10 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.5.3` — version-alignment release with the workspace (the paired
+`ng-form-foundry` 0.5.3 ships hover-revealed field actions and indexed
+group-list add labels); no transformer changes.
+
 `0.5.2` — **shape safety and operator-friendly display**: a container-shape
 disagreement between document and schema (array declared where the document
 holds an object, or scalar where it holds a collection — inside choices
