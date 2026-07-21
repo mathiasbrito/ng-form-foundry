@@ -18,8 +18,9 @@ import type { Transformer, TransformResult } from '../../core/transformer';
 import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '../../core/json-schema';
 import { mergeInferred } from '../../core/merge-inferred';
 import { childrenOf } from '../../core/schema-keys';
+import { assertSchemaShapes } from '../../core/shape-check';
 import { type CfgGroup, parseLibconfig } from './parser';
-import { carryUncoveredEmpties, extractValue, libconfigToNodeGroup } from './schema';
+import { annotateSchemaRadix, carryUncoveredEmpties, extractValue, libconfigToNodeGroup } from './schema';
 import { applyValueToSource } from './revert';
 
 /** Options for {@link libconfigTransformer}'s `toSchema`. */
@@ -94,8 +95,15 @@ export const libconfigTransformer = {
       fromJsonSchema && unknownKeys === 'edit'
         ? mergeInferred(fromJsonSchema, libconfigToNodeGroup(root, source, options?.rootName ?? '__root__'))
         : fromJsonSchema ?? libconfigToNodeGroup(root, source, options?.rootName ?? '__root__');
+    // Schema-driven leaves display in the base the document wrote them in —
+    // the JSON Schema cannot know it, the document does (see annotateSchemaRadix).
+    if (fromJsonSchema) annotateSchemaRadix(root, schema);
     const labeled = options?.thesaurus ? applyThesaurus(schema, options.thesaurus) : schema;
     const initialValue = extractValue(root, source, options?.schema != null) as FormValue;
+    // A container-shape disagreement (group vs list vs scalar) produces a
+    // form that cannot carry the section and would erase it on save: refuse
+    // up front so the consumer can fall back to inferred editing.
+    if (fromJsonSchema) assertSchemaShapes(initialValue, fromJsonSchema);
     if (fromJsonSchema && unknownKeys === 'edit') {
       // Uncovered empty collections merged as read-only carries: their value
       // must be the verbatim slice, not the typed [] the extraction produced.

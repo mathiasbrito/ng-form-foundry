@@ -4,6 +4,28 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Fixed
+- **A container-shape mismatch between document and schema now throws
+  instead of silently erasing the section** (YAML, JSON, libconfig). A
+  schema declaring a section an array while the document holds an object
+  (or a scalar where it holds a collection) used to produce an empty,
+  valid-looking form whose save deleted the section's contents. `toSchema`
+  now throws a `SchemaShapeError` naming the offending path, so consumers
+  can catch it and fall back to inferred editing. Scalar-vs-scalar
+  differences remain editable, not errors.
+- **A type-changing integral edit writes an integer literal** (libconfig).
+  Editing a quoted string slot (wild configs carry `"0xe00"`-style quoted
+  ints) to a number under an `integer` schema previously emitted a float
+  literal (`3585.0`); it now emits `3585`. Float form is reserved for
+  genuinely fractional values and float-typed slots.
+- Schema-driven forms now display hex/octal/binary values in the base the
+  document wrote them in, in every `unknownKeys` mode (YAML and libconfig).
+  Previously only inferred forms and `'edit'` mode carried the `radix`
+  display hint; a schema-covered `pci = 0x1A` rendered as decimal `26` even
+  though saves always kept the hex spelling.
+
 ## [0.5.1] — 2026-07-21
 
 ### Fixed
@@ -158,6 +180,7 @@ Baseline for this changelog: the tree/detail config editor covering the full
 node model (choices, maps, optional-field menus), and the
 `ng-form-foundry-transformers` package with YANG, YAML, and JSON transformers.
 
+[Unreleased]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.1...HEAD
 [0.5.1]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.4.0...v0.4.1

@@ -29,3 +29,4 @@ export type {
 export { CASE_KEY } from './schema';
 export type { Thesaurus, ThesaurusEntry } from './schema';
 export { applyThesaurus } from './thesaurus';
+export { SchemaShapeError } from './shape-check';

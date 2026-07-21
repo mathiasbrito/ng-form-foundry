@@ -45,10 +45,11 @@ directly (tree-shakeable).
 
 Turn a YAML config into a form, then write the edited value back with comments, key
 order, and formatting preserved. Pass a JSON Schema to drive types/required/enums,
-or omit it to infer the form from the data itself. Inferred forms keep hex and
-octal literals (`0x1A`, `0o17` — YAML 1.2 has no binary notation) in their own
-base: the leaf gets a `radix` display hint and an edited value re-emits as the
-same kind of literal.
+or omit it to infer the form from the data itself. Hex and octal literals
+(`0x1A`, `0o17` — YAML 1.2 has no binary notation) keep their own base either
+way: the leaf gets a `radix` display hint — schema-driven leaves included,
+since only the document knows how a value was written — and an edited value
+re-emits as the same kind of literal.
 
 ```ts
 import { yamlTransformer } from 'ng-form-foundry-transformers';
@@ -95,6 +96,15 @@ requires Node ≥ 21 for this; on older Node it throws rather than silently roun
 Schema (draft 2020-12, back-compatible with draft-07)** to shape the form; without
 one, the form is inferred from the data's structure and value types. The exported
 `jsonSchemaToNodeGroup(schema)` does the mapping and can be used on its own.
+
+A schema-covered key whose **container shape disagrees with the document** —
+the schema says array where the document holds an object, or scalar where it
+holds a collection — makes `toSchema` throw a `SchemaShapeError` naming the
+offending path: such a form could not carry the section's contents and
+saving it would erase them. Catch the error to fall back to inferred
+editing, or align the schema. Scalar-vs-scalar differences (a quoted
+`"0xe00"` under an `integer` schema) are not errors — the form carries and
+edits them, and an integral edit writes back an integer literal.
 
 The schema **may cover any slice of the document**. On save, the edited value
 is authoritative for schema-covered paths only: every key the schema does not
@@ -255,10 +265,11 @@ integers beyond 2^53 travel as exact decimal strings. A negative edit into a
 non-decimal slot emits decimal, because the C scanner accepts no sign on
 hex/binary/octal literals.
 
-Non-decimal literals also set the leaf's `radix` display hint in the inferred
-schema, so the form *shows and edits* the value in the base the file wrote it
-in (`0x1A` renders as `0x1A`, not `26`) — see the library's radix rendering in
-`features.md`. The value itself stays a plain number end to end.
+Non-decimal literals also set the leaf's `radix` display hint — on inferred
+and schema-driven leaves alike, in every `unknownKeys` mode — so the form
+*shows and edits* the value in the base the file wrote it in (`0x1A` renders
+as `0x1A`, not `26`) — see the library's radix rendering in `features.md`.
+The value itself stays a plain number end to end.
 
 Without a JSON Schema the form is inferred from the document's typed literals
 (a list of groups infers the union of entry keys; keys missing from some

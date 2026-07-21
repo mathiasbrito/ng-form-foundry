@@ -6,6 +6,7 @@ import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '
 import { isIntegerString, isUnsafeIntegerString } from '../../core/bigint';
 import { type SchemaKeys, childrenOf, itemSchemaOf } from '../../core/schema-keys';
 import { mergeInferred } from '../../core/merge-inferred';
+import { assertSchemaShapes } from '../../core/shape-check';
 
 /** Options for {@link jsonTransformer}'s `toSchema`. */
 export interface JsonOptions {
@@ -101,6 +102,9 @@ export const jsonTransformer = {
       fromJsonSchema && unknownKeys === 'edit'
         ? mergeInferred(fromJsonSchema, inferNodeGroup(data, options?.rootName))
         : fromJsonSchema ?? inferNodeGroup(data, options?.rootName);
+    // A container-shape disagreement between document and schema would erase
+    // the section on save: refuse up front (see assertSchemaShapes).
+    if (fromJsonSchema) assertSchemaShapes(data, fromJsonSchema);
     const labeled = options?.thesaurus ? applyThesaurus(schema, options.thesaurus) : schema;
     // 'preserve' gates the revert on the JSON Schema's NodeGroup; 'edit' on
     // the merged one (schema-born ≈ everything, but keys no form field can

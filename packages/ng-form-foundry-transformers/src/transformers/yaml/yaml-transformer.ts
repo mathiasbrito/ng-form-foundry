@@ -5,6 +5,8 @@ import type { Transformer, TransformResult } from '../../core/transformer';
 import { inferNodeGroup } from '../../core/infer';
 import { type JsonSchema, type JsonSchemaOptions, jsonSchemaToNodeGroup } from '../../core/json-schema';
 import { mergeInferred } from '../../core/merge-inferred';
+import { childrenOf } from '../../core/schema-keys';
+import { assertSchemaShapes } from '../../core/shape-check';
 import { isUnsafeBigInt } from '../../core/bigint';
 import { applyValueToDocument } from './revert';
 
@@ -86,9 +88,13 @@ export const yamlTransformer = {
       fromJsonSchema && unknownKeys === 'edit'
         ? mergeInferred(fromJsonSchema, inferNodeGroup(data, options?.rootName))
         : fromJsonSchema ?? inferNodeGroup(data, options?.rootName);
-    // Inferred leaves (the whole schema, or the uncovered slice under 'edit')
-    // pick up the document's hex/octal presentation.
-    if ((!fromJsonSchema || unknownKeys === 'edit') && doc.contents) annotateRadix(doc.contents, schema);
+    // A container-shape disagreement between document and schema would erase
+    // the section on save: refuse up front (see assertSchemaShapes).
+    if (fromJsonSchema) assertSchemaShapes(data, fromJsonSchema);
+    // Every mode picks up the document's hex/octal presentation: inference
+    // for its own leaves, schema-driven leaves too — the JSON Schema cannot
+    // know the base a value was written in, the document does.
+    if (doc.contents) annotateRadix(doc.contents, schema);
     const labeled = options?.thesaurus ? applyThesaurus(schema, options.thesaurus) : schema;
     return {
       schema: labeled,
@@ -114,13 +120,16 @@ const RADIX_BY_FORMAT: Record<string, 2 | 8 | 16> = { BIN: 2, OCT: 8, HEX: 16 };
 
 /**
  * Copy non-decimal integer presentation (`0x`/`0o`/`0b` literals) from the
- * parsed document onto the inferred schema as leaf/leafList `radix` display
- * hints — the plain-data inference cannot see them, because `toJS()` drops the
- * scalar format. The revert needs nothing: scalars are mutated in place, so an
- * edited value re-emits in its literal's own base. Across group-list items the
- * first non-decimal occurrence wins — one shared item schema cannot vary the
- * display per item. Schema-driven mode is untouched (JSON Schema has no radix
- * vocabulary).
+ * parsed document onto the schema as leaf/leafList `radix` display hints —
+ * neither plain-data inference (`toJS()` drops the scalar format) nor a JSON
+ * Schema (no radix vocabulary) can know the base a value was written in; the
+ * document is the only authority. Runs in every mode and fills gaps only, so
+ * a `radix` already on a leaf wins. The revert needs nothing: scalars are
+ * mutated in place, so an edited value re-emits in its literal's own base.
+ * Across group-list items the first non-decimal occurrence wins — one shared
+ * item schema cannot vary the display per item. Keyed containers — groups,
+ * choices, maps — resolve their children through {@link childrenOf}, so case
+ * fields and map entries annotate too.
  */
 function annotateRadix(node: unknown, schema: NodeType): void {
   switch (schema.kind) {
@@ -135,21 +144,22 @@ function annotateRadix(node: unknown, schema: NodeType): void {
       if (radixes[0] && radixes.every((r) => r === radixes[0])) schema.radix = radixes[0];
       return;
     }
-    case 'nodeGroup': {
-      if (!isMap(node)) return;
-      for (const pair of node.items) {
-        const child = schema.children[pairKey(pair.key)];
-        if (child) annotateRadix(pair.value, child);
-      }
-      return;
-    }
     case 'nodeGroupList': {
       if (!isSeq(node)) return;
       for (const item of node.items) annotateRadix(item, schema.type);
       return;
     }
-    default:
-      return; // choice/map never come out of plain-data inference
+    default: {
+      // nodeGroup / choice / map — keyed containers over a document mapping.
+      if (!isMap(node)) return;
+      const keys = childrenOf(schema);
+      if (!keys) return;
+      for (const pair of node.items) {
+        const child = keys.get(pairKey(pair.key));
+        if (child) annotateRadix(pair.value, child);
+      }
+      return;
+    }
   }
 }
 

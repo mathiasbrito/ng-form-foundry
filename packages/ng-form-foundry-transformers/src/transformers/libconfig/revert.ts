@@ -216,7 +216,10 @@ function emitScalar(value: unknown, node: CfgScalar): string {
     if ((node.type === 'int' || node.type === 'int64') && Number.isInteger(value)) {
       return intLiteral(value, node.int);
     }
-    return floatLiteral(value); // a fractional edit into an int slot: emit honestly
+    // A type-changing edit (e.g. a quoted "0xe00" slot edited to a number
+    // under an integer schema): integral values emit an int literal —
+    // float form is reserved for genuinely fractional values.
+    return Number.isInteger(value) ? String(value) : floatLiteral(value);
   }
 
   return serialize(value, '');

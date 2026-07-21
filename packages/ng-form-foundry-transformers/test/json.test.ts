@@ -203,3 +203,14 @@ test("unknownKeys: 'edit' still preserves keys no form field can carry (inside a
   assert.match(out, /"a": 2/);
   assert.match(out, /"vendor": "keep"/);
 });
+
+test('a container-shape mismatch between document and schema throws, naming the path', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: { cells: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' } } } } },
+  };
+  assert.throws(
+    () => jsonTransformer.toSchema('{ "cells": { "id": 1 } }', { schema }),
+    /'cells'.*document holds an object.*schema expects an array/s,
+  );
+});

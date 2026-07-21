@@ -310,3 +310,27 @@ test("unknownKeys: 'edit' still preserves keys no form field can carry (inside a
   const out = yamlTransformer.toSource({ mode: { a: 2 } }, binding);
   assert.equal(out, 'mode:\n  a: 2\n  vendor: keep # comment\n');
 });
+
+test('schema-driven leaves display in the base the document wrote them in', () => {
+  const src = 'mask: 0x1a\nplain: 42\n';
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: { mask: { type: 'integer' }, plain: { type: 'integer' } },
+  };
+  for (const unknownKeys of ['preserve', 'drop'] as const) {
+    const { schema: built } = yamlTransformer.toSchema(src, { schema, unknownKeys });
+    assert.equal((built.children['mask'] as any).radix, 16, `mask under '${unknownKeys}'`);
+    assert.equal((built.children['plain'] as any).radix, undefined);
+  }
+});
+
+test('a container-shape mismatch between document and schema throws, naming the path', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: { cells: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' } } } } },
+  };
+  assert.throws(
+    () => yamlTransformer.toSchema('cells:\n  id: 1\n', { schema }),
+    /'cells'.*document holds an object.*schema expects an array/s,
+  );
+});

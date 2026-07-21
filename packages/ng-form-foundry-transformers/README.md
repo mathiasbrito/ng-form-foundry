@@ -155,6 +155,14 @@ enabled, so the output validates against the source schema (opt out with
 `schemaOptions: { optionalPresence: false }`); a required property mapping to a
 choice is marked `mandatory`.
 
+**The schema must agree with the document on container shapes.** A covered
+key whose schema says array where the document holds an object (or scalar
+where it holds a collection) makes `toSchema` throw a `SchemaShapeError`
+naming the path — such a form could not carry the section and saving would
+erase it. Catch it to fall back to inferred editing. Scalar-vs-scalar
+differences (a quoted `"0xe00"` under an `integer` schema) stay editable,
+and an integral edit writes back an integer literal.
+
 **The schema may cover any slice of the document.** Keys it does not mention
 are governed by `unknownKeys` (YAML, JSON, and libconfig alike):
 `'preserve'` (default) keeps them verbatim on save — a partial schema edits

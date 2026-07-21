@@ -205,6 +205,53 @@ export function raw(value: CfgValue, source: string): string {
 }
 
 /**
+ * Stamp the document's non-decimal integer presentation onto a
+ * **schema-driven** NodeGroup as `radix` display hints — the JSON Schema has
+ * no radix vocabulary, so the document is the only authority on how a value
+ * is written. Covered number/string leaves whose literal is hex/octal/binary
+ * (and homogeneous collections thereof) display in that base in every
+ * `unknownKeys` mode, matching what inference does for uncovered fields.
+ * Fills gaps only: a `radix` already on the leaf (e.g. carried by
+ * `mergeInferred` under `'edit'`) wins. Keyed containers — groups, choices,
+ * maps — resolve through {@link childrenOf}, so case fields and map entries
+ * annotate too.
+ */
+export function annotateSchemaRadix(node: CfgValue, schema: NodeType): void {
+  switch (schema.kind) {
+    case 'leaf': {
+      if (node.kind === 'scalar' && node.int && node.int.radix !== 10 && !schema.radix) {
+        schema.radix = node.int.radix;
+      }
+      return;
+    }
+    case 'leafList': {
+      if (schema.radix) return;
+      if ((node.kind === 'array' || node.kind === 'list') && node.elements.every((e) => e.kind === 'scalar')) {
+        const radix = sharedRadix(node.elements as CfgScalar[]);
+        if (radix) schema.radix = radix;
+      }
+      return;
+    }
+    case 'nodeGroupList': {
+      if (node.kind !== 'list') return;
+      for (const el of node.elements) annotateSchemaRadix(el, schema.type);
+      return;
+    }
+    default: {
+      // nodeGroup / choice / map — keyed containers over a document group.
+      if (node.kind !== 'group') return;
+      const keys = childrenOf(schema);
+      if (!keys) return;
+      for (const setting of node.settings) {
+        const child = keys.get(setting.name);
+        if (child) annotateSchemaRadix(setting.value, child);
+      }
+      return;
+    }
+  }
+}
+
+/**
  * `unknownKeys: 'edit'` extraction fixup. The whole-document extraction runs
  * with `emptyAsArrays` (schema-covered empty collections are typed and
  * editable), but collections the JSON Schema does **not** cover merge as

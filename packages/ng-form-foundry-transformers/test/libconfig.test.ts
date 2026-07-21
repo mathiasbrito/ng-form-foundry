@@ -456,6 +456,75 @@ test("unknownKeys: 'edit' keeps uncovered empty collections as read-only raw car
   assert.equal(libconfigTransformer.toSource(plain(initialValue) as any, binding), src);
 });
 
+test('schema-driven leaves display in the base the document wrote — every unknownKeys mode', () => {
+  for (const unknownKeys of ['preserve', 'drop', 'edit'] as const) {
+    const { schema } = libconfigTransformer.toSchema(OAI_FIXTURE, {
+      schema: OAI_PARTIAL_SCHEMA,
+      unknownKeys,
+    });
+    const entry = (schema.children as any).gNBs.type.children;
+    assert.equal(entry.gNB_ID.radix, 16, `covered gNB_ID under '${unknownKeys}'`);
+  }
+  // The document's base annotates covered lists too, and never write-back:
+  // the hex spelling on save always came from the parsed literal itself.
+  const listed = libconfigTransformer.toSchema('masks = [0x0F, 0xF0];\n', {
+    schema: { type: 'object', properties: { masks: { type: 'array', items: { type: 'integer' } } } },
+  });
+  assert.equal((listed.schema.children as any).masks.radix, 16);
+});
+
+// —— container-shape mismatches hard-error instead of silently erasing ——
+
+test('a group-shaped section under an array schema throws, naming the path', () => {
+  const src = 'gNBs = {\n  gNB_ID = 3584;\n  gNB_name = "cu-1";\n};\n';
+  const arraySchema: JsonSchema = {
+    type: 'object',
+    required: ['gNBs'],
+    properties: {
+      gNBs: { type: 'array', items: { type: 'object', properties: { gNB_ID: { type: 'integer' } } } },
+    },
+  };
+  for (const unknownKeys of ['preserve', 'drop', 'edit'] as const) {
+    assert.throws(
+      () => libconfigTransformer.toSchema(src, { schema: arraySchema, unknownKeys }),
+      (e: Error) => e.name === 'SchemaShapeError' && /'gNBs'/.test(e.message) && /erase/.test(e.message),
+      `under '${unknownKeys}'`,
+    );
+  }
+});
+
+test('a scalar under an array schema, and an array under an object schema, both throw', () => {
+  const arraySchema: JsonSchema = {
+    type: 'object',
+    properties: { Active_gNBs: { type: 'array', items: { type: 'string' } } },
+  };
+  assert.throws(
+    () => libconfigTransformer.toSchema('Active_gNBs = "cu-1";\n', { schema: arraySchema }),
+    /'Active_gNBs'.*document holds a scalar.*schema expects an array/s,
+  );
+  const objectSchema: JsonSchema = {
+    type: 'object',
+    properties: { amf: { type: 'object', properties: { port: { type: 'integer' } } } },
+  };
+  assert.throws(
+    () => libconfigTransformer.toSchema('amf = ( 1, 2 );\n', { schema: objectSchema }),
+    /'amf'.*document holds an array.*schema expects an object/s,
+  );
+});
+
+test('matching shapes never throw: the whole OAI fixture passes the shape check', () => {
+  const { initialValue } = libconfigTransformer.toSchema(OAI_FIXTURE, { schema: OAI_PARTIAL_SCHEMA });
+  assert.ok(initialValue);
+});
+
+test('a type-changing integral edit emits an int literal, never a float', () => {
+  // Quoted-hex ints exist in wild OAI configs: string slot, integer schema.
+  const { binding } = libconfigTransformer.toSchema('gNB_ID = "0xe00";\n', {
+    schema: { type: 'object', properties: { gNB_ID: { type: 'integer' } }, required: ['gNB_ID'] },
+  });
+  assert.equal(libconfigTransformer.toSource({ gNB_ID: 3585 }, binding), 'gNB_ID = 3585;\n');
+});
+
 test('inferred mode is unchanged: the value stays authoritative for every key', () => {
   const { binding, initialValue } = libconfigTransformer.toSchema('a = 1;\nb = 2;\n');
   const v = plain(initialValue) as Record<string, unknown>;
