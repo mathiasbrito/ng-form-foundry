@@ -20,10 +20,12 @@
 }
 
 // Every complex node (nodeGroup, choice, map) renders as a full-width collapsible
-// section panel, so they read consistently regardless of depth or kind.
+// section panel, so they read consistently regardless of depth or kind. No own
+// margin: the `.form-content` column gap spaces ALL block kinds — panels,
+// group/map lists, the field flow — identically, so a group's last fields
+// never sit closer to one neighbor kind than another.
 .node-section {
   width: 100%;
-  margin: 4px 0;
 }
 
 // An absent presence leaf shows only an "Add <field>" button, sitting in the
@@ -31,9 +33,17 @@
 // 56px input box of its row neighbors. Once enabled, the field itself (with
 // its remove control) takes this spot — see the leaf presence template branch.
 .presence-leaf-add {
-  flex: 0 1 auto;
+  // Field-wide: the button stretches horizontally into the flex slot the
+  // enabled field will take (same grow, same minimum), at its own default
+  // button height, vertically centered against the 56px input box of its
+  // row neighbors. The bottom margin mirrors the form field's ~20px
+  // subscript reserve, so a row ending in an add button keeps the same
+  // visual distance to the next row as field rows do.
+  flex: 1 1 0;
+  min-width: 10%;
   align-self: flex-start;
   margin-top: 8px;
+  margin-bottom: 20px;
   // Quiet at rest: a form dense with optionals reads calm, and the labeled
   // affordance stays discoverable (never hidden, only dimmed).
   @include reveal.quiet-chrome-button(0.6);
@@ -129,8 +139,13 @@ nff-leaf-list-renderer {
     flex: 0 0 auto;
     min-width: 0;
   }
+  // Boolean-area adds stand in for checkboxes, not input boxes: they keep
+  // natural width among their natural-width neighbours, no subscript mirror.
   .presence-leaf-add {
+    flex: 0 0 auto;
+    min-width: 0;
     margin-top: 0;
+    margin-bottom: 0;
     align-self: center;
   }
   // Ghost checkboxes are natural-width like their enabled neighbours.
@@ -159,6 +174,10 @@ nff-leaf-list-renderer {
   // (Chrome), which a grid `.fields` inside then stretches its rows to fill.
   flex-direction: column;
   width: 100%;
+  // One vertical rhythm for every block kind (field flow, section panels,
+  // group/map lists) — replaces per-element margins, which spaced panels but
+  // left list renderers touching their neighbors.
+  gap: 8px;
 }
 
 .leafs-container {

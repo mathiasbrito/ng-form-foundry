@@ -149,6 +149,7 @@
 
   <section class="detail">
     @if (selected) {
+      @if (showBreadcrumb()) {
       <nav class="breadcrumb" aria-label="Breadcrumb">
         @for (crumb of breadcrumb; track crumb.id; let last = $last) {
           @if (last) {
@@ -188,6 +189,7 @@
           }
         }
       </nav>
+      }
 
       <!-- The selected subtree as a flat section list: each descendant's fields
            under a breadcrumb heading — the headings, not nesting, mark the

@@ -4,6 +4,33 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.5.4] — 2026-07-22
+
+### Added
+- **`expandOnClick`** on `nff-config-editor` (default `false`): selecting a
+  tree row no longer expands the node's own children — the twisty (and
+  ArrowRight) alone control expansion, while the selection's ancestors still
+  expand so the row stays visible. Pass `true` for the previous
+  click-expands behavior.
+- **`showBreadcrumb`** on `nff-config-editor` (default `true`): turn off the
+  detail pane's top breadcrumb when the tree already gives the user their
+  bearings. Section trail headings stay; member removal remains available on
+  tree rows and section headings.
+
+### Changed
+- **"Add *field*" buttons are field-wide.** An absent optional's add button
+  stretches into the flex slot the enabled field will take, at its default
+  button height, vertically centered against neighboring inputs — and keeps
+  the same visual distance to the next row that field rows have. Boolean-area
+  adds stay compact among their checkboxes.
+- **One vertical rhythm between blocks.** Field flow, section panels, and
+  group/map lists are now spaced identically (8px); list renderers previously
+  sat flush against their neighbors.
+
+### Fixed
+- Revealing an inline array entry's add/remove buttons compresses the
+  entry's own input instead of overlapping the field to its right.
+
 ## [0.5.3] — 2026-07-21
 
 ### Changed
@@ -199,6 +226,7 @@ Baseline for this changelog: the tree/detail config editor covering the full
 node model (choices, maps, optional-field menus), and the
 `ng-form-foundry-transformers` package with YANG, YAML, and JSON transformers.
 
+[0.5.4]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.0...v0.5.1

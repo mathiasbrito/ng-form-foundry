@@ -8,4 +8,7 @@
 
 mat-form-field {
   flex: 1;
+  // Shrinkable below the Material intrinsic minimum, so a push-revealed
+  // actions column compresses the input instead of overflowing the entry.
+  min-width: 0;
 }

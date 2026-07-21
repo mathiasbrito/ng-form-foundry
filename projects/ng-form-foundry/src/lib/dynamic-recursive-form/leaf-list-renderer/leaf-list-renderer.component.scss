@@ -59,8 +59,13 @@
   height: 20px;
 }
 
+// Flexible, not full-width: when the entry's actions column push-reveals,
+// the input yields the space inside its own slot instead of the buttons
+// overlaying the neighboring field.
 nff-anon-leaf-renderer {
-  width: 100%;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .add-button {

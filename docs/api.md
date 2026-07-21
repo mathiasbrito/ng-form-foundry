@@ -187,6 +187,8 @@ tree and the detail pane. Wrap it in your own card or border:
 | `formGroup` | `FormGroup` | — | **Required.** The form from `buildFormFromSchema(schema)`. |
 | `editable` | `boolean` | `true` | Whether fields accept input and structural controls (add/remove/menus) show. Two-way bindable (`[(editable)]`): the root tree row carries an edit on/off toggle. |
 | `rootTitle` | `string` | — | Title for the root tree row and breadcrumb origin, overriding the schema's `label`/`name`. Without it, the root shows its label, else its name — except a transformer-produced unnamed root (`__root__`), which shows **Configuration** instead of the sentinel. |
+| `expandOnClick` | `boolean` | `false` | Whether selecting a tree row also expands the node's own children. Off, a click selects only (the detail pane shows the subtree anyway) and the twisty alone controls expansion; the selection's ancestors always expand so the row stays visible. |
+| `showBreadcrumb` | `boolean` | `true` | Whether the detail pane shows its top breadcrumb (the selected node's path with the member remove beside it). Turn off when the tree already gives the user their bearings; the section trail headings inside the detail stay, and member removal remains on tree rows and section headings. |
 
 The root tree row also carries an expand-all control that flips to collapse-all
 once every node is open (collapsing keeps the root's first level visible).

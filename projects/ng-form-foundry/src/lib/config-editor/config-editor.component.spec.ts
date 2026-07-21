@@ -167,7 +167,30 @@ describe('ConfigEditorComponent', () => {
     expect(Object.keys(component.sections[0].schema!.children)).toEqual(['tz']);
   });
 
-  it('selecting a node with children expands it in the tree', () => {
+  it('selecting a node does not expand it by default; its ancestors still reveal', () => {
+    const item = node('ifaces').children[0]; // a list entry, below its list
+    component.expanded.clear();
+    component.select(item);
+    expect(component.expanded.has('ifaces')).toBe(true); // ancestor revealed
+    expect(component.expanded.has(item.id)).toBe(false); // the node itself: untouched
+  });
+
+  it('showBreadcrumb=false hides the top breadcrumb; section trail headings stay', () => {
+    const item = node('ifaces').children[0];
+    component.select(item);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('nav.breadcrumb')).toBeTruthy();
+
+    fixture.componentRef.setInput('showBreadcrumb', false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('nav.breadcrumb')).toBeNull();
+    // The detail content itself is untouched.
+    expect(component.sections.length).toBeGreaterThan(0);
+  });
+
+  it('expandOnClick opts back into expanding the selected node', () => {
+    fixture.componentRef.setInput('expandOnClick', true);
+    fixture.detectChanges();
     const list = node('ifaces');
     expect(component.expanded.has(list.id)).toBe(false);
     component.select(list);
@@ -754,7 +777,8 @@ describe('ConfigEditorComponent with dotted map keys', () => {
 
   it('a rename carries the descendants&apos; expansion state to the new identity', () => {
     const entry = component.root.children.find((c) => c.id === 'endpoints')!.children[0];
-    component.select(entry); // expands the entry itself
+    component.select(entry);
+    component.expanded.add(entry.id); // expanded via its twisty (select alone no longer expands)
     expect(component.expanded.has('endpoints/10.0.0.1')).toBe(true);
 
     component.renameTreeMapEntry(entry, 'web1');

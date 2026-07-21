@@ -159,6 +159,22 @@ export class ConfigEditorComponent implements OnDestroy {
    * shows on the next rebind or structural rebuild, not immediately.
    */
   readonly rootTitle = input<string>();
+  /**
+   * Whether selecting a tree row also expands the node's own children.
+   * Off by default: a click selects (the detail pane shows the subtree
+   * anyway) and the twisty alone controls expansion, so browsing a deep
+   * config does not keep unfolding the tree. Ancestors of the selection are
+   * always expanded — the selected row itself must stay visible.
+   */
+  readonly expandOnClick = input<boolean>(false);
+  /**
+   * Whether the detail pane shows its top breadcrumb (the selected node's
+   * path, with the member remove control beside it). Hosts whose tree
+   * already tells the user where they are can turn it off — the section
+   * trail headings inside the detail stay, and member removal remains
+   * available on the tree rows and section headings.
+   */
+  readonly showBreadcrumb = input<boolean>(true);
 
   root!: TreeNode;
   selected: TreeNode | null = null;
@@ -216,12 +232,14 @@ export class ConfigEditorComponent implements OnDestroy {
     // Navigating retires any pending just-added-leaf focus request.
     this.focusSectionId = null;
     this.focusLeafKey = null;
-    // Reveal the selection: expand every ancestor so the row is visible, and
-    // the node itself as it opens on the right. Structural re-syncs pass
-    // reveal=false — they must not re-expand what the user collapsed.
+    // Reveal the selection: expand every ancestor so the row is visible —
+    // and the node itself only under `expandOnClick` (the detail pane shows
+    // its subtree regardless). Structural re-syncs pass reveal=false — they
+    // must not re-expand what the user collapsed.
     if (reveal) {
       for (const crumb of this.breadcrumb) {
-        if (crumb !== node || this.hasExpandableContent(crumb)) this.expanded.add(crumb.id);
+        if (crumb !== node) this.expanded.add(crumb.id);
+        else if (this.expandOnClick() && this.hasExpandableContent(crumb)) this.expanded.add(crumb.id);
       }
     }
   }
