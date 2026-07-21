@@ -309,6 +309,11 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.5.4` — version-alignment release with the workspace (the paired
+`ng-form-foundry` 0.5.4 ships tree options — `expandOnClick`,
+`showBreadcrumb` — field-wide add buttons, and a unified block rhythm); no
+transformer changes.
+
 `0.5.3` — version-alignment release with the workspace (the paired
 `ng-form-foundry` 0.5.3 ships hover-revealed field actions and indexed
 group-list add labels); no transformer changes.

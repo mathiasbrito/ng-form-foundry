@@ -1,6 +1,6 @@
 {
   "name": "ng-form-foundry",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Build fully-typed Angular Reactive Forms and Angular Material UI from a declarative, recursive form-description schema.",
   "keywords": [
     "angular",
