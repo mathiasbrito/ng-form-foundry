@@ -301,6 +301,14 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.5.1` — **partial JSON Schemas edit safely**: the new `unknownKeys` option
+(YAML, JSON, libconfig) governs keys the schema does not cover — `'preserve'`
+(default) keeps them verbatim on save, `'drop'` deletes them for
+intentionally complete schemas, `'edit'` surfaces them as editable fields
+typed by the document's own values. The YAML binding is now
+`YamlBinding { doc, schema? }` instead of the bare parsed document (bindings
+are opaque; code that hands them straight back to `toSource` is unaffected).
+
 `0.5.0` — the **libconfig transformer is stable**: the one-time beta warning
 is gone (and with it the `resetLibconfigBetaWarning` helper), and the format's
 guarantees and known limitations are documented in the transformers guide.
