@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use '../../styles/small-icon-button' as nff;
+@use '../../styles/field-action-reveal' as reveal;
 
 :host {
   display: flex;
@@ -81,3 +82,6 @@ nff-anon-leaf-renderer {
 
 
 @include nff.small-icon-button;
+// The whole actions column collapses/expands so the entry field is pushed
+// aside by both buttons at once.
+@include reveal.field-action-reveal('.field-item', '.actions', 4px);

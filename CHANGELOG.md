@@ -4,6 +4,25 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.5.3] — 2026-07-21
+
+### Changed
+- **Field action buttons reveal on hover.** The per-field remove buttons
+  (optional fields), the per-entry remove/add buttons of leaf lists and map
+  entries, and the ghost (+) are collapsed while the pointer is elsewhere —
+  the field owns the full row — and slide in, pushing the field aside, when
+  their row is hovered or keyboard-focused. A form dense with optional
+  fields no longer reads as a wall of icons. On touch devices (no hover) the
+  buttons stay visible; `prefers-reduced-motion` disables the animation.
+- **Quiet chrome at rest.** Labeled "Add *field*" affordances, the config
+  editor's section/breadcrumb delete buttons, and map-level add buttons are
+  dimmed at rest and come to full strength on hover or keyboard focus.
+- **Group-list add buttons name the entry they append** — "Add Serving Cell
+  #2" — in the config editor's section footers and tree rows, and in the
+  form's entry headers via the new `addButtonLabel` input on
+  `nff-dynamic-recursive-form` (the parent list computes the label; hosts
+  that don't set it keep the previous "Add new …" text).
+
 ## [0.5.2] — 2026-07-21
 
 ### Fixed
@@ -180,6 +199,7 @@ Baseline for this changelog: the tree/detail config editor covering the full
 node model (choices, maps, optional-field menus), and the
 `ng-form-foundry-transformers` package with YANG, YAML, and JSON transformers.
 
+[0.5.3]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.4.1...v0.5.0

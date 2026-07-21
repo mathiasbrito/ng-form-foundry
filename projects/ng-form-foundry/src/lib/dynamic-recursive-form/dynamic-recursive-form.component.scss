@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use '../styles/small-icon-button' as nff;
+@use '../styles/field-action-reveal' as reveal;
 
 :host {
   display: flex;
@@ -33,6 +34,9 @@
   flex: 0 1 auto;
   align-self: flex-start;
   margin-top: 8px;
+  // Quiet at rest: a form dense with optionals reads calm, and the labeled
+  // affordance stays discoverable (never hidden, only dimmed).
+  @include reveal.quiet-chrome-button(0.6);
 }
 
 // A ghost field (showAbsentOptionals): the absent presence leaf previewed
@@ -238,3 +242,4 @@ mat-panel-description {
 
 
 @include nff.small-icon-button;
+@include reveal.field-action-reveal('.ghost-field', '.ghost-add', 8px);

@@ -113,6 +113,19 @@ Disable the field to omit it instead.
 optional dictionary). `form.value` also drops absent presence controls; use
 `getRawValue()` for the full nullable-inclusive object.
 
+### Field actions reveal on hover
+
+The remove button of an enabled optional field, a leaf-list entry's
+remove/add buttons, a map entry's remove, and the ghost (+) stay collapsed
+while the pointer is elsewhere — the field owns the full row — and slide in,
+pushing the field aside, when their row is hovered or focused (tabbing onto a
+button reveals it). On touch devices, where there is no hover, the buttons
+are simply always visible, and `prefers-reduced-motion` disables the
+animation. Labeled "Add *field*" affordances and the config editor's
+section/breadcrumb deletes are never hidden — only dimmed at rest, coming to
+full strength on hover or focus. Group-list add buttons name the entry they
+would append ("Add Cell #3").
+
 ### Ghost preview of absent optionals
 
 `<nff-dynamic-recursive-form [showAbsentOptionals]="true">` swaps the

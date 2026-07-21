@@ -266,7 +266,7 @@
     <ng-container *ngTemplateOutlet="formRender"></ng-container>
       <div class="flattened-actions">
         @if (editable() && index() != null && addButtonCallback() != null) {
-          <button matIconButton  matTooltip="+ Add new {{ schema().label ?? schema().name }}" [attr.aria-label]="'Add new ' + (schema().label ?? schema().name)" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!)">
+          <button matIconButton [matTooltip]="addButtonLabel() ?? 'Add new ' + (schema().label ?? schema().name)" [attr.aria-label]="addButtonLabel() ?? 'Add new ' + (schema().label ?? schema().name)" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!)">
             <mat-icon>add</mat-icon>
           </button>
         }
@@ -289,7 +289,7 @@
           <mat-icon>edit</mat-icon>
         </button>
         @if (editable() && index() != null && addButtonCallback() != null) {
-          <button matIconButton matTooltip="+ Add new {{ schema().label ?? schema().name }}" [attr.aria-label]="'Add new ' + (schema().label ?? schema().name)" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!); $event.stopPropagation()">
+          <button matIconButton [matTooltip]="addButtonLabel() ?? 'Add new ' + (schema().label ?? schema().name)" [attr.aria-label]="addButtonLabel() ?? 'Add new ' + (schema().label ?? schema().name)" class="add-button small-icon-button" (click)="addButtonCallback()!(index()!); $event.stopPropagation()">
             <mat-icon>add</mat-icon>
           </button>
         }

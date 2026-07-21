@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use '../../styles/small-icon-button' as nff;
+@use '../../styles/field-action-reveal' as reveal;
 
 :host {
   display: flex;
@@ -37,6 +38,9 @@
   align-self: flex-start;
   background-color: var(--mat-sys-primary-container);
   @include mat.elevation(1);
+  // Map-level, not per-row: no field row to hover, so it stays visible but
+  // quiet — same treatment as the labeled add affordances.
+  @include reveal.quiet-chrome-button(0.6);
 }
 
 .remove-button {
@@ -45,3 +49,4 @@
 }
 
 @include nff.small-icon-button;
+@include reveal.field-action-reveal('.map-entry', '.remove-button', 8px);

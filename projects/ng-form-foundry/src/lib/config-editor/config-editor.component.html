@@ -64,8 +64,8 @@
           <button
             matIconButton
             class="row-btn add"
-            [matTooltip]="'Add ' + node.list.itemLabel"
-            [attr.aria-label]="'Add ' + node.list.itemLabel"
+            [matTooltip]="'Add ' + node.list.itemLabel + ' #' + (node.list.array.length + 1)"
+            [attr.aria-label]="'Add ' + node.list.itemLabel + ' #' + (node.list.array.length + 1)"
             (click)="addItem(node); $event.stopPropagation()"
           >
             <mat-icon>add</mat-icon>
@@ -289,12 +289,16 @@
             <button matButton [matTooltip]="'Add ' + s.node.label + ' entry'" (click)="addTreeMapEntry(s.node, true)"><mat-icon>add</mat-icon> Add entry</button>
           </div>
         }
-        @if (s.footer && editable() && s.node.list && !listAtMax(s.node)) {
-          <div class="section-actions">
-            <button matButton (click)="addItem(s.node, true)">
-              <mat-icon>add</mat-icon> Add {{ s.node.list.itemLabel }}
-            </button>
-          </div>
+        @if (s.footer && editable() && s.node.list; as list) {
+          @if (!listAtMax(s.node)) {
+            <div class="section-actions">
+              <!-- The next entry's number in the label, so the button reads as
+                   what it does: "Add Cell #3" appends the third entry. -->
+              <button matButton (click)="addItem(s.node, true)">
+                <mat-icon>add</mat-icon> Add {{ list.itemLabel }} #{{ list.array.length + 1 }}
+              </button>
+            </div>
+          }
         }
         @if (!s.footer && emptySectionHint(s); as hint) {
           <p class="empty">{{ hint }}</p>

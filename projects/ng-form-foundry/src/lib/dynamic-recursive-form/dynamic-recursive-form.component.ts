@@ -83,6 +83,13 @@ export class DynamicRecursiveFormComponent implements OnInit {
   /** Invoked with {@link index} to append a new sibling form to a parent list. */
   readonly addButtonCallback = input<((index: number) => void) | null>(null);
   /**
+   * Label for the add-sibling button — the parent list names the appended
+   * entry ("Add Cell #3"), which this form cannot derive itself (it knows
+   * neither the list's label nor its length). Falls back to
+   * "Add new <own label>".
+   */
+  readonly addButtonLabel = input<string | null>(null);
+  /**
    * Key of a presence leaf whose field should grab focus when it renders — lets
    * a host that added the control itself (e.g. the tree editor's optionals
    * menu) hand focus to the new field, like the form's own add button does.

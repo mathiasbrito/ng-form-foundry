@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use '../../styles/small-icon-button' as nff;
+@use '../../styles/field-action-reveal' as reveal;
 
 :host {
   display: flex;
@@ -41,3 +42,4 @@ mat-form-field {
 }
 
 @include nff.small-icon-button;
+@include reveal.field-action-reveal(':host', '.remove-button', 8px);

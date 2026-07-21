@@ -1,0 +1,69 @@
+// Reveal-on-hover for the per-field add/remove icon buttons: a form dense
+// with optional fields otherwise reads as a wall of trash icons. At rest the
+// buttons are collapsed to zero width (their share of the row's `$gap`
+// cancelled too), so the field owns the full row; on hovering the field row
+// — or focusing into it, so keyboard users tabbing onto a button reveal it —
+// the buttons slide in from the right and *push the field aside* while they
+// fade in (`pointer-events` blocks clicks while hidden, never keyboard
+// focus). On touch devices there is no hover, so the buttons simply stay
+// visible: the hiding is gated behind `@media (hover: hover)`.
+//
+// `$row` is the selector of the hoverable field row (may be `:host`);
+// `$actions` the button (or button-container) selector inside it; `$gap` the
+// row's flex gap, cancelled while collapsed so the field edge sits exactly
+// where a button-less field's would.
+@mixin field-action-reveal($row, $actions, $gap: 8px) {
+  #{$actions} {
+    // Never flex-squeezed below natural width: a tight row must wrap or
+    // shrink the field, not shave pixels off the icons.
+    flex-shrink: 0;
+    transition:
+      opacity 150ms ease,
+      max-width 150ms ease,
+      margin-left 150ms ease,
+      transform 150ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #{$actions} {
+      transition: none;
+    }
+  }
+
+  @media (hover: hover) {
+    #{$row} #{$actions} {
+      max-width: 0;
+      margin-left: -$gap;
+      opacity: 0;
+      transform: translateX(8px);
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    #{$row}:hover #{$actions},
+    #{$row}:focus-within #{$actions} {
+      max-width: 48px;
+      margin-left: 0;
+      opacity: 1;
+      transform: none;
+      // Released once revealed, so neither the icons nor their elevation
+      // shadow are ever clipped in the settled state.
+      overflow: visible;
+      pointer-events: auto;
+    }
+  }
+}
+
+// The quiet treatment for always-visible chrome buttons (labeled "Add …"
+// affordances, breadcrumb/section deletes): dimmed at rest so a dense form
+// reads calm, full strength on hover or keyboard focus. `$rest` stays higher
+// for labeled buttons than for icons — text must remain readable.
+@mixin quiet-chrome-button($rest: 0.6) {
+  opacity: $rest;
+  transition: opacity 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+  }
+}

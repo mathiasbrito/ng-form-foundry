@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use '../styles/small-icon-button' as nff;
+@use '../styles/field-action-reveal' as reveal;
 
 :host {
   display: block;
@@ -230,10 +231,19 @@
 
 // A member's delete control, right after its section trail or — when the
 // member itself is selected — after the top breadcrumb: the same compact
-// error-container button the form renderers use for remove.
+// error-container button the form renderers use for remove. Faded at rest so
+// a heading row reads as a heading, not a warning; full strength on hover or
+// keyboard focus.
 .section-remove {
   flex: 0 0 auto;
   align-self: center;
+  @include reveal.quiet-chrome-button(0.45);
+}
+
+// The detail's labeled list/map add affordances: same quiet-at-rest
+// treatment, resting higher because the label must stay readable.
+.section-actions button {
+  @include reveal.quiet-chrome-button(0.6);
 }
 
 .remove-button {

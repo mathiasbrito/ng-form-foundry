@@ -13,6 +13,7 @@
           (remove)="removeItem($index)"
           [editable]="editable"
           [addButtonCallback]="addItem"
+          [addButtonLabel]="'Add ' + (nodeGroupList.type.label ?? nodeGroupList.type.name) + ' #' + (formArray.length + 1)"
         />
         </div>
       }
