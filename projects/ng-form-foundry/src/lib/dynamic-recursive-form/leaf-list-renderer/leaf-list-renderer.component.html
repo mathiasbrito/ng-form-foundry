@@ -3,7 +3,7 @@
       <div class="field-item">
         <nff-anon-leaf-renderer
           [AnonLeaf]="leaf_" [control]="control"
-          [removable]="minItems == null || formArray.length > minItems"
+          [removable]="formArray.length > effectiveMin"
           [index]="$index"
           [editable]="editable"
           [label]="leaf_.label ?? leaf_.name"
@@ -11,12 +11,12 @@
         />
         @if (editable) {
           <div class="actions">
-            @if (formArray.length > minItems) {
+            @if (formArray.length > effectiveMin) {
               <button class="remove-button small-icon-button" matIconButton [matTooltip]="'Remove ' + (leaf_.label ?? leaf_.name) + ' item'" [attr.aria-label]="'Remove ' + (leaf_.label ?? leaf_.name) + ' item'" (click)="removeItem($index)">
                 <mat-icon matPrefix>delete</mat-icon>
               </button>
             }
-            @if ($last) {
+            @if ($last && canAdd) {
               <button class="add-button small-icon-button" matIconButton [matTooltip]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" [attr.aria-label]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" (click)="addItem()">
                 <mat-icon matPrefix>add</mat-icon>
               </button>
@@ -25,5 +25,12 @@
           </div>
         }
       </div>
+    }
+    @if (editable && formArray.length === 0 && canAdd) {
+      <!-- An empty leaf-list has no item to host the trailing add button; this
+           creates the first entry so the list is not a dead end. -->
+      <button class="add-button small-icon-button" matIconButton [matTooltip]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" [attr.aria-label]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" (click)="addItem()">
+        <mat-icon matPrefix>add</mat-icon>
+      </button>
     }
 }

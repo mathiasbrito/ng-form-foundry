@@ -241,8 +241,17 @@ lines: {
 },
 ```
 
-`minItems`/`maxItems` gate the add/remove controls. Lists size themselves to the
+`minItems`/`maxItems` gate the add/remove controls, identically in the
+standalone form and the config editor: Add is hidden and refused at
+`maxItems`, Remove at `minItems`, and `minItems === maxItems` locks the list
+to edit-in-place. Absent `minItems` floors at 0 (the list can be emptied);
+absent `maxItems` is unbounded. An empty list still offers an "Add … #1"
+control, so it is never a dead end. Lists otherwise size themselves to the
 data you seed: an array of three produces three items.
+
+When a host binds the `nff-node-group-list-renderer` / `nff-leaf-list-renderer`
+components directly, their `minItems`/`maxItems` `@Input`s act as a fallback —
+the schema's own bounds win when it declares them.
 
 ## Field layout
 
@@ -378,9 +387,12 @@ For large configs, the [`<nff-config-editor>`](api.md#nff-config-editor) renders
 the structure as a navigable tree beside a detail pane that shows the **selected
 node's whole subtree flattened into sections** — each child's fields under a
 breadcrumb heading that marks the boundary and links back up, with no nested
-panels. The tree scopes the view, and structural edits made in either pane stay
-in sync. It supports the full node model — groups, lists, maps, and choices —
-plus a "+ Optional field" menu for absent presence children (each added one
-carries a delete button that returns it to the menu). It draws no container of
-its own, only a divider between the panes, so the embedding page owns the
+panels. The tree scopes the view, and structural edits made in either pane
+stay in sync — as do external mutations to the bound form from a sibling view
+(see [`refresh()`](api.md#nff-config-editor)). It supports the full node
+model — groups, lists, maps, and choices — plus a "+ Optional field" menu for
+absent presence children (each added one carries a delete button that returns
+it to the menu), and the `expandOnClick` / `showBreadcrumb` inputs tune its
+navigation. It draws no container of its own, only a divider between the
+panes, so the embedding page owns the
 chrome.

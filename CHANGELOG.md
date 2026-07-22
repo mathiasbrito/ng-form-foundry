@@ -4,6 +4,55 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.5.5] — 2026-07-22
+
+### Added
+- **`setNodePresence(group, schema, key, present, initial?)`** — a public
+  builder helper to materialize or de-materialize an optional (presence)
+  child of a form group, at any depth, mirroring the presence toggle the form
+  UI offers. A host driving the shared form can now materialize optional
+  fields for editing and de-materialize the ones left empty on cancel, so a
+  half-filled card no longer strands required-empty controls that hold the
+  form invalid. `toggleNodePresence` on the form component now delegates to
+  it.
+
+### Fixed
+- **The standalone form and the config editor now agree on list cardinality.**
+  A cross-renderer audit found the standalone `nff-dynamic-recursive-form` had
+  drifted on repeatable groups/lists: it ignored `maxItems` (Add always
+  showed and could exceed the cap), it defaulted `minItems` to 1 and even
+  ignored an explicit `minItems: 0` (the last item couldn't be removed), and
+  an **empty** list was a dead end with no way to add the first item. All
+  three are fixed and aligned with the config editor: Add is gated and
+  guarded at `maxItems`, `minItems` defaults to 0 and is honored (so an
+  unbounded list can be emptied), and an empty list shows an "Add … #1"
+  affordance. The same fixes apply to `leafList`, which previously ignored
+  its bounds entirely.
+- **The standalone map renderer edits complex value kinds.** A map whose
+  value is a `leafList`, `nodeGroupList`, or nested `map` now renders a value
+  editor for each entry (previously only `leaf` and `nodeGroup` values were
+  editable). A choice-valued map remains editable only through the config
+  editor.
+- **`nff-config-editor` presence toggles route through `setNodePresence`**,
+  the same helper the standalone form uses, so both renderers materialize and
+  de-materialize optionals identically.
+
+### Changed
+- On `nff-node-group-list-renderer` and `nff-leaf-list-renderer`, the schema's
+  `minItems`/`maxItems` now take precedence over the components' `minItems`/
+  `maxItems` `@Input`s when both are present (the inputs remain the fallback
+  for direct hosts), and the bounds are read live so a schema rebind is
+  reflected.
+
+- **`nff-config-editor` reflects external mutations to the bound form.** When
+  a host (or a sibling view sharing the same `FormGroup`) changes a control
+  the editor also renders, the detail pane now stays in sync: leaf inputs
+  update through their reactive bindings, and the pane's own non-reactive
+  displays (the case selector, a map entry's key) re-read on the form's value
+  changes under OnPush and zoneless change detection. A new public
+  `refresh()` method forces a re-read for the case where the form is mutated
+  while the editor is `display:none`.
+
 ## [0.5.4] — 2026-07-22
 
 ### Added
@@ -226,6 +275,8 @@ Baseline for this changelog: the tree/detail config editor covering the full
 node model (choices, maps, optional-field menus), and the
 `ng-form-foundry-transformers` package with YANG, YAML, and JSON transformers.
 
+[Unreleased]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.4...HEAD
+[0.5.5]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/mathiasbrito/ng-form-foundry/compare/v0.5.1...v0.5.2

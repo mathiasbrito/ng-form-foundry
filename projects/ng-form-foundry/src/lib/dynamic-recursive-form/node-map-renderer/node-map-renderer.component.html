@@ -33,7 +33,31 @@
               [formGroup]="asFormGroup(formGroup.controls[key])"
               [editable]="editable"
             />
+          } @else if (nodeMap.value.kind === 'leafList') {
+            <nff-leaf-list-renderer
+              [leaf_]="asLeafList(nodeMap.value)"
+              [formArray]="formGroup.controls[key]"
+              [editable]="editable"
+            />
+          } @else if (nodeMap.value.kind === 'nodeGroupList') {
+            <nff-node-group-list-renderer
+              [inheritedAppearance]="entryAppearance"
+              [showAbsentOptionals]="showAbsentOptionals"
+              [nodeGroupList]="asNodeGroupList(nodeMap.value)"
+              [formArray]="asFormArray(formGroup.controls[key])"
+              [editable]="editable"
+            />
+          } @else if (nodeMap.value.kind === 'map') {
+            <nff-node-map-renderer
+              [inheritedAppearance]="entryAppearance"
+              [showAbsentOptionals]="showAbsentOptionals"
+              [nodeMap]="asNodeMap(nodeMap.value)"
+              [formGroup]="asFormGroup(formGroup.controls[key])"
+              [editable]="editable"
+            />
           }
+          <!-- A choice-valued map (additionalProperties: anyOf/oneOf) has no
+               standalone bare-choice renderer; use the config editor for it. -->
         </div>
 
         @if (editable && !atMin) {

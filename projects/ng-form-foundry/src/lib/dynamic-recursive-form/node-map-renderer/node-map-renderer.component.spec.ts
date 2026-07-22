@@ -108,3 +108,42 @@ describe('NodeMapRendererComponent', () => {
     expect(Object.keys(value).length).toBe(2);
   });
 });
+
+describe('NodeMapRendererComponent complex value kinds', () => {
+  async function mount(nodeMap: NodeMap, group: FormGroup) {
+    await TestBed.configureTestingModule({ imports: [NodeMapRendererComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(NodeMapRendererComponent);
+    fixture.componentRef.setInput('nodeMap', nodeMap);
+    fixture.componentRef.setInput('formGroup', group);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('renders a group-list value editor for a nodeGroupList-valued map entry', async () => {
+    const nodeMap: NodeMap = {
+      kind: 'map',
+      name: 'pools',
+      value: {
+        kind: 'nodeGroupList',
+        name: 'cells',
+        type: { kind: 'nodeGroup', name: 'cell', children: { id: { kind: 'leaf', type: 'number', name: 'id' } } },
+      },
+    };
+    const { FormArray } = await import('@angular/forms');
+    const group = new FormGroup({ poolA: new FormArray<any>([]) });
+    const fixture = await mount(nodeMap, group);
+    expect(fixture.nativeElement.querySelector('nff-node-group-list-renderer')).toBeTruthy();
+  });
+
+  it('recurses into a map-valued map entry', async () => {
+    const nodeMap: NodeMap = {
+      kind: 'map',
+      name: 'outer',
+      value: { kind: 'map', name: 'inner', value: { kind: 'leaf', type: 'string', name: 'value' } },
+    };
+    const group = new FormGroup({ a: new FormGroup({ b: new FormControl('x') }) });
+    const fixture = await mount(nodeMap, group);
+    // The outer entry hosts a nested map renderer.
+    expect(fixture.nativeElement.querySelectorAll('nff-node-map-renderer').length).toBeGreaterThanOrEqual(1);
+  });
+});

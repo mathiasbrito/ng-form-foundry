@@ -9,6 +9,7 @@ import {
   renameMapEntry,
   resolveChoiceCase,
   serializeForm,
+  setNodePresence,
   switchChoiceCase,
   toWireValue,
 } from './dynamic-recursive-forms-builder';
@@ -478,6 +479,73 @@ describe('dynamic-recursive-forms-builder', () => {
   });
 
   // ---- shared choice/map mutation helpers --------------------------------
+
+  describe('setNodePresence', () => {
+    const schema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      children: {
+        host: { kind: 'leaf', type: 'string', name: 'host' },
+        note: { kind: 'leaf', type: 'string', name: 'note', presence: true },
+        tuning: {
+          kind: 'nodeGroup',
+          name: 'tuning',
+          presence: true,
+          children: { level: { kind: 'leaf', type: 'number', name: 'level' } },
+        },
+      },
+    };
+
+    it('materializes an absent presence leaf, seeding the initial value', () => {
+      const group = buildFormFromSchema(schema, { host: 'h' });
+      expect(group.contains('note')).toBe(false);
+
+      expect(setNodePresence(group, schema.children['note'], 'note', true, 'hello')).toBe(true);
+      expect(group.get('note')!.value).toBe('hello');
+      expect(group.getRawValue()).toEqual({ host: 'h', note: 'hello' });
+    });
+
+    it('a materialized non-nullable presence leaf is required — empty makes the form invalid', () => {
+      const group = buildFormFromSchema(schema, { host: 'h' });
+      setNodePresence(group, schema.children['note'], 'note', true); // no value
+      expect(group.get('note')!.hasError('required')).toBe(true);
+      expect(group.valid).toBe(false);
+    });
+
+    it('de-materializing drops the key: the cancel-with-empties escape from the required trap', () => {
+      const group = buildFormFromSchema(schema, { host: 'h' });
+      setNodePresence(group, schema.children['note'], 'note', true); // materialize to edit
+      expect(group.valid).toBe(false); // required-empty
+
+      // Operator cancels without filling it: drop the still-empty control.
+      expect(setNodePresence(group, schema.children['note'], 'note', false)).toBe(true);
+      expect(group.contains('note')).toBe(false);
+      expect(group.valid).toBe(true); // trap released
+      expect(group.getRawValue()).toEqual({ host: 'h' });
+    });
+
+    it('works on a nested group a host holds directly', () => {
+      const group = buildFormFromSchema(schema, { host: 'h', tuning: { level: 5 } });
+      const tuning = group.get('tuning') as FormGroup;
+      const levelLeaf = (schema.children['tuning'] as NodeGroup).children['level'];
+      // level is not presence — a non-presence schema is a no-op.
+      expect(setNodePresence(tuning, levelLeaf, 'level', false)).toBe(false);
+      expect(tuning.contains('level')).toBe(true);
+    });
+
+    it('materializing a presence group builds its subtree fresh', () => {
+      const group = buildFormFromSchema(schema, { host: 'h' });
+      setNodePresence(group, schema.children['tuning'], 'tuning', true, { level: 9 });
+      expect((group.get('tuning') as FormGroup).get('level')!.value).toBe(9);
+    });
+
+    it('is idempotent and returns false when already in the target state', () => {
+      const group = buildFormFromSchema(schema, { host: 'h', note: 'x' });
+      expect(setNodePresence(group, schema.children['note'], 'note', true)).toBe(false); // already present
+      const bare = buildFormFromSchema(schema, { host: 'h' });
+      expect(setNodePresence(bare, schema.children['note'], 'note', false)).toBe(false); // already absent
+    });
+  });
 
   describe('switchChoiceCase', () => {
     const choice: NodeChoice = {

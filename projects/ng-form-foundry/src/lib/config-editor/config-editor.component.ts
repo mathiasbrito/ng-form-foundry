@@ -1,4 +1,4 @@
-import { Component, effect, ElementRef, inject, input, model, OnDestroy, untracked } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, model, OnDestroy, untracked } from '@angular/core';
 import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { Subscription } from 'rxjs';
@@ -19,6 +19,7 @@ import {
   caseFields,
   removeMapEntry,
   renameMapEntry,
+  setNodePresence,
   switchChoiceCase,
 } from '../core/dynamic-recursive-forms-builder';
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form/dynamic-recursive-form.component';
@@ -91,7 +92,7 @@ interface TreeNode {
   /** Absent optional children of this node, offered by its "+ Optional field" menu (schema order). */
   optionals?: OptionalEntry[];
   /** Present on a present optional child node: drives the row's remove control. */
-  presenceRemovable?: { key: string };
+  presenceRemovable?: { key: string; schema: NodeType };
   /** Field-layout appearance inherited from ancestor groups, for the node's detail-section form. */
   inherited?: Appearance | null;
   /** Present on a choice node: the choice schema and its FormGroup (holding `__case` + the active case's fields). */
@@ -187,6 +188,7 @@ export class ConfigEditorComponent implements OnDestroy {
   private shape = '';
   private changes?: Subscription;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   /** Stable per-instance ids for the shape signature, so replacing a control (setControl) reads as a structural change. */
   private readonly controlIds = new WeakMap<AbstractControl, number>();
   private controlIdSeq = 0;
@@ -214,10 +216,31 @@ export class ConfigEditorComponent implements OnDestroy {
     this.shape = this.shapeOf(group);
     this.expanded.add(this.root.id);
     this.select(this.root);
-    // The detail sections mutate the FormGroup directly (presence toggles,
-    // list items, map entries, case switches); a shape change there must
-    // reflect in the tree.
-    this.changes = group.valueChanges.subscribe(() => this.syncShape());
+    // Any change to the bound form — whether from the detail sections or from
+    // an external holder of the same FormGroup — must reach the detail pane.
+    // Leaf inputs self-heal (the reactive ValueAccessor writes the new value
+    // synchronously), but the pane's own non-reactive displays (the case
+    // selector, a map entry's key) are one-shot bindings; mark the view so
+    // they re-read under OnPush and zoneless change detection. A shape change
+    // additionally rebuilds the tree.
+    this.changes = group.valueChanges.subscribe(() => {
+      this.cdr.markForCheck();
+      this.syncShape();
+    });
+  }
+
+  /**
+   * Force the editor to re-read the bound form. Call this when the form was
+   * mutated in a way the editor's own `valueChanges` subscription could not
+   * observe — a structural change made with `{ emitEvent: false }`, or a
+   * mutation while a detached change detector left the view unchecked. It
+   * re-syncs the tree structure, rebuilds the current selection's sections
+   * from the live controls, and renders them.
+   */
+  refresh(): void {
+    this.syncShape(); // structural changes (added/removed/renamed controls)
+    if (this.selected) this.select(this.selected, false); // value re-read
+    this.cdr.detectChanges();
   }
 
   select(node: TreeNode, reveal = true) {
@@ -349,8 +372,7 @@ export class ConfigEditorComponent implements OnDestroy {
 
   /** Add an absent optional child from the menu: build its control and select the node it lands on. */
   addOptional(node: TreeNode, entry: OptionalEntry) {
-    if (!node.group || node.group.get(entry.key)) return;
-    node.group.addControl(entry.key, buildControl(entry.schema) as AbstractControl);
+    if (!node.group || !setNodePresence(node.group, entry.schema, entry.key, true)) return;
     // A leaf renders in the parent's detail pane; complex kinds become tree nodes.
     this.selectByPath(entry.schema.kind === 'leaf' ? node.id : this.join(node.id, entry.key));
     // Adding the last optional removes the menu row that held focus.
@@ -372,9 +394,9 @@ export class ConfigEditorComponent implements OnDestroy {
 
   /** Remove a present optional child node, returning its entry to the parent's menu. */
   removeOptional(parent: TreeNode, node: TreeNode) {
-    const key = node.presenceRemovable?.key;
-    if (!key || !parent.group) return;
-    parent.group.removeControl(key);
+    const removable = node.presenceRemovable;
+    if (!removable || !parent.group) return;
+    setNodePresence(parent.group, removable.schema, removable.key, false);
     this.selectByPath(parent.id);
     this.focusSelectedRow();
   }
@@ -763,7 +785,9 @@ export class ConfigEditorComponent implements OnDestroy {
     for (const key of Object.keys(schema.children)) {
       const child = schema.children[key];
       if (child.kind === 'leaf' || child.kind === 'leafList') {
-        // Leaves render in the detail pane; an absent presence leaf is offered by the menu.
+        // Leaves render in the detail pane; an absent presence leaf is also
+        // offered by the "+ Optional field" menu, so it can be added from the
+        // tree row as well as inline.
         if (child.kind === 'leaf' && child.presence && !group.get(key)) {
           optionals.push({ key, schema: child, label: this.labelOf(child, key) });
         }
@@ -776,7 +800,7 @@ export class ConfigEditorComponent implements OnDestroy {
       }
       const node = this.buildChildNode(child, group.get(key), this.labelOf(child, key), this.join(path, key), childInherited);
       if (!node) continue;
-      if (presence) node.presenceRemovable = { key };
+      if (presence) node.presenceRemovable = { key, schema: child };
       children.push(node);
     }
 

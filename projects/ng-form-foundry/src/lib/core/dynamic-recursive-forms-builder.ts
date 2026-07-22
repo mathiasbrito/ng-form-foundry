@@ -493,6 +493,35 @@ export function removeMapEntry(group: FormGroup, map: NodeMap, key: string): boo
 }
 
 /**
+ * Materialize or de-materialize an optional (presence) child of `group`,
+ * mirroring the presence toggle the form UI offers — but callable by any host
+ * holding the {@link FormGroup}, for a key at any depth. `present: true` builds
+ * the child fresh from `schema` (seeded with `initial` if given; nested
+ * presence descendants start absent, as {@link buildControl}); `present: false`
+ * removes it, dropping the key from the form value.
+ *
+ * The materialize direction is why the coupling exists: a materialized
+ * non-nullable presence leaf carries `Validators.required`, because an
+ * enabled-but-empty key would serialize as `null` and fail a typed schema. A
+ * host that materializes fields for editing therefore drops the ones left
+ * empty on cancel by de-materializing them — this API is that primitive.
+ *
+ * `schema` must be the presence node for `key`; a non-presence `schema` is a
+ * no-op. Returns whether the form changed.
+ */
+export function setNodePresence(group: FormGroup, schema: NodeType, key: string, present: boolean, initial?: unknown): boolean {
+  if (!hasPresence(schema)) return false;
+  if (present) {
+    if (group.contains(key)) return false;
+    group.addControl(key, buildControl(schema, initial) as never);
+    return true;
+  }
+  if (!group.contains(key)) return false;
+  group.removeControl(key);
+  return true;
+}
+
+/**
  * The map's own constraints as a group validator: entry count against
  * `minEntries`/`maxEntries` and every entry key against `keyPattern`. The UI
  * gates prevent most violations; the validator reports the ones that slip

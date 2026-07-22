@@ -1,3 +1,4 @@
+import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
 
@@ -99,6 +100,41 @@ describe('ConfigEditorComponent', () => {
     fixture.componentRef.setInput('schema', schema);
     fixture.componentRef.setInput('formGroup', form);
     fixture.detectChanges();
+  });
+
+  it('a leaf reflects an external setValue with no host CD pass (reactive value accessor)', () => {
+    form.get('hostname')!.setValue('edge');
+    fixture.detectChanges();
+    let inputs = Array.from(fixture.nativeElement.querySelectorAll('.detail input')) as HTMLInputElement[];
+    expect(inputs.some((i) => i.value === 'edge')).toBe(true);
+
+    // The reactive binding writes the value synchronously, no detectChanges.
+    form.get('hostname')!.setValue('EXTERNAL');
+    inputs = Array.from(fixture.nativeElement.querySelectorAll('.detail input')) as HTMLInputElement[];
+    expect(inputs.some((i) => i.value === 'EXTERNAL')).toBe(true);
+  });
+
+  it('refresh() re-reads the form so non-reactive displays reflect an external mutation', () => {
+    fixture.componentRef.setInput('editable', false); // readonly case-select uses [value], a one-shot binding
+    component.select(node('scope'));
+    fixture.detectChanges();
+    const caseText = () =>
+      (Array.from(fixture.nativeElement.querySelectorAll('.case-select input')) as HTMLInputElement[])
+        .map((e) => e.value)
+        .join('|');
+    expect(caseText()).toContain('By node');
+
+    // External case switch while the editor gets no CD pass — the one-shot
+    // display stays stale until the host asks the editor to re-read.
+    switchChoiceCase(form.get('scope') as FormGroup, schema.children['scope'] as NodeChoice, 'byZone');
+    component.refresh();
+    expect(caseText()).toContain('By zone');
+  });
+
+  it('a value change marks the view for check so a shared-form host stays in sync', () => {
+    const spy = spyOn(component['cdr'], 'markForCheck');
+    form.get('hostname')!.setValue('x');
+    expect(spy).toHaveBeenCalled();
   });
 
   // --- structure -------------------------------------------------------------
@@ -1104,5 +1140,58 @@ describe('ConfigEditorComponent with a present-children range (minPresent)', () 
     (form.get('qosObjectives') as FormGroup).addControl('mfbr', new FormControl(500));
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.section-error')).toBeNull();
+  });
+});
+
+// The auto-sync path uses ChangeDetectorRef.markForCheck, which is Angular's
+// zoneless change-detection trigger — no zone.js involved. This block runs the
+// editor under provideZonelessChangeDetection and asserts an external form
+// mutation reaches a non-reactive display with NO manual detectChanges and NO
+// zone tick: only the scheduled tick that markForCheck itself requests.
+describe('ConfigEditorComponent under zoneless change detection', () => {
+  const schema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'device',
+    root: true,
+    children: {
+      scope: {
+        kind: 'choice',
+        name: 'scope',
+        caseLabels: { byNode: 'By node', byZone: 'By zone' },
+        cases: {
+          byNode: { nodeId: { kind: 'leaf', type: 'string', name: 'nodeId' } },
+          byZone: { zoneId: { kind: 'leaf', type: 'string', name: 'zoneId' } },
+        },
+      },
+    },
+  };
+
+  it('reflects an external case switch with no host detectChanges (markForCheck-driven)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ConfigEditorComponent],
+      providers: [provideZonelessChangeDetection()],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ConfigEditorComponent);
+    const component = fixture.componentInstance;
+    const form = buildFormFromSchema(schema, { scope: { nodeId: 'n1' } });
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', form);
+    fixture.componentRef.setInput('editable', false); // readonly case-select: [value], one-shot
+    await fixture.whenStable();
+
+    component.select(component.root.children.find((c) => c.id === 'scope')!);
+    await fixture.whenStable();
+    const caseText = () =>
+      (Array.from(fixture.nativeElement.querySelectorAll('.case-select input')) as HTMLInputElement[])
+        .map((e) => e.value)
+        .join('|');
+    expect(caseText()).toContain('By node');
+
+    // External mutation only — no detectChanges, no zone. The editor's
+    // valueChanges → markForCheck schedules the zoneless tick that whenStable awaits.
+    switchChoiceCase(form.get('scope') as FormGroup, schema.children['scope'] as NodeChoice, 'byZone');
+    await fixture.whenStable();
+    expect(caseText()).toContain('By zone');
   });
 });

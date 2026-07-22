@@ -9,13 +9,26 @@
           [formGroup]="asFormGroup(group)"
           [title]="getTitle($index)"
           [index]="0"
-          [removable]="formArray.length > minItems"
+          [removable]="formArray.length > effectiveMin"
           (remove)="removeItem($index)"
           [editable]="editable"
-          [addButtonCallback]="addItem"
+          [addButtonCallback]="canAdd ? addItem : null"
           [addButtonLabel]="'Add ' + (nodeGroupList.type.label ?? nodeGroupList.type.name) + ' #' + (formArray.length + 1)"
         />
         </div>
+      }
+      @if (editable && formArray.length === 0 && canAdd) {
+        <!-- An empty list has no per-item header to host the add button, so it
+             would otherwise be an unrecoverable dead end. This footer add
+             creates the first item (mirrors the config editor's "Add … #1"). -->
+        <button
+          matButton="outlined"
+          class="empty-add-button"
+          [matTooltip]="'Add ' + (nodeGroupList.type.label ?? nodeGroupList.type.name)"
+          (click)="addItem()"
+        >
+          <mat-icon>add</mat-icon> Add {{ nodeGroupList.type.label ?? nodeGroupList.type.name }} #1
+        </button>
       }
   </div>
 }

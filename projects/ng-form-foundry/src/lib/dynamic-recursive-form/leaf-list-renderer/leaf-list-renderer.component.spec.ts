@@ -56,3 +56,65 @@ describe('DrfLeafListRendererComponent', () => {
     expect(array.value).toEqual([240, 0x0b11]);
   });
 });
+
+describe('DrfLeafListRendererComponent cardinality', () => {
+  async function mount(leaf_: LeafList, values: unknown[]) {
+    await TestBed.configureTestingModule({ imports: [LeafListRendererComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(LeafListRendererComponent);
+    const array = new FormArray<any>(values.map((v) => new FormControl(v)));
+    fixture.componentRef.setInput('leaf_', leaf_);
+    fixture.componentRef.setInput('formArray', array);
+    fixture.componentRef.setInput('editable', true);
+    fixture.detectChanges();
+    return { fixture, array, c: fixture.componentInstance };
+  }
+
+  it('refuses to exceed maxItems', async () => {
+    const { array, c } = await mount({ kind: 'leafList', name: 'tags', type: 'string', maxItems: 2 }, ['a', 'b']);
+    expect(c.canAdd).toBe(false);
+    c.addItem();
+    expect(array.length).toBe(2);
+  });
+
+  it('honors minItems 0: the last item is removable', async () => {
+    const { array, c } = await mount({ kind: 'leafList', name: 'tags', type: 'string' }, ['a']);
+    c.removeItem(0);
+    expect(array.length).toBe(0);
+  });
+
+  it('offers an add affordance for an empty list', async () => {
+    const { fixture, array } = await mount({ kind: 'leafList', name: 'tags', type: 'string' }, []);
+    const add = fixture.nativeElement.querySelector('.add-button') as HTMLButtonElement | null;
+    expect(add).toBeTruthy();
+    add!.click();
+    fixture.detectChanges();
+    expect(array.length).toBe(1);
+  });
+});
+
+describe('DrfLeafListRendererComponent bounds precedence', () => {
+  async function mount(leaf_: LeafList, values: unknown[], inputs?: { minItems?: number; maxItems?: number }) {
+    await TestBed.configureTestingModule({ imports: [LeafListRendererComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(LeafListRendererComponent);
+    const array = new FormArray<any>(values.map((v) => new FormControl(v)));
+    fixture.componentRef.setInput('leaf_', leaf_);
+    fixture.componentRef.setInput('formArray', array);
+    if (inputs?.minItems != null) fixture.componentRef.setInput('minItems', inputs.minItems);
+    if (inputs?.maxItems != null) fixture.componentRef.setInput('maxItems', inputs.maxItems);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  it('the @Input bound is the fallback when the schema declares no bounds', async () => {
+    const c = await mount({ kind: 'leafList', name: 'tags', type: 'string' }, ['a', 'b'], { minItems: 1, maxItems: 2 });
+    expect(c.effectiveMin).toBe(1);
+    expect(c.effectiveMax).toBe(2);
+    expect(c.canAdd).toBe(false);
+  });
+
+  it('the schema wins over the @Input when both are present (including minItems 0)', async () => {
+    const c = await mount({ kind: 'leafList', name: 'tags', type: 'string', minItems: 0, maxItems: 5 }, ['a'], { minItems: 3, maxItems: 2 });
+    expect(c.effectiveMin).toBe(0);
+    expect(c.effectiveMax).toBe(5);
+  });
+});

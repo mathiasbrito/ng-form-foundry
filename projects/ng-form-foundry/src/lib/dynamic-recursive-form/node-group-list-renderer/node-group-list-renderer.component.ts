@@ -38,8 +38,10 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
   @Input() editable: boolean = true;
   /** Forwarded to each entry's embedded form — see the form's input of the same name. */
   @Input() showAbsentOptionals = false;
-  @Input() minItems: number = 1;
-  @Input() maxItems: number = 1;
+  // Schema-driven bounds, matching the config editor: absent minItems floors
+  // at 0 (an unbounded list can be emptied), absent maxItems is unbounded.
+  @Input() minItems: number = 0;
+  @Input() maxItems: number = Number.POSITIVE_INFINITY;
   /** Field-layout appearance from the enclosing group, forwarded to every item form. */
   @Input() inheritedAppearance: Appearance | null = null;
   @Output() message = new EventEmitter();
@@ -55,12 +57,21 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
     if (this.initialValue) {
       this.formArray.patchValue(this.initialValue);
     }
-    if (this.nodeGroupList.maxItems) {
-      this.maxItems = this.nodeGroupList.maxItems;
-    }
-    if (this.nodeGroupList.minItems) {
-      this.minItems = this.nodeGroupList.minItems;
-    }
+  }
+
+  // Effective bounds: the schema wins when it declares them (an explicit
+  // `minItems: 0` included), else the `@Input` fallback for a host that binds
+  // the renderer directly. Getters, so a schema rebind is reflected live.
+  get effectiveMin(): number {
+    return this.nodeGroupList?.minItems ?? this.minItems;
+  }
+  get effectiveMax(): number {
+    return this.nodeGroupList?.maxItems ?? this.maxItems;
+  }
+
+  /** Whether another item may be appended (below the effective maximum). */
+  get canAdd(): boolean {
+    return this.formArray.length < this.effectiveMax;
   }
 
   ngAfterViewInit() {
@@ -70,7 +81,7 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
   }
 
   removeItem($index: number) {
-    if (this.formArray.length <= this.minItems) {
+    if (this.formArray.length <= this.effectiveMin) {
       this.message.emit({
         message: `You cannot remove the last ${this.nodeGroupList.type.name} configuration!`,
         type: 'error',
@@ -80,7 +91,8 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
     this.formArray.removeAt($index);
   }
 
-  addItem = (index: number) => {
+  addItem = (index?: number) => {
+    if (this.formArray.length >= this.effectiveMax) return;
     this.formArray.push(buildFormFromSchema(this.nodeGroupList.type, null));
   }
 

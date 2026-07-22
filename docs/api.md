@@ -102,7 +102,18 @@ function renameMapEntry(group: FormGroup, map: NodeMap, oldKey: string, newKey: 
 
 /** Remove an entry unless the map is at `minEntries`. */
 function removeMapEntry(group: FormGroup, map: NodeMap, key: string): boolean;
+
+/** Materialize (`present: true`, seeded with `initial`) or de-materialize an optional
+ *  (presence) child at `key`, at any depth. No-op for a non-presence `schema`. */
+function setNodePresence(group: FormGroup, schema: NodeType, key: string, present: boolean, initial?: unknown): boolean;
 ```
+
+`setNodePresence` is the presence toggle the form UI offers, exposed for hosts
+that drive the shared `FormGroup` themselves. A materialized non-nullable
+presence leaf carries `Validators.required` (an enabled-but-empty key would
+serialize as `null` and fail a typed schema), so a host that materializes
+fields for editing drops the ones left empty on cancel by de-materializing
+them — `setNodePresence(group, schema, key, false)`.
 
 ## Components
 
@@ -201,6 +212,16 @@ the tree pins below it.
 The inputs are signal inputs, like the form component's. Swapping `schema` or
 `formGroup` rebinds the editor to the new pair (a host loading another config
 document); expansion and selection reset to the new root.
+
+The editor reflects external mutations to the bound `FormGroup` — a sibling
+view sharing the same form, another component calling `setValue` — without any
+host wiring: leaf inputs update through their reactive bindings, and the pane's
+own displays (the case selector, a map entry's key) re-read on the form's value
+changes. For the cases the editor's own value-change subscription can't observe
+— a structural change made with `{ emitEvent: false }`, or a mutation while the
+editor's change detector was detached — call the public **`refresh()`** method
+(e.g. `@ViewChild(ConfigEditorComponent)` → `editor.refresh()`); it re-syncs
+the tree and re-reads the detail pane.
 
 ## Types
 

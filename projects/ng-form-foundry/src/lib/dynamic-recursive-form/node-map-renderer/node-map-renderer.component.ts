@@ -5,11 +5,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltip } from '@angular/material/tooltip';
-import { Appearance, Leaf, NodeGroup, NodeMap } from '../../types/dynamic-recursive.types';
+import { Appearance, Leaf, LeafList, NodeGroup, NodeGroupList, NodeMap } from '../../types/dynamic-recursive.types';
 import { descendantLayout } from '../../core/appearance';
 import { addMapEntry, removeMapEntry, renameMapEntry } from '../../core/dynamic-recursive-forms-builder';
-import { asFormControl, asFormGroup } from '../../core/utils';
+import { asFormArray, asFormControl, asFormGroup } from '../../core/utils';
 import { LeafRendererComponent } from '../leaf-renderer/leaf-renderer.component';
+import { LeafListRendererComponent } from '../leaf-list-renderer/leaf-list-renderer.component';
+import { NodeGroupListRendererComponent } from '../node-group-list-renderer/node-group-list-renderer.component';
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form.component';
 
 /**
@@ -29,8 +31,11 @@ import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form.compone
     MatInputModule,
     MatTooltip,
     LeafRendererComponent,
-    // node-map-renderer and dynamic-recursive-form import each other (a map value
-    // may be a group); forwardRef defers the reference to break the cycle.
+    LeafListRendererComponent,
+    NodeGroupListRendererComponent,
+    // node-map-renderer references itself (a map-valued map) and the form (a
+    // group-valued map), which import each other; forwardRef breaks the cycles.
+    forwardRef(() => NodeMapRendererComponent),
     forwardRef(() => DynamicRecursiveFormComponent),
   ],
   templateUrl: './node-map-renderer.component.html',
@@ -72,6 +77,16 @@ export class NodeMapRendererComponent implements OnChanges {
   get valueGroup(): NodeGroup {
     return this.nodeMap.value as NodeGroup;
   }
+  /** Narrowing casts for the complex value kinds the template renders. */
+  protected asLeafList(v: unknown): LeafList {
+    return v as LeafList;
+  }
+  protected asNodeGroupList(v: unknown): NodeGroupList {
+    return v as NodeGroupList;
+  }
+  protected asNodeMap(v: unknown): NodeMap {
+    return v as NodeMap;
+  }
 
   get atMax(): boolean {
     return this.nodeMap.maxEntries != null && this.entryKeys.length >= this.nodeMap.maxEntries;
@@ -107,4 +122,5 @@ export class NodeMapRendererComponent implements OnChanges {
 
   protected readonly asFormControl = asFormControl;
   protected readonly asFormGroup = asFormGroup;
+  protected readonly asFormArray = asFormArray;
 }

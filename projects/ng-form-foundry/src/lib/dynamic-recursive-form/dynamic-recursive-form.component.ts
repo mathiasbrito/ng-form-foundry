@@ -13,7 +13,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { asFormArray, asFormControl, asFormGroup } from '../core/utils';
 import { formatRadix } from './radix-input/radix-input.directive';
 import {
-  caseDisplayLabels, buildControl, caseFields, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
+  caseDisplayLabels, buildControl, caseFields, setNodePresence, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -247,17 +247,11 @@ export class DynamicRecursiveFormComponent implements OnInit {
    * Add or remove a presence node's control on this form — any presence kind:
    * group, leaf, map, or choice. Removing it drops the key from `form.value`;
    * adding it builds the control fresh from its schema (nested presence
-   * children start absent).
+   * children start absent). Delegates to {@link setNodePresence}, the
+   * host-callable primitive.
    */
   toggleNodePresence(key: string, schema: NodeType, present: boolean) {
-    const group = this.formGroup();
-    if (present) {
-      if (!group.get(key)) {
-        group.addControl(key, buildControl(schema) as never);
-      }
-    } else if (group.get(key)) {
-      group.removeControl(key);
-    }
+    setNodePresence(this.formGroup(), schema, key, present);
     // Either way the key's ghost stand-in is stale: drop it, so a later
     // re-ghosting renders a pristine one even if the old instance was mutated.
     this.ghostControls.delete(key);

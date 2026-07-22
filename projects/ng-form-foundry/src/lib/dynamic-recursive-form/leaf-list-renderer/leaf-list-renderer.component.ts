@@ -27,7 +27,11 @@ export class LeafListRendererComponent implements OnInit {
   @Input() initialValue!: number[] | string[] | boolean[];
   @Input() formArray!: any;
   @Input() editable: boolean = true;
-  @Input() minItems: number = 1;
+  // Schema-driven bounds: absent `minItems` floors at 0 (an unbounded list can
+  // be emptied), absent `maxItems` is unbounded. Read from the schema in
+  // ngOnInit so a bare `[leaf_]` binding honors them without extra wiring.
+  @Input() minItems: number = 0;
+  @Input() maxItems: number = Number.POSITIVE_INFINITY;
   /**
    * The parent group's grid layout (its `fieldsLayout` styles). A stacked list
    * spans the parent's full row, so its entries repeat the same tracks and
@@ -68,8 +72,23 @@ export class LeafListRendererComponent implements OnInit {
     }
   }
 
+  // Effective bounds: the schema wins when it declares them (an explicit
+  // `minItems: 0` included), else the `@Input` fallback for a host that binds
+  // the renderer directly. Getters, so a schema rebind is reflected live.
+  get effectiveMin(): number {
+    return this.leaf_?.minItems ?? this.minItems;
+  }
+  get effectiveMax(): number {
+    return this.leaf_?.maxItems ?? this.maxItems;
+  }
+
+  /** Whether another item may be appended (below the effective maximum). */
+  get canAdd(): boolean {
+    return (this.formArray?.length ?? 0) < this.effectiveMax;
+  }
+
   removeItem($index: number) {
-    if (this.formArray.length <= this.minItems) {
+    if (this.formArray.length <= this.effectiveMin) {
       this.message.emit({
         message: 'You cannot remove the last item!',
         type: 'error',
@@ -80,6 +99,7 @@ export class LeafListRendererComponent implements OnInit {
   }
 
   addItem() {
+    if (this.formArray.length >= this.effectiveMax) return;
     this.formArray.push(new FormControl());
   }
 }
