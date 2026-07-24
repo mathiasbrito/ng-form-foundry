@@ -149,11 +149,16 @@ string / number constraints (`pattern`, `minLength`, `minimum`, `multipleOf`,
 `format`, …) carried onto the leaves as validators, with
 `minProperties`/`maxProperties` becoming present-children bounds on closed
 objects (`minPresent`/`maxPresent`) or entry bounds on open maps.
-Non-`required` properties become **`presence` nodes** — absent from the form
-and the serialized value until
-enabled, so the output validates against the source schema (opt out with
-`schemaOptions: { optionalPresence: false }`); a required property mapping to a
-choice is marked `mandatory`.
+Non-`required` properties (leaves, groups, choices, maps, **and lists**) become
+**`presence` nodes** — absent from the form and the serialized value until
+enabled, so the output validates against the source schema and a zero-edit
+rebuild never injects a key the source lacked (opt out with `schemaOptions: {
+optionalPresence: false }`); a required property mapping to a choice is marked
+`mandatory`. Pass `schemaOptions: { advisoryRequired: true }` to also treat
+*required* properties as presence nodes — they keep `required: true` for
+validation but stay absent until enabled, so an over-broad `required` list (one
+schema covering several config flavours) does not force-write keys the source
+omitted.
 
 **The schema must agree with the document on container shapes.** A covered
 key whose schema says array where the document holds an object (or scalar
@@ -308,6 +313,13 @@ npm test        # node:test on the compiled output (no Python needed)
 ```
 
 ## Status
+
+`0.6.0` — optional **array** properties now map to `presence` nodes (leaf-lists
+and node-group lists included), so a zero-edit rebuild never injects a list the
+source lacked; new `schemaOptions: { advisoryRequired: true }` treats a schema's
+over-broad `required` list as advisory (required keys become presence nodes,
+keeping `required` for validation only). The paired `ng-form-foundry` 0.6.0
+drives a list's add/remove affordance from required-vs-optional.
 
 `0.5.5` — version-alignment release with the workspace (the paired
 `ng-form-foundry` 0.5.5 aligns the standalone form and config editor on list
