@@ -12,6 +12,7 @@ import { A1PolicyExample } from './a1-policy-example/a1-policy-example';
 import { LayoutExample } from './layout-example/layout-example';
 import { RootTitleExample } from './root-title-example/root-title-example';
 import { UnknownKeysExample } from './unknown-keys-example/unknown-keys-example';
+import { PresenceListsExample } from './presence-lists-example/presence-lists-example';
 
 export const routes: Routes = [
   {
@@ -70,5 +71,9 @@ export const routes: Routes = [
   {
     path: 'unknown-keys',
     component: UnknownKeysExample
+  },
+  {
+    path: 'presence-lists',
+    component: PresenceListsExample
   }
 ];

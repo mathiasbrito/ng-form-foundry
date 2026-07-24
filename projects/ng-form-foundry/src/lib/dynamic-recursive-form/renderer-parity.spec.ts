@@ -166,4 +166,42 @@ describe('renderer parity: standalone form vs config editor', () => {
     expect(setNodePresence(e.form, noteLeaf, 'note', false)).toBe(true);
     expect(serializeForm(schema, s.form)).toEqual(serializeForm(schema, e.form));
   });
+
+  it('an absent presence list stays out of the value in both renderers, and materializes identically', () => {
+    const schema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      root: true,
+      children: {
+        host: { kind: 'leaf', type: 'string', name: 'host' },
+        addrs: { kind: 'leafList', type: 'string', name: 'addrs', presence: true },
+      },
+    };
+    const addrsList: NodeType = schema.children['addrs'];
+
+    // Absent from the seed ⇒ not built ⇒ absent from the value in BOTH.
+    const s = mountForm(schema, { host: 'h' });
+    const e = mountEditor(schema, { host: 'h' });
+    expect(s.form.contains('addrs')).toBe(false);
+    expect(e.form.contains('addrs')).toBe(false);
+    expect(serializeForm(schema, s.form)).toEqual({ host: 'h' });
+    expect(serializeForm(schema, s.form)).toEqual(serializeForm(schema, e.form));
+
+    // Materialize through each renderer's own presence path.
+    s.fixture.componentInstance.toggleNodePresence('addrs', addrsList, true);
+    const entry = e.component.root.optionals!.find((o) => o.key === 'addrs')!;
+    e.component.addOptional(e.component.root, entry);
+
+    // Both now carry an (empty) list, and serialize it identically.
+    expect(s.form.contains('addrs')).toBe(true);
+    expect(e.form.contains('addrs')).toBe(true);
+    expect(serializeForm(schema, s.form)).toEqual({ host: 'h', addrs: [] });
+    expect(serializeForm(schema, s.form)).toEqual(serializeForm(schema, e.form));
+
+    // De-materializing drops the key again in both.
+    s.fixture.componentInstance.toggleNodePresence('addrs', addrsList, false);
+    expect(setNodePresence(e.form, addrsList, 'addrs', false)).toBe(true);
+    expect(serializeForm(schema, s.form)).toEqual(serializeForm(schema, e.form));
+    expect(serializeForm(schema, s.form)).toEqual({ host: 'h' });
+  });
 });

@@ -31,19 +31,27 @@
   // Tight gap so the add/remove buttons hug their own field.
   gap: 4px;
   align-items: center;
-  flex: 1 1 0;
+  // Grow to share the row, but keep a real base width so entries WRAP onto new
+  // rows once the row is full instead of shrinking into an unreadable cluster.
+  flex: 1 1 auto;
 }
 
 // Entries honor the flex flow's per-type minimums — the CSS custom properties
-// set on the parent form's `.fields` inherit down to here. Enum entries
-// (mat-selects) are text-like in width and follow the text minimum.
+// set on the parent form's `.fields` inherit down to here. The fallbacks give a
+// sensible entry width (and thus wrapping) when no appearance minimum is set.
 :host(.list-type-string) .field-item,
 :host(.list-type-enum) .field-item {
-  min-width: var(--nff-min-text-field-width, 0px);
+  min-width: var(--nff-min-text-field-width, 220px);
 }
 :host(.list-type-number) .field-item {
-  min-width: var(--nff-min-number-field-width, 0px);
+  min-width: var(--nff-min-number-field-width, 140px);
   max-width: var(--nff-max-number-field-width, none);
+}
+
+// The labeled "Add … item" affordance for an empty (present, non-presence) list
+// fills the row at the default button height.
+.empty-add-button {
+  width: 100%;
 }
 
 .actions {

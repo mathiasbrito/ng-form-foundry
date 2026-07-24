@@ -230,16 +230,25 @@ export class ConfigEditorComponent implements OnDestroy {
   }
 
   /**
-   * Force the editor to re-read the bound form. Call this when the form was
-   * mutated in a way the editor's own `valueChanges` subscription could not
-   * observe — a structural change made with `{ emitEvent: false }`, or a
-   * mutation while a detached change detector left the view unchecked. It
-   * re-syncs the tree structure, rebuilds the current selection's sections
-   * from the live controls, and renders them.
+   * Force the editor to re-read the bound form. A leaf field normally reflects
+   * an external `setValue` on its own — the reactive value accessor writes the
+   * value synchronously, no change detection needed — so this is only for the
+   * corners that bypass that: a structural change made with
+   * `{ emitEvent: false }` (the tree wouldn't otherwise rebuild), a non-reactive
+   * display (the case selector, a map key) that needs re-reading, or a host
+   * whose change detector was detached during the mutation.
+   *
+   * It re-syncs the tree structure and **tears down and recreates** the detail
+   * sections, so every rendered control rebinds to the live form and re-pulls
+   * its current value — even a field whose bound input somehow missed the
+   * external write.
    */
   refresh(): void {
     this.syncShape(); // structural changes (added/removed/renamed controls)
-    if (this.selected) this.select(this.selected, false); // value re-read
+    const selected = this.selected;
+    this.sections = []; // tear the embedded detail forms down…
+    this.cdr.detectChanges();
+    if (selected) this.select(selected, false); // …and rebuild them, fresh-bound
     this.cdr.detectChanges();
   }
 
@@ -744,10 +753,10 @@ export class ConfigEditorComponent implements OnDestroy {
     if (node.choice) {
       const active = this.activeCase(node);
       const body = active && node.choice.schema.cases[active] ? this.caseAsGroup(node.choice.schema, active) : null;
-      return { schema: body ? this.leafOnly(body) : null, group: node.choice.group };
+      return { schema: body ? this.leafOnly(body, node.choice.group) : null, group: node.choice.group };
     }
     if (node.schema && node.group) {
-      return { schema: this.leafOnly(node.schema), group: node.group };
+      return { schema: this.leafOnly(node.schema, node.group), group: node.group };
     }
     return { schema: null, group: null };
   }
@@ -759,11 +768,15 @@ export class ConfigEditorComponent implements OnDestroy {
    * (grid / field-width layout) carries into the slice. Null when there are
    * no own fields.
    */
-  private leafOnly(schema: NodeGroup): NodeGroup | null {
+  private leafOnly(schema: NodeGroup, group: FormGroup | null): NodeGroup | null {
     const children: Record<string, NodeType> = {};
     for (const key of Object.keys(schema.children)) {
       const child = schema.children[key];
-      if (child.kind === 'leaf' || child.kind === 'leafList') children[key] = child;
+      if (child.kind !== 'leaf' && child.kind !== 'leafList') continue;
+      // An absent presence leafList has no inline affordance and no control to
+      // render — it is offered by the "+ Optional field" menu instead.
+      if (child.kind === 'leafList' && child.presence && !group?.get(key)) continue;
+      children[key] = child;
     }
     if (!Object.keys(children).length) return null;
     return { ...schema, root: false, children, appearance: { ...schema.appearance, flatten: true } };
@@ -786,14 +799,15 @@ export class ConfigEditorComponent implements OnDestroy {
       const child = schema.children[key];
       if (child.kind === 'leaf' || child.kind === 'leafList') {
         // Leaves render in the detail pane; an absent presence leaf is also
-        // offered by the "+ Optional field" menu, so it can be added from the
-        // tree row as well as inline.
-        if (child.kind === 'leaf' && child.presence && !group.get(key)) {
+        // offered by the "+ Optional field" menu (addable inline or from the
+        // tree row). An absent presence *leafList* has no inline affordance, so
+        // it is offered only by the menu (and excluded from the leafOnly slice).
+        if (child.presence && !group.get(key)) {
           optionals.push({ key, schema: child, label: this.labelOf(child, key) });
         }
         continue;
       }
-      const presence = child.kind !== 'nodeGroupList' && child.presence;
+      const presence = !!child.presence;
       if (presence && !group.get(key)) {
         optionals.push({ key, schema: child, label: this.labelOf(child, key) });
         continue;

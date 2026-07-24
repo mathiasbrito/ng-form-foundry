@@ -158,6 +158,14 @@ export type LeafList<TKind extends Leaf['type'] = Leaf['type']> = {
   maxItems?: number;
   /** Present every item in this base — see {@link LeafNumber.radix}. */
   radix?: 2 | 8 | 16;
+  /**
+   * Optional scalar list whose *presence itself* is data — an absent key,
+   * distinct from a present-but-empty list. Off means no control and no key in
+   * the value; on means the (possibly empty) list is materialized. Mirrors
+   * {@link NodeGroup.presence}; lets a round-trip distinguish `x = ( )` (present,
+   * empty) from an absent `x`.
+   */
+  presence?: boolean;
 };
 
 export type NodeGroupList = {
@@ -168,6 +176,8 @@ export type NodeGroupList = {
   type: NodeGroup;
   minItems?: number;
   maxItems?: number;
+  /** Optional list whose presence is itself data — see {@link LeafList.presence}. */
+  presence?: boolean;
 };
 
 export type NodeGroup = {

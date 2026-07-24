@@ -109,9 +109,50 @@ An **enabled** presence leaf is `required` (unless `nullable`): materialized
 means the key serializes, and an empty value would go on the wire as `null`.
 Disable the field to omit it instead.
 
-`presence` works on a `nodeGroup` too (an optional sub-object), and on a `map` (an
-optional dictionary). `form.value` also drops absent presence controls; use
-`getRawValue()` for the full nullable-inclusive object.
+**`presence` vs `required` — how they combine.** They answer different questions:
+`presence` asks *may the key be absent?* (whether a control exists at all);
+`required` asks *must a present value be filled?* (validation — leaves only). For
+a leaf:
+
+| `presence` | `required` | Behavior |
+| --- | --- | --- |
+| — | — | Always present; the value may be left empty. |
+| — | ✓ | Always present; must be filled (empty ⇒ invalid). |
+| ✓ | — | Optional (an "Add" affordance); absent is valid, but once added it must be filled\* — a materialized empty key would serialize as a meaningless `null`. |
+| ✓ | ✓ | Same as the row above for a leaf (`presence` already implies "fill once added"); this is the pair `jsonSchemaToNodeGroup` emits under `advisoryRequired`. |
+
+\* unless `nullable: true`, which lets an added field stay `null`. `required` is a
+**leaf-only** flag: a list's "always present" is simply the *absence* of
+`presence` (use `minItems` for "at least N"), a `choice`'s is `mandatory`, and a
+group counts enabled optional children with `minPresent`.
+
+`presence` works on a `nodeGroup` too (an optional sub-object), on a `map` (an
+optional dictionary), and on a `leafList`/`nodeGroupList` (an optional list).
+`form.value` also drops absent presence controls; use `getRawValue()` for the
+full nullable-inclusive object.
+
+For a list, presence is what keeps an **absent** list distinct from a
+**present-but-empty** one. An absent optional list is not built — its key stays
+out of the value — so a zero-edit rebuild of a document that never had the list
+does not inject an empty `[]` where none existed. A source that genuinely wrote
+an empty list keeps it.
+
+The affordance follows whether the list is **required** or **optional** (a
+presence node — a non-`required` property, or a `required` one under
+`advisoryRequired`):
+
+- an **optional** list shows an **"Add *field*"** button while absent. Clicking
+  it materializes the list **with its first entry** (it appears at once — an
+  optional list has no present-empty state). Removing the **last** entry
+  **de-materializes** the whole list (→ absent, key gone).
+- a **required** list is always present: it shows an **"Add item"** affordance,
+  stays `[]` when empty, and has no remove — it cannot become absent.
+
+So `advisoryRequired` (which turns a `required` property into a presence node) is
+exactly what makes a list removable. The `nff-config-editor` offers the
+equivalent through its tree — the "+ Optional field" menu adds an optional list,
+a row trash removes it. Programmatically, `setNodePresence(group, listSchema,
+key, true|false)` does the same materialize/remove.
 
 ### Field actions reveal on hover
 
@@ -248,6 +289,14 @@ to edit-in-place. Absent `minItems` floors at 0 (the list can be emptied);
 absent `maxItems` is unbounded. An empty list still offers an "Add … #1"
 control, so it is never a dead end. Lists otherwise size themselves to the
 data you seed: an array of three produces three items.
+
+Unlike a `nodeGroup`/`map`/`choice`, a list has no `appearance` of its own, so
+a `nodeGroupList` section in the standalone form is always **shown** (expanded)
+and is hidden only when an ancestor section collapses. A `leafList` or
+`nodeGroupList` may be marked `presence: true` to make it *optional* — absent
+until a toggle materializes it — which keeps an absent list distinct from a
+present-but-empty one (see [Optional, nullable, and present
+fields](#optional-nullable-and-present-fields)).
 
 When a host binds the `nff-node-group-list-renderer` / `nff-leaf-list-renderer`
 components directly, their `minItems`/`maxItems` `@Input`s act as a fallback —

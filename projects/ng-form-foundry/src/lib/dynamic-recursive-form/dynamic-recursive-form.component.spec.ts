@@ -373,6 +373,28 @@ describe('DynamicRecursiveFormComponent', () => {
     expect(titles).toEqual(['A List', 'Z Map', 'Group']);
   });
 
+  it('a root nodeGroupList section is shown (expanded) by default — a list has no collapse of its own', () => {
+    const rootWithList: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      root: true,
+      children: {
+        cells: {
+          kind: 'nodeGroupList',
+          name: 'cells',
+          type: { kind: 'nodeGroup', name: 'cell', children: { id: { kind: 'leaf', type: 'number', name: 'id' } } },
+        },
+      },
+    };
+    const local = TestBed.createComponent(DynamicRecursiveFormComponent);
+    local.componentRef.setInput('schema', rootWithList);
+    local.componentRef.setInput('formGroup', buildFormFromSchema(rootWithList, { cells: [{ id: 1 }] }));
+    local.detectChanges();
+
+    const panel: HTMLElement = local.nativeElement.querySelector('nff-node-group-list-renderer').closest('mat-expansion-panel');
+    expect(panel.classList.contains('mat-expanded')).toBe(true);
+  });
+
   it('presence leaves trail the regular fields in the root layout, regardless of declaration order', () => {
     const rootWithPresence: NodeGroup = {
       kind: 'nodeGroup',

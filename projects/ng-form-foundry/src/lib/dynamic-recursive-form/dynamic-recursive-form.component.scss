@@ -49,6 +49,28 @@
   @include reveal.quiet-chrome-button(0.6);
 }
 
+// The "Add <list>" button that stands in for an absent optional list fills the
+// row at the default button height — a list reads as a full-width section, not a
+// compact field. `width` + `flex-shrink: 0` gives full width and its own row in
+// the field flow (a leaf-list sits among scalars), and full width in a column
+// flow (a nodeGroupList under `.form-content`), without stretching the height.
+.presence-list-add {
+  width: 100%;
+  flex-shrink: 0;
+  margin: 8px 0;
+  // Quiet at rest, discoverable; comes to full strength on hover/focus.
+  @include reveal.quiet-chrome-button(0.6);
+}
+
+// An optional (presence) list once materialized: the list renderer takes the
+// full row (a leaf-list is otherwise squeezed inline beside a scalar field; a
+// nodeGroupList is already full width under `.form-content`). Removal is the
+// renderer's own concern — removing the last entry de-materializes the list.
+.presence-list {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
 // A ghost field (showAbsentOptionals): the absent presence leaf previewed
 // read-only beside its (+) incorporate button. Sized like the enabled field
 // it stands in for (the inner leaf renderer keeps its own type-scoped
@@ -224,14 +246,20 @@ mat-panel-description {
   gap: 4px;
 }
 
+// A list card's add/remove buttons wear the same filled look as the leaf-list's
+// per-entry buttons (primary-/error-container + elevation), but stay visible and
+// dimmed at rest — full strength on hover or keyboard focus — so a list of cards
+// reads calm rather than as a column of bright icons.
 .add-button {
   background-color: var(--mat-sys-primary-container);
   @include mat.elevation(1);
+  @include reveal.quiet-chrome-button(0.45);
 }
 
 .remove-button {
   background-color: var(--mat-sys-error-container);
   @include mat.elevation(1);
+  @include reveal.quiet-chrome-button(0.45);
 }
 
 .flattened-form {

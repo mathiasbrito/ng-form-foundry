@@ -309,6 +309,18 @@ export class DynamicRecursiveFormComponent implements OnInit {
     if (!present && this.presenceFocusKey === key) this.presenceFocusKey = null;
   }
 
+  /**
+   * Materialize an absent presence (optional / `advisoryRequired`) list *with
+   * its first entry* — clicking "Add <list>" makes the first entry appear at
+   * once. An optional list has no present-empty state: removing the last entry
+   * de-materializes it (→ absent). A required list is always present instead and
+   * uses the renderer's own "Add item" affordance, so it never routes here.
+   */
+  addPresenceList(key: string, schema: NodeType) {
+    setNodePresence(this.formGroup(), schema, key, true, [null]);
+    this.ghostControls.delete(key);
+  }
+
   protected objectKeys(obj: Record<string, unknown>): string[] {
     return Object.keys(obj);
   }

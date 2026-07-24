@@ -1,0 +1,68 @@
+h2[mat-dialog-title] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cheatsheet {
+  max-width: 860px;
+
+  .lede {
+    margin-top: 0;
+  }
+
+  h3 {
+    margin: 20px 0 8px;
+    font-size: 1rem;
+    color: var(--mat-sys-primary);
+  }
+
+  code {
+    background: var(--mat-sys-surface-container-high);
+    padding: 0 4px;
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+    font-size: 0.85em;
+    white-space: nowrap;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+
+    th {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td,
+    th {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      vertical-align: top;
+    }
+
+    td:first-child {
+      white-space: nowrap;
+      width: 1%;
+    }
+  }
+
+  .note {
+    font-size: 0.85rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  pre {
+    margin: 0;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--mat-sys-surface-container);
+    border: 1px solid var(--mat-sys-outline-variant);
+    overflow-x: auto;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+}

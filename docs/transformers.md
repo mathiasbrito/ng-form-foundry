@@ -156,19 +156,72 @@ const schema = jsonSchemaToNodeGroup(qosTarget, 'QoSTarget', {
 ```
 
 **Optional properties become `presence` nodes.** A property not in `required`
-maps to `presence: true` (leaf, group, choice, or map): absent from the form
-value until the user enables it. That is what schemas with typed properties and
-`additionalProperties: false` demand — materializing an untouched optional as
-`null` fails validation against the very schema the form came from. A required
-property that maps to a choice is marked `mandatory` instead. Opt out with
-`{ optionalPresence: false }` to materialize every property unconditionally.
-When calling through the YAML/JSON transformers, pass these flags (and
-`refDocuments`) as `options.schemaOptions`.
+maps to `presence: true` (leaf, group, choice, map, **and lists** — `leafList`
+and `nodeGroupList`): absent from the form value until the user enables it. That
+is what schemas with typed properties and `additionalProperties: false` demand —
+materializing an untouched optional as `null` (or, for a list, as `[]`) fails
+validation against the very schema the form came from, and would inject a key the
+source never authored. A required property that maps to a choice is marked
+`mandatory` instead. Opt out with `{ optionalPresence: false }` to materialize
+every property unconditionally. When calling through the YAML/JSON transformers,
+pass these flags (and `refDocuments`) as `options.schemaOptions`.
+
+Marking optional **lists** as presence is what keeps an *absent* list distinct
+from a *present-but-empty* one: a zero-edit rebuild of a source that never had
+`amf_ip_address` will not splice `amf_ip_address = [ ]` back in, while a source
+that wrote `amf_ip_address = ( )` keeps its empty list. Both cases round-trip
+byte-for-byte.
+
+#### `advisoryRequired` — treat `required` as advisory, not structural
+
+**What it does.** By default, a property listed in the schema's `required` array
+is **always materialized** — it renders on the form and is present in the value
+even when the source document omitted it, because the schema says it must exist.
+Setting `{ advisoryRequired: true }` makes those `required` properties `presence`
+nodes as well: their presence then **follows the data**. A key present in the
+loaded value materializes; a key the source omitted **stays absent**. The
+property keeps `required: true`, so once it is present it must hold a value
+(validation is unchanged) — but `required` no longer *forces the key to exist*.
+
+**Why it exists.** When a single schema covers several config flavours (a CU, a
+DU, and a gNB all validated against one document), its `required` list is
+necessarily over-broad: a key that is mandatory for one flavour gets demanded on
+every unit. A byte-exact editor must not write a key the source never had, so
+force-materializing every `required` key would corrupt the document — e.g.
+emitting `du_addr = ""` into a CU config that never carried `du_addr`.
+`advisoryRequired` is the escape for that case.
+
+```ts
+// Source omits `du_addr`; the shared schema marks it required.
+const { schema, initialValue } = libconfigTransformer.toSchema(source, {
+  schema: sharedSchema,
+  schemaOptions: { advisoryRequired: true },   // via YAML/JSON/libconfig
+});
+// du_addr → presence node, absent from initialValue → not force-written.
+// If the operator DOES add it, `required` still forbids leaving it empty.
+```
+
+The three states of a property under `advisoryRequired`, by whether it is in
+`required` and whether the source carried it:
+
+| in `required`? | in the source? | result |
+| --- | --- | --- |
+| yes | yes | materialized, `required` validation applies |
+| yes | no  | **absent** (not force-written); `required` applies only if you add it |
+| no  | yes | materialized (ordinary optional that happens to be present) |
+| no  | no  | absent (ordinary optional) |
+
+**When to use it.** Only for **byte-exact editing of an existing document**
+against a schema whose `required` list you do not control or cannot scope.
+Leave it `false` (the default) for **new-form authoring**, where a required
+field *should* render on a blank form so the user is prompted to fill it. The
+cleaner fix for an over-broad `required` list is to correct the schema — scope
+it per flavour, or trim `required` to the keys genuinely always present — and
+`advisoryRequired` is the pragmatic fallback when that is not an option. It
+composes with `optionalPresence` and the `unknownKeys` modes.
 
 Not yet mapped: `allOf` composition, `exclusiveMinimum`/`exclusiveMaximum`, and
 `additionalProperties` *alongside* fixed `properties` (the fixed keys win).
-Optional **arrays** cannot carry `presence` (lists don't support it yet) and are
-always materialized.
 
 ### Thesaurus — display metadata injection
 

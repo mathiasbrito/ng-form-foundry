@@ -74,6 +74,20 @@ export interface JsonSchemaOptions {
    */
   optionalPresence?: boolean;
   /**
+   * Treat the schema's `required` list as *advisory* rather than structural
+   * (default `false`). A required property then becomes a presence node too, so
+   * presence follows the data: a key present in the initial value materializes,
+   * a key absent stays absent — a round-trip never injects a key the source
+   * lacked, even one the schema marks `required`. `required` still drives
+   * *validation* (a materialized required field must hold a value), it just no
+   * longer forces the key to exist. Use for byte-exact editing of an existing
+   * document against a schema whose `required` list is over-broad (e.g. one
+   * schema covering several config flavors); leave off for new-form authoring,
+   * where a required field should render on a blank form so the user can fill
+   * it.
+   */
+  advisoryRequired?: boolean;
+  /**
    * Display metadata injected into the produced schema (`label`,
    * `description`, choice `caseLabels`) — see {@link applyThesaurus}. Fills
    * gaps only; schema-authored `title`/`description` always win.
@@ -105,7 +119,10 @@ const ROOT = '__root__';
 export function jsonSchemaToNodeGroup(schema: JsonSchema, name: string = ROOT, options?: JsonSchemaOptions): NodeGroup {
   const documents = [schema, ...(options?.refDocuments ?? [])];
   const resolver = new RefResolver(schema, documents);
-  const ctx: BuildContext = { optionalPresence: options?.optionalPresence ?? true };
+  const ctx: BuildContext = {
+    optionalPresence: options?.optionalPresence ?? true,
+    advisoryRequired: options?.advisoryRequired ?? false,
+  };
   const { schema: root, scope } = resolver.resolve(schema);
   const group = objectToNodeGroup(root, name, scope, ctx, root.title);
   group.root = true;
@@ -116,19 +133,32 @@ export function jsonSchemaToNodeGroup(schema: JsonSchema, name: string = ROOT, o
 interface BuildContext {
   /** See {@link JsonSchemaOptions.optionalPresence}. */
   optionalPresence: boolean;
+  /** See {@link JsonSchemaOptions.advisoryRequired}. */
+  advisoryRequired: boolean;
 }
 
 /**
  * Apply {@link JsonSchemaOptions.optionalPresence} to one *property* node: a
  * non-required property becomes a presence node, so it stays absent from the
- * form value until enabled. Only called at property positions
+ * form value until enabled — lists included, so an absent optional array is
+ * not injected as an empty one on save. Only called at property positions
  * ({@link objectToNodeGroup} children and {@link branchToCase} fields) — a map's
  * `value` template, an array's item type, and a leaf-bodied case are not
- * properties and must never be marked. Lists cannot carry `presence`.
+ * properties and must never be marked. Under
+ * {@link JsonSchemaOptions.advisoryRequired}, a `required` property is marked
+ * too (presence then seeds from the data; `required` drives validation only).
  */
 function markOptionalProperty(node: NodeType, required: boolean, ctx: BuildContext): NodeType {
-  if (!ctx.optionalPresence || required) return node;
-  if (node.kind === 'leaf' || node.kind === 'nodeGroup' || node.kind === 'choice' || node.kind === 'map') {
+  if (!ctx.optionalPresence) return node;
+  if (required && !ctx.advisoryRequired) return node;
+  if (
+    node.kind === 'leaf' ||
+    node.kind === 'nodeGroup' ||
+    node.kind === 'choice' ||
+    node.kind === 'map' ||
+    node.kind === 'leafList' ||
+    node.kind === 'nodeGroupList'
+  ) {
     node.presence = true;
   }
   return node;

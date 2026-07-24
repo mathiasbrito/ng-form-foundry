@@ -46,3 +46,9 @@ nff-dynamic-recursive-form {
 .add-button {
   background-color: var(--mat-sys-primary-container);
 }
+
+// The empty-list add affordance fills the row (default height), so the
+// list-level remove trash overlapping the top-right sits over the button.
+.empty-add-button {
+  width: 100%;
+}

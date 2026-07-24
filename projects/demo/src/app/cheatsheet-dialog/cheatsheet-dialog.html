@@ -1,0 +1,102 @@
+<h2 mat-dialog-title>
+  <mat-icon>menu_book</mat-icon> Schema cheatsheet
+</h2>
+
+<mat-dialog-content class="cheatsheet">
+  <p class="lede">
+    A form is described by one <b>root <code>nodeGroup</code></b>. Every field is a
+    node with a <code>kind</code>, a <code>name</code> (its key), and an optional
+    <code>label</code>. Edit the schema JSON in a demo to see any of this change live.
+  </p>
+
+  <h3>Node kinds</h3>
+  <table>
+    <tr><th><code>kind</code></th><th>What it is</th><th>Value shape</th></tr>
+    <tr><td><code>leaf</code></td><td>A single field</td><td>scalar</td></tr>
+    <tr><td><code>leafList</code></td><td>A list of scalars</td><td><code>[scalar, …]</code></td></tr>
+    <tr><td><code>nodeGroup</code></td><td>A nested object (group of fields)</td><td><code>&#123; … &#125;</code></td></tr>
+    <tr><td><code>nodeGroupList</code></td><td>A list of objects (cards)</td><td><code>[&#123; … &#125;, …]</code></td></tr>
+    <tr><td><code>choice</code></td><td>Pick one <em>case</em> (discriminated union)</td><td>the chosen case's object</td></tr>
+    <tr><td><code>map</code></td><td>An open dictionary (arbitrary keys)</td><td><code>&#123; key: value, … &#125;</code></td></tr>
+  </table>
+
+  <h3>Leaf types (<code>type</code>)</h3>
+  <p>
+    <code>'string'</code> · <code>'number'</code> · <code>'boolean'</code> ·
+    <code>'enum'</code> (with <code>enum: [...]</code>).
+  </p>
+
+  <h3>On every node</h3>
+  <table>
+    <tr><td><code>name</code></td><td>Identity — must equal the key in <code>children</code>. Required.</td></tr>
+    <tr><td><code>label</code></td><td>Display name (falls back to <code>name</code>).</td></tr>
+    <tr><td><code>description</code></td><td>Helper text.</td></tr>
+    <tr><td><code>default</code></td><td>Initial value when none is supplied.</td></tr>
+    <tr><td><code>order</code></td><td>Sort weight among siblings.</td></tr>
+  </table>
+
+  <h3>Optional · required · nullable</h3>
+  <table>
+    <tr><td><code>presence: true</code></td><td><b>Optional</b> — the key may be absent. Rendered with an "Add …" affordance; a list materializes with its first entry and de-materializes when the last is removed. Omit it (or set <code>required</code>) for an always-present field.</td></tr>
+    <tr><td><code>nullable: true</code></td><td>The value may be an explicit <code>null</code> (distinct from an absent key).</td></tr>
+    <tr><td><code>readOnly: true</code></td><td>Displayed but not editable (e.g. a <code>const</code>).</td></tr>
+    <tr><td><code>required: true</code></td><td>Leaf must hold a value; a required <code>choice</code> must pick a case (<code>mandatory</code>).</td></tr>
+  </table>
+
+  <h3>How <code>presence</code> &amp; <code>required</code> combine</h3>
+  <p class="note">
+    They answer different questions — <code>presence</code>: <em>may the key be absent?</em>
+    (whether a control exists at all); <code>required</code>: <em>must a present value be
+    filled?</em> (validation, <b>leaves only</b>). For a leaf:
+  </p>
+  <table>
+    <tr><th><code>presence</code></th><th><code>required</code></th><th>Behavior</th></tr>
+    <tr><td>—</td><td>—</td><td>Always present; value may be left empty.</td></tr>
+    <tr><td>—</td><td>✓</td><td>Always present; must be filled (empty ⇒ invalid).</td></tr>
+    <tr><td>✓</td><td>—</td><td>Optional — "Add" to include, remove to drop. Once added it must be filled*: a materialized empty key would be a meaningless <code>null</code>.</td></tr>
+    <tr><td>✓</td><td>✓</td><td>Same as above for a leaf (<code>presence</code> already implies "fill once added"). This is the pair the transformer emits for an <code>advisoryRequired</code> field.</td></tr>
+  </table>
+  <p class="note">
+    * unless <code>nullable: true</code>, which lets an added field stay <code>null</code>.
+    Lists and containers have no <code>required</code>: a list's "always present" is just the
+    absence of <code>presence</code> — use <code>minItems</code> for "at least N", a choice's
+    <code>mandatory</code> for "must pick a case".
+  </p>
+
+  <h3>Validation</h3>
+  <table>
+    <tr><td>string</td><td><code>minLength</code> · <code>maxLength</code> · <code>pattern</code> · <code>format: 'email'|'uri'|'url'</code></td></tr>
+    <tr><td>number</td><td><code>integer</code> · <code>min</code> · <code>max</code> · <code>multipleOf</code> · <code>radix: 2|8|16</code> (hex/oct/bin)</td></tr>
+    <tr><td>lists</td><td><code>minItems</code> · <code>maxItems</code></td></tr>
+    <tr><td>map</td><td><code>keyPattern</code> · <code>minEntries</code> · <code>maxEntries</code></td></tr>
+    <tr><td>group</td><td><code>minPresent</code> · <code>maxPresent</code> (how many optional children are enabled)</td></tr>
+  </table>
+
+  <h3>Choice &amp; Map</h3>
+  <table>
+    <tr><td><code>choice.cases</code></td><td>A record of case-name → fields (or a single node). <code>caseLabels</code> names them in the picker; <code>mandatory</code> forces a selection.</td></tr>
+    <tr><td><code>map.value</code></td><td>The node every entry conforms to (a leaf, group, list, choice, or nested map). Keys are user-entered.</td></tr>
+  </table>
+
+  <h3>Appearance (presentation only)</h3>
+  <table>
+    <tr><td><code>flatten</code></td><td>Render the group's fields inline, without a wrapping card.</td></tr>
+    <tr><td><code>collapsed</code></td><td>Start a group/map/choice section collapsed.</td></tr>
+    <tr><td><code>noBorder</code></td><td>Drop the section border.</td></tr>
+    <tr><td><code>grid: &#123; rows, cols &#125;</code></td><td>Lay fields on a CSS grid.</td></tr>
+    <tr><td><code>minFieldWidth</code></td><td>Auto-fit equal columns at least this wide (e.g. <code>"12rem"</code>).</td></tr>
+    <tr><td><code>booleanFields</code></td><td><code>'beginning' | 'end' | 'default'</code> — gather checkboxes into a compact row.</td></tr>
+    <tr><td><code>minTextFieldWidth</code> / <code>minNumberFieldWidth</code></td><td>Per-type minimum widths in the flex flow.</td></tr>
+  </table>
+  <p class="note">
+    Layout keys cascade to nested groups, list items, map entries, and choice
+    cases; a child can override the pair it sets.
+  </p>
+
+  <h3>A tiny example</h3>
+  <pre>{{ example }}</pre>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton mat-dialog-close>Close</button>
+</mat-dialog-actions>

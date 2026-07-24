@@ -4,6 +4,61 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.6.0] — 2026-07-24
+
+### Fixed
+- **Optional lists no longer inject an empty list on a zero-edit rebuild.** An
+  optional `leafList`/`nodeGroupList` a source never authored was materialized
+  by `buildFormFromSchema` as an empty `FormArray`, serialized as `[]`, and
+  written back as e.g. `amf_ip_address = [ ];` — corrupting a document the
+  operator never touched. Lists now carry `presence`, so an *absent* list is
+  kept distinct from a *present-but-empty* one (`[]`): an absent optional list
+  is not built and stays out of the form value, while a source that wrote
+  `( )` round-trips its empty list. `serializeForm(buildFormFromSchema(schema,
+  value))` is now an identity on data for every container kind, lists included.
+- **A `leafList`'s entries wrap instead of shrinking into a cluttered row.**
+  Entries now keep a sensible minimum width (overridable per type via the
+  `appearance` field-width variables) and flow onto new rows as the list grows,
+  rather than compressing until unreadable.
+
+### Added
+- **`setNodePresence` materializes and de-materializes list presence nodes.**
+  The existing helper now works uniformly for `leafList` and `nodeGroupList`:
+  `setNodePresence(group, listSchema, key, true)` builds the (empty) array so a
+  host — e.g. a "Quick Config" flow — can push items into it, and `false`
+  removes it and drops the key.
+- **A list's add/remove affordance follows required vs optional** — the same
+  way for `leafList` and `nodeGroupList`. An **optional** list (a presence node —
+  non-`required`, or `required` under `advisoryRequired`) shows an **"Add
+  *field*"** button while absent — **not** a lingering checkbox; clicking it
+  materializes the list **with its first entry** (no present-empty step), and
+  removing the last entry **de-materializes** the whole list (→ absent). A
+  **required** (non-presence) list is always present, shows an **"Add item"**
+  affordance, and stays `[]` when empty — it cannot be removed. So
+  `advisoryRequired` is exactly what makes a list removable.
+- **The absent-list "Add *field*" button fills the row at the default button
+  height**, and a required empty `leafList` shows a labeled "Add *field* item"
+  button (it previously did not stretch / was a bare `+` icon).
+- **A list card's add/remove buttons are dimmed at rest** (full strength on
+  hover/focus), wearing the same filled look as the leaf-list's per-entry
+  buttons, so a list of cards reads calm rather than as a column of bright icons.
+- **`jsonSchemaToNodeGroup` maps optional array properties to `presence`
+  nodes**, and gains an `advisoryRequired` option. An array property not in
+  `required` becomes a presence list (previously arrays were always
+  materialized). `advisoryRequired: true` (default `false`) treats the schema's
+  `required` list as advisory: required properties become presence nodes too
+  while keeping `required: true`, so a schema whose `required` list is over-broad
+  (e.g. one covering several config flavors) does not force-serialize a
+  required-but-absent key (e.g. `du_addr`) — the requirement stays a validation
+  concern only.
+
+### Changed
+- **A root-level `nodeGroupList` section is now shown (expanded) by default** in
+  the standalone `nff-dynamic-recursive-form` (it previously rendered collapsed).
+  A list has no `appearance`/`collapsed` of its own — only `nodeGroup`, `map`,
+  and `choice` do — so a list section is hidden only when an ancestor section
+  collapses. A presence list stays absent (an "Add *field*" button) until added.
+
 ## [0.5.5] — 2026-07-22
 
 ### Added

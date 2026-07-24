@@ -84,7 +84,7 @@ describe('DrfLeafListRendererComponent cardinality', () => {
 
   it('offers an add affordance for an empty list', async () => {
     const { fixture, array } = await mount({ kind: 'leafList', name: 'tags', type: 'string' }, []);
-    const add = fixture.nativeElement.querySelector('.add-button') as HTMLButtonElement | null;
+    const add = fixture.nativeElement.querySelector('.empty-add-button') as HTMLButtonElement | null;
     expect(add).toBeTruthy();
     add!.click();
     fixture.detectChanges();

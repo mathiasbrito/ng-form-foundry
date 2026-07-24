@@ -115,6 +115,14 @@ serialize as `null` and fail a typed schema), so a host that materializes
 fields for editing drops the ones left empty on cancel by de-materializing
 them — `setNodePresence(group, schema, key, false)`.
 
+It works uniformly across presence node kinds, including `leafList` and
+`nodeGroupList`: `setNodePresence(group, listSchema, key, true)` builds the
+`FormArray` (empty, ready for items to be pushed into it), and passing `false`
+removes it and drops the key. This is how an optional list stays *absent* until
+something opts into it — the distinction between an absent list and a
+present-but-empty `[]` is preserved through a round-trip, so a zero-edit rebuild
+never injects an empty list a source never authored.
+
 ## Components
 
 ### `<nff-dynamic-recursive-form>`

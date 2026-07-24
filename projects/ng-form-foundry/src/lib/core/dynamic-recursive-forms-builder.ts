@@ -49,7 +49,12 @@ function isMap(node: NodeType): node is NodeMap {
 /** Whether the node is an optional (presence) node: its key is data, absent until enabled. */
 function hasPresence(node: NodeType): boolean {
   return (
-    (node.kind === 'leaf' || node.kind === 'nodeGroup' || node.kind === 'map' || node.kind === 'choice') &&
+    (node.kind === 'leaf' ||
+      node.kind === 'nodeGroup' ||
+      node.kind === 'map' ||
+      node.kind === 'choice' ||
+      node.kind === 'leafList' ||
+      node.kind === 'nodeGroupList') &&
     node.presence === true
   );
 }

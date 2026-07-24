@@ -1,0 +1,53 @@
+<section class="intro">
+  <h2>Optional (presence) lists</h2>
+  <p>
+    The affordance for a list follows whether it is <strong>required</strong> or
+    <strong>optional</strong> (<code>presence: true</code>, i.e.
+    <code>advisoryRequired</code>). The loaded config had none of the optional
+    lists, so they start <strong>absent</strong> — <em>nothing</em> in the
+    serialized value on the right. This is the byte-exact fix: a zero-edit rebuild
+    never injects a list the source never authored.
+  </p>
+  <ul>
+    <li><strong>Optional</strong> (<code>amf_ip_address</code>,
+      <code>plmn_list</code>): an <strong>"Add …"</strong> button while absent →
+      clicking it makes the first entry appear at once. Removing the last entry
+      <strong>de-materializes</strong> the whole list (→ absent, key gone).</li>
+    <li><strong>Required</strong> (<code>tac_list</code>): always present — no
+      remove. When empty it stays <code>[]</code>, with an "Add TAC item" button.</li>
+    <li><code>served_cells</code> is an ordinary (non-presence) group list:
+      always present, its section shown by default.</li>
+  </ul>
+</section>
+
+<div class="columns">
+  <nff-dynamic-recursive-form
+    class="form"
+    [schema]="schema()"
+    [formGroup]="form()"
+    [editable]="true"
+  />
+
+  <aside class="live">
+    <h3><code>serializeForm(schema, form)</code> — what gets written back</h3>
+    <pre>{{ serialized() }}</pre>
+
+    <h3>Schema — edit it to reshape the form</h3>
+    <p class="hint">
+      Flip a list's <code>presence</code> (optional ↔ required), rename a field, or
+      add one — valid JSON rebuilds the form live. Not sure what's available?
+      <button matButton (click)="openCheatsheet()">
+        <mat-icon>menu_book</mat-icon> Schema cheatsheet
+      </button>
+    </p>
+    @if (schemaError()) {
+      <p class="error">⚠ {{ schemaError() }}</p>
+    }
+    <textarea
+      class="schema-editor"
+      spellcheck="false"
+      [value]="schemaText()"
+      (input)="onSchemaInput($any($event.target).value)"
+    ></textarea>
+  </aside>
+</div>

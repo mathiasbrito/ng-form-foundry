@@ -114,6 +114,39 @@ describe('ConfigEditorComponent', () => {
     expect(inputs.some((i) => i.value === 'EXTERNAL')).toBe(true);
   });
 
+  it('a deep list-entry leaf reflects an external setValue made while display:none, after refresh()', () => {
+    // Root is selected; gNBs[0].gNB_name renders as a deep section leaf.
+    const nameInput = () =>
+      (Array.from(fixture.nativeElement.querySelectorAll('.detail input')) as HTMLInputElement[]).find(
+        (i) => i.value === 'eth0' || i.value === 'B',
+      );
+    // ifaces[0].nm === 'eth0' is our deep list-entry leaf (see the fixture).
+    expect(nameInput()?.value).toBe('eth0');
+
+    // Hide the editor, mutate the deep control externally (emitEvent:true), un-hide, refresh.
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'none';
+    (form.get('ifaces') as FormArray).at(0).get('nm')!.setValue('B');
+    host.style.display = '';
+    component.refresh();
+    fixture.detectChanges();
+
+    const inputs = Array.from(fixture.nativeElement.querySelectorAll('.detail input')) as HTMLInputElement[];
+    expect(inputs.some((i) => i.value === 'B')).toBe(true);
+  });
+
+  it('a deep list-entry leaf self-heals via its reactive value accessor with no refresh() and no CD', () => {
+    // Isolates whether the reactive value accessor alone reflects an external
+    // setValue on a deep leaf, without any refresh() or detectChanges.
+    const before = (Array.from(fixture.nativeElement.querySelectorAll('.detail input')) as HTMLInputElement[]).some(
+      (i) => i.value === 'eth0',
+    );
+    expect(before).toBe(true);
+    (form.get('ifaces') as FormArray).at(0).get('nm')!.setValue('SELFHEAL'); // no refresh, no detectChanges
+    const inputs = Array.from(fixture.nativeElement.querySelectorAll('.detail input')) as HTMLInputElement[];
+    expect(inputs.some((i) => i.value === 'SELFHEAL')).toBe(true);
+  });
+
   it('refresh() re-reads the form so non-reactive displays reflect an external mutation', () => {
     fixture.componentRef.setInput('editable', false); // readonly case-select uses [value], a one-shot binding
     component.select(node('scope'));

@@ -480,6 +480,54 @@ describe('dynamic-recursive-forms-builder', () => {
 
   // ---- shared choice/map mutation helpers --------------------------------
 
+  describe('presence lists (absent optional arrays are not injected)', () => {
+    const schema: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      children: {
+        gNB_ID: { kind: 'leaf', type: 'number', name: 'gNB_ID' },
+        amf_ip: { kind: 'leafList', name: 'amf_ip', type: 'string', presence: true },
+        cells: {
+          kind: 'nodeGroupList',
+          name: 'cells',
+          presence: true,
+          type: { kind: 'nodeGroup', name: 'cell', children: { id: { kind: 'leaf', type: 'number', name: 'id' } } },
+        },
+      },
+    };
+
+    it('an absent presence list is not built and not serialized (the byte-exact fix)', () => {
+      const group = buildFormFromSchema(schema, { gNB_ID: 3584 }); // amf_ip and cells absent
+      expect(group.contains('amf_ip')).toBe(false);
+      expect(group.contains('cells')).toBe(false);
+      expect(serializeForm(schema, group)).toEqual({ gNB_ID: 3584 }); // no [] injected
+    });
+
+    it('a present-but-empty list is preserved (distinct from absent)', () => {
+      const group = buildFormFromSchema(schema, { gNB_ID: 3584, amf_ip: [] });
+      expect(group.contains('amf_ip')).toBe(true);
+      expect(serializeForm(schema, group)).toEqual({ gNB_ID: 3584, amf_ip: [] });
+    });
+
+    it('setNodePresence materializes an absent presence list, ready to receive items', () => {
+      const group = buildFormFromSchema(schema, { gNB_ID: 3584 });
+      // Quick Config path: turn the optional list on, then push an item.
+      expect(setNodePresence(group, schema.children['amf_ip'], 'amf_ip', true)).toBe(true);
+      expect(group.get('amf_ip')).toBeInstanceOf(FormArray);
+      (group.get('amf_ip') as FormArray).push(new FormControl('10.0.0.1'));
+      expect(serializeForm(schema, group)).toEqual({ gNB_ID: 3584, amf_ip: ['10.0.0.1'] });
+      // …and back off drops it.
+      expect(setNodePresence(group, schema.children['amf_ip'], 'amf_ip', false)).toBe(true);
+      expect(serializeForm(schema, group)).toEqual({ gNB_ID: 3584 });
+    });
+
+    it('setNodePresence materializes an absent presence nodeGroupList', () => {
+      const group = buildFormFromSchema(schema, { gNB_ID: 3584 });
+      setNodePresence(group, schema.children['cells'], 'cells', true, [{ id: 1 }]);
+      expect(serializeForm(schema, group)).toEqual({ gNB_ID: 3584, cells: [{ id: 1 }] });
+    });
+  });
+
   describe('setNodePresence', () => {
     const schema: NodeGroup = {
       kind: 'nodeGroup',

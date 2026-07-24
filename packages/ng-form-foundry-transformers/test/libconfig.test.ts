@@ -369,6 +369,65 @@ test('schema mode: only schema-born keys can be inserted', () => {
   assert.doesNotMatch(out, /rogue/); // non-schema key never inserted
 });
 
+// —— presence for lists: absent ≠ present-empty (the byte-exact injection bug) ——
+//
+// The reported corruption: an OPTIONAL list a source never authored (here
+// `amf_ip_address` inside each gNB) was materialized by buildFormFromSchema as
+// an empty FormArray, serialized as `[]`, and spliced back in as `x = [ ];`.
+// The fix marks optional list properties as presence nodes so the builder does
+// not materialize an absent list, and distinguishes absent from present-empty.
+
+const GNB_LIST_SCHEMA: JsonSchema = {
+  type: 'object',
+  required: ['gNBs'],
+  properties: {
+    gNBs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['gNB_ID'],
+        properties: {
+          gNB_ID: { type: 'integer' },
+          amf_ip_address: { type: 'array', items: { type: 'string' } }, // optional leaf-list
+        },
+      },
+    },
+  },
+};
+
+test('presence lists: an optional list property is a presence node and stays out of initialValue when absent', () => {
+  const src = 'gNBs = (\n  { gNB_ID = 3584;\n  }\n);\n';
+  const { schema, initialValue } = libconfigTransformer.toSchema(src, { schema: GNB_LIST_SCHEMA });
+  const item = (schema.children['gNBs'] as any).type;
+  assert.equal(item.children['amf_ip_address'].kind, 'leafList');
+  assert.equal(item.children['amf_ip_address'].presence, true); // optional list ⇒ presence
+  // buildFormFromSchema keys materialization off presence, so the absent list
+  // must not appear in the extracted value — nothing for it to seed from.
+  const entry = (initialValue as any).gNBs[0];
+  assert.equal('amf_ip_address' in entry, false);
+});
+
+test('presence lists: a zero-edit rebuild does not inject an absent optional list', () => {
+  const src = 'gNBs = (\n  { gNB_ID = 3584;\n  }\n);\n';
+  const { binding } = libconfigTransformer.toSchema(src, { schema: GNB_LIST_SCHEMA });
+  // What serializeForm emits for a presence-absent list: the key simply is not there.
+  const out = libconfigTransformer.toSource({ gNBs: [{ gNB_ID: 3584 }] }, binding);
+  assert.equal(out, src); // byte-for-byte; no `amf_ip_address = [ ];` spliced in
+  assert.doesNotMatch(out, /amf_ip_address/);
+});
+
+test('presence lists: a present-but-empty list round-trips instead of being dropped', () => {
+  const src = 'gNBs = (\n  { gNB_ID = 3584;\n    amf_ip_address = ( );\n  }\n);\n';
+  const { schema, initialValue } = libconfigTransformer.toSchema(src, { schema: GNB_LIST_SCHEMA });
+  const item = (schema.children['gNBs'] as any).type;
+  assert.equal(item.children['amf_ip_address'].presence, true);
+  // Present in the source ⇒ present in the value (as an empty array), distinct
+  // from the absent case above — the form must be able to keep `( )`.
+  const entry = (initialValue as any).gNBs[0];
+  assert.ok(Array.isArray(entry.amf_ip_address));
+  assert.equal(entry.amf_ip_address.length, 0);
+});
+
 test('schema mode: a choice keeps its key; switching cases swaps fields, unknown keys survive', () => {
   const src = 'mode = { a = 1; keep_me = 7; };\nuncovered = 1;\n';
   const choiceSchema: JsonSchema = {

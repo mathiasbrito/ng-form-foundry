@@ -45,6 +45,12 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
   /** Field-layout appearance from the enclosing group, forwarded to every item form. */
   @Input() inheritedAppearance: Appearance | null = null;
   @Output() message = new EventEmitter();
+  /**
+   * Emitted when the last entry of a presence (optional / advisoryRequired) list
+   * is removed — the host de-materializes the whole list (→ absent). An optional
+   * list has no present-empty state; a required list never routes here.
+   */
+  @Output() removeList = new EventEmitter<void>();
   // forwardRef: DynamicRecursiveFormComponent and this component import each
   // other, so the class reference is undefined when this query is evaluated at
   // decoration time. forwardRef defers the lookup and keeps the selector valid.
@@ -81,6 +87,13 @@ export class NodeGroupListRendererComponent implements OnInit, AfterViewInit {
   }
 
   removeItem($index: number) {
+    // A presence (optional / advisoryRequired) list has no present-empty state:
+    // removing its last entry de-materializes the whole list (→ absent). A
+    // required (non-presence) list instead stops at its minimum, staying `[]`.
+    if (this.nodeGroupList?.presence && this.formArray.length === 1) {
+      this.removeList.emit();
+      return;
+    }
     if (this.formArray.length <= this.effectiveMin) {
       this.message.emit({
         message: `You cannot remove the last ${this.nodeGroupList.type.name} configuration!`,

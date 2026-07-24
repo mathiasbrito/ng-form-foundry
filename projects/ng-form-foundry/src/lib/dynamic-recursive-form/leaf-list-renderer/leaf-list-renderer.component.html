@@ -27,10 +27,18 @@
       </div>
     }
     @if (editable && formArray.length === 0 && canAdd) {
-      <!-- An empty leaf-list has no item to host the trailing add button; this
-           creates the first entry so the list is not a dead end. -->
-      <button class="add-button small-icon-button" matIconButton [matTooltip]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" [attr.aria-label]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" (click)="addItem()">
-        <mat-icon matPrefix>add</mat-icon>
+      <!-- A required (non-presence) list can be present-but-empty; this labeled
+           affordance adds the first entry so an empty list is not a dead end
+           (mirrors the node-group list's "Add … #1"). A presence list never
+           renders empty here — its first entry appears on materialize, and
+           removing the last entry de-materializes it. -->
+      <button
+        matButton="outlined"
+        class="empty-add-button"
+        [attr.aria-label]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'"
+        (click)="addItem()"
+      >
+        <mat-icon>add</mat-icon> Add {{ leaf_.label ?? leaf_.name }} item
       </button>
     }
 }

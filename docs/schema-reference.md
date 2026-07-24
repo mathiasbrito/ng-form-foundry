@@ -84,6 +84,7 @@ A repeatable scalar field. Builds a `FormArray<FormControl>`.
 | `default` | array of the element type | {sub}`data` | Initial items when no value is supplied. |
 | `minItems` | `number` | {sub}`data` | Minimum item count. |
 | `maxItems` | `number` | {sub}`data` | Maximum item count. |
+| `presence` | `boolean` | {sub}`data` | Makes the list optional: an *absent* list (no key) is distinct from a *present-but-empty* one (`[]`). While absent, an **"Add *field*"** button stands in and the `FormArray` is not built, so the key stays out of the value and a zero-edit rebuild never injects an empty list. Clicking it materializes the list with its **first entry** (an optional list has no present-empty state); removing the last entry de-materializes the whole list (→ absent). A *required* (non-presence) list instead is always present, shows an "Add item" affordance, and stays `[]` when empty. |
 | `label` | `string` | {sub}`ui` | List label. Falls back to `name`. |
 
 ## `nodeGroup` — a nested object
@@ -173,6 +174,7 @@ the `type` group.
 | `type` | `NodeGroup` | {sub}`data` | The group schema each item conforms to. Required. |
 | `minItems` | `number` | {sub}`data` | Minimum item count; the last item cannot be removed below this. |
 | `maxItems` | `number` | {sub}`data` | Maximum item count. |
+| `presence` | `boolean` | {sub}`data` | Makes the list optional: an *absent* list (no key) is distinct from a *present-but-empty* one (`[]`). While absent, an **"Add *field*"** button stands in and the `FormArray` is not built, so the key stays out of the value and a zero-edit rebuild never injects an empty list. Clicking it materializes the list with its **first card** (an optional list has no present-empty state); removing the last card de-materializes the whole list (→ absent). A *required* (non-presence) list instead is always present, shows an "Add … #1" affordance, and stays `[]` when empty. |
 | `label` | `string` | {sub}`ui` | List label. Falls back to `name`. |
 
 ## `choice` — a discriminated selection

@@ -40,6 +40,12 @@ export class LeafListRendererComponent implements OnInit {
    */
   @Input() layout: LayoutStyles | null = null;
   @Output() message = new EventEmitter();
+  /**
+   * Emitted from the empty-list remove button when the list is a presence list —
+   * the host removes the whole list (de-materializes it, → absent). Only wired
+   * for a `presence` `leafList`; the parent maps it to `setNodePresence`.
+   */
+  @Output() removeList = new EventEmitter<void>();
 
   matDialog = inject(MatDialog);
 
@@ -88,6 +94,13 @@ export class LeafListRendererComponent implements OnInit {
   }
 
   removeItem($index: number) {
+    // A presence (optional / advisoryRequired) list has no present-empty state:
+    // removing its last entry de-materializes the whole list (→ absent). A
+    // required (non-presence) list instead stops at its minimum, staying `[]`.
+    if (this.leaf_?.presence && this.formArray.length === 1) {
+      this.removeList.emit();
+      return;
+    }
     if (this.formArray.length <= this.effectiveMin) {
       this.message.emit({
         message: 'You cannot remove the last item!',

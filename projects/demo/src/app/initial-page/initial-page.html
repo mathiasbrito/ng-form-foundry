@@ -1,5 +1,11 @@
 <h2>ng-form-foundry demos</h2>
 
+<p>
+  <button matButton="outlined" (click)="openCheatsheet()">
+    <mat-icon>menu_book</mat-icon> Schema cheatsheet
+  </button>
+</p>
+
 <h3>Forms</h3>
 <ul>
   <li><a routerLink="/showcase">0.3.0 showcase — all features &amp; fixes</a></li>
@@ -10,6 +16,7 @@
   <li><a routerLink="/yang">YANG-derived form (presence and choice)</a></li>
   <li><a routerLink="/layout">Field layout playground — appearance.grid / minFieldWidth</a></li>
   <li><a routerLink="/unknown-keys">Partial-schema editing — unknownKeys (preserve / drop / edit), radix &amp; ghost fields</a></li>
+  <li><a routerLink="/presence-lists">Optional (presence) lists — absent vs present-empty, byte-exact round-trip</a></li>
 </ul>
 
 <h3>Tree editor</h3>

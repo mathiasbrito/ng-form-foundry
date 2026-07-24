@@ -337,7 +337,7 @@ test('non-property positions are never marked: map values, array items, leaf-bod
   assert.equal(labels.value.presence, undefined); // its value template — never
 
   const peers = g.children['peers'] as any;
-  assert.equal(peers.presence, undefined); // lists cannot carry presence
+  assert.equal(peers.presence, true); // an optional list property is a presence node (absent ≠ present-empty)
   assert.equal(peers.type.presence, undefined); // the item group — never
   assert.equal(peers.type.children.id.presence, true); // an optional property INSIDE an item is a property
 
@@ -359,6 +359,37 @@ test('optionalPresence: false restores unconditional materialization', () => {
   const g = jsonSchemaToNodeGroup(schema, 'body', { optionalPresence: false });
   assert.equal((g.children['note'] as any).presence, undefined);
   assert.equal((g.children['filter'] as any).presence, undefined);
+});
+
+test('advisoryRequired: off (default) — a required property is materialized, not presence', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    required: ['du_addr', 'ports'],
+    properties: {
+      du_addr: { type: 'string' },
+      ports: { type: 'array', items: { type: 'integer' } },
+    },
+  };
+  const g = jsonSchemaToNodeGroup(schema);
+  assert.equal((g.children['du_addr'] as any).presence, undefined); // required ⇒ always present
+  assert.equal((g.children['du_addr'] as any).required, true);
+  assert.equal((g.children['ports'] as any).presence, undefined); // required list ⇒ materialized
+});
+
+test('advisoryRequired: on — a required property is presence yet keeps required (validation only)', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    required: ['du_addr', 'ports'],
+    properties: {
+      du_addr: { type: 'string' },
+      ports: { type: 'array', items: { type: 'integer' } },
+    },
+  };
+  const g = jsonSchemaToNodeGroup(schema, '__root__', { advisoryRequired: true });
+  const du = g.children['du_addr'] as any;
+  assert.equal(du.presence, true); // absent-in-data stays absent — no forced du_addr = ""
+  assert.equal(du.required, true); // but still required once materialized
+  assert.equal((g.children['ports'] as any).presence, true); // required list, presence too
 });
 
 test('an optional leaf with a default is still presence (the default seeds it when enabled)', () => {

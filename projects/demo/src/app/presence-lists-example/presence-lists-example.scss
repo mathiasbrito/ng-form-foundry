@@ -1,0 +1,98 @@
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.intro {
+  max-width: 900px;
+  margin-bottom: 16px;
+
+  h2 {
+    margin: 0 0 8px;
+  }
+
+  code {
+    background: var(--mat-sys-surface-container-high);
+    padding: 0 4px;
+    border-radius: 4px;
+  }
+}
+
+.columns {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+
+  .form {
+    flex: 1 1 60%;
+    min-width: 0;
+  }
+
+  .live {
+    flex: 1 1 40%;
+    min-width: 0;
+
+    h3 {
+      margin: 16px 0 8px;
+      font-size: 0.9rem;
+
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+
+    .hint {
+      margin: 0 0 8px;
+      font-size: 0.8rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .error {
+      margin: 0 0 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      background: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
+    }
+
+    pre {
+      margin: 0;
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--mat-sys-surface-container);
+      color: var(--mat-sys-on-surface);
+      border: 1px solid var(--mat-sys-outline-variant);
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .schema-editor {
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 360px;
+      resize: vertical;
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--mat-sys-surface-container-lowest);
+      color: var(--mat-sys-on-surface);
+      border: 1px solid var(--mat-sys-outline-variant);
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      tab-size: 2;
+
+      &:focus-visible {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: -1px;
+      }
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .columns {
+    flex-direction: column;
+  }
+}

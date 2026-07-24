@@ -62,6 +62,11 @@ export interface LeafList {
   maxItems?: number;
   /** Present every item in this base — see {@link Leaf.radix}. */
   radix?: 2 | 8 | 16;
+  /**
+   * Optional list whose presence is itself data — an absent key, distinct from
+   * a present-but-empty list. Mirrors {@link NodeGroup.presence}.
+   */
+  presence?: boolean;
 }
 
 export interface NodeGroup {
@@ -93,6 +98,8 @@ export interface NodeGroupList {
   type: NodeGroup;
   minItems?: number;
   maxItems?: number;
+  /** Optional list whose presence is itself data — see {@link LeafList.presence}. */
+  presence?: boolean;
 }
 
 /** One case body: a record of named fields, or a single node (a leaf-bodied case). */

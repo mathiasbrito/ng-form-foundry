@@ -78,7 +78,7 @@
     }
     @for (childItem of nodeGroupChildrenList; track $index) {
       @let child = childItem.value;
-      @if (child.kind == 'leafList') {
+      @if (child.kind == 'leafList' && !child.presence) {
         <nff-leaf-list-renderer
           [layout]="gridHasCols() ? fieldsLayout() : null"
           [leaf_]="child"
@@ -86,6 +86,32 @@
           [formArray]="asFormArray(formGroup().get(childItem.key))"
           [initialValue]="formGroup().get(childItem.key)?.value"
         />
+      }
+      @else if (child.kind == 'leafList' && child.presence) {
+        <!-- Optional (advisoryRequired) list: an "Add <list>" button while
+             absent; clicking it materializes the list with its first entry (no
+             empty state). Removing the last entry de-materializes it (the
+             renderer's `removeList` → absent). -->
+        @let leafListArray = asFormArray(formGroup().get(childItem.key));
+        @if (leafListArray) {
+          <div class="presence-list">
+            <nff-leaf-list-renderer
+              [layout]="gridHasCols() ? fieldsLayout() : null"
+              [leaf_]="child"
+              [editable]="editable()"
+              [formArray]="leafListArray"
+              (removeList)="toggleNodePresence(childItem.key, child, false)"
+            />
+          </div>
+        } @else if (editable()) {
+          <button
+            matButton="outlined"
+            class="presence-list-add"
+            (click)="addPresenceList(childItem.key, child)"
+          >
+            <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
+          </button>
+        }
       }
     }
     <!-- Presence leaves trail the regular fields so their add buttons don't
@@ -222,7 +248,7 @@
             }
           </mat-expansion-panel>
         }
-        @else if (child.kind == 'nodeGroupList') {
+        @else if (child.kind == 'nodeGroupList' && !child.presence) {
           <nff-node-group-list-renderer
             [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
             [nodeGroupList]="child"
@@ -230,6 +256,31 @@
             [initialValue]="formGroup().get(childItem.key)?.value"
             [editable]="editable()"
           />
+        }
+        @else if (child.kind == 'nodeGroupList' && child.presence) {
+          <!-- Optional (advisoryRequired) list: an "Add <list>" button while
+               absent; clicking it materializes the list with its first entry.
+               Removing the last entry de-materializes it (`removeList` → absent). -->
+          @let presenceListArray = asFormArray(formGroup().get(childItem.key));
+          @if (presenceListArray) {
+            <div class="presence-list">
+              <nff-node-group-list-renderer
+                [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
+                [nodeGroupList]="child"
+                [formArray]="presenceListArray"
+                [editable]="editable()"
+                (removeList)="toggleNodePresence(childItem.key, child, false)"
+              />
+            </div>
+          } @else if (editable()) {
+            <button
+              matButton="outlined"
+              class="presence-list-add"
+              (click)="addPresenceList(childItem.key, child)"
+            >
+              <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
+            </button>
+          }
         }
         @else if (child.kind == 'map') {
           @let mapGroup = asFormGroup(formGroup().get(childItem.key));
@@ -388,12 +439,12 @@
           }
         </mat-expansion-panel>
       }
-      @else if (child.kind == 'nodeGroupList') {
-        <mat-expansion-panel class="node-section" togglePosition="before">
+      @else if (child.kind == 'nodeGroupList' && !child.presence) {
+        <!-- A nodeGroupList has no `appearance` of its own, so its section is
+             always shown; only an ancestor's collapse hides it. -->
+        <mat-expansion-panel class="node-section" [expanded]="true" togglePosition="before">
           <mat-expansion-panel-header>
-            <mat-panel-title>
-              {{ child.label ?? child.name }}
-            </mat-panel-title>
+            <mat-panel-title>{{ child.label ?? child.name }}</mat-panel-title>
           </mat-expansion-panel-header>
           <nff-node-group-list-renderer
             [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
@@ -403,6 +454,31 @@
             [editable]="editable()"
           />
         </mat-expansion-panel>
+      }
+      @else if (child.kind == 'nodeGroupList' && child.presence) {
+        <!-- Optional (advisoryRequired) list: an "Add <list>" button while
+             absent; clicking it materializes the list with its first entry.
+             Removing the last entry de-materializes it (`removeList` → absent). -->
+        @let rootListArray = asFormArray(formGroup().get(childItem.key));
+        @if (rootListArray) {
+          <div class="presence-list">
+            <nff-node-group-list-renderer
+              [inheritedAppearance]="childAppearance()" [showAbsentOptionals]="showAbsentOptionals()"
+              [nodeGroupList]="child"
+              [formArray]="rootListArray"
+              [editable]="editable()"
+              (removeList)="toggleNodePresence(childItem.key, child, false)"
+            />
+          </div>
+        } @else if (editable()) {
+          <button
+            matButton="outlined"
+            class="presence-list-add"
+            (click)="addPresenceList(childItem.key, child)"
+          >
+            <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
+          </button>
+        }
       }
       @else if (child.kind == 'nodeGroup' && child.presence) {
         <mat-expansion-panel class="node-section" togglePosition="before" [expanded]="!!formGroup().get(childItem.key)">

@@ -106,9 +106,11 @@ required).
 
 Validity mirrors what would go on the wire: `presence` fields are absent until
 enabled and required while enabled (unless `nullable`), a `mandatory` or
-enabled-presence `choice` errors until a case is picked, and lists start empty
-rather than seeding a placeholder entry. A valid form serializes to a value
-that satisfies the schema's own constraints.
+enabled-presence `choice` errors until a case is picked, an **optional
+(`presence`) list is absent until you add it** — adding it drops in a first
+entry, and removing the last entry takes it away again — while a **required list
+stays empty (`[]`)** rather than seeding a placeholder entry. A valid form
+serializes to a value that satisfies the schema's own constraints.
 
 ## Documentation
 
