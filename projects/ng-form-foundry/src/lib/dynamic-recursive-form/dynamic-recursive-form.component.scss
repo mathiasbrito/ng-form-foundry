@@ -109,8 +109,11 @@
 // CSS-grid layout, active when `appearance.grid` / `minFieldWidth` set the
 // track templates inline (see `fieldsLayout`). Each field sits in a track, so
 // the flex-flow minimum widths must not fight the track width; a stacked
-// (multi-entry) array leaf spans the full row as it did in flex flow; buttons
-// keep their natural width instead of stretching to the cell.
+// (multi-entry) array leaf spans the full row as it did in flex flow. A
+// presence "Add <field>" / "Add <list>" button stands in for the field or
+// list that will take the slot, so it stretches to fill it — grid items
+// default to `justify-self: stretch`, matching the `flex: 1 1 0` it gets in
+// the flex flow — rather than shrinking to its label width.
 .fields.grid-fields {
   // The flex-flow `flex: 1 1 0` would let ancestors stretch the grid, and any
   // excess height lands in the row tracks (`align-content: stretch`), reading
@@ -123,17 +126,21 @@
     // The flex flow's per-type width bounds don't apply: tracks size fields.
     max-width: none;
   }
-  > button {
-    justify-self: start;
-  }
 }
 
-// Only a grid with explicit column tracks (`.grid-cols`) lets a stacked
-// leaf-list span the full row — without a column template `1 / -1` resolves
-// to a definite single-cell placement that jumps ahead of auto-flowed
-// siblings.
+// Only a grid with explicit column tracks (`.grid-cols`) lets a leaf-list span
+// the full row — without a column template `1 / -1` resolves to a definite
+// single-cell placement that jumps ahead of auto-flowed siblings. A stacked
+// (multi-entry) bare list spans so its entries flow across the tracks instead
+// of wrapping vertically inside one; a materialized presence list spans via
+// its `.presence-list` wrapper (the grid item — the renderer inside is not),
+// matching the full-row it already takes in the flex flow. An absent optional
+// list's "Add <list>" button spans the same full row, so materializing it
+// doesn't shift the layout.
 .fields.grid-cols {
-  nff-leaf-list-renderer.stacked {
+  nff-leaf-list-renderer.stacked,
+  .presence-list,
+  .presence-list-add {
     grid-column: 1 / -1;
   }
 }

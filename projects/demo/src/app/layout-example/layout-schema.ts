@@ -2,10 +2,12 @@ import { Appearance, NodeGroup } from 'ng-form-foundry';
 
 /**
  * A form exercising the `appearance` field-layout options: a root group of
- * mixed scalar fields (plus a leaf-list, which spans the full row once it has
- * several entries), a nested group, and a choice. The `appearance` sits on
- * the **root only** — the nested TLS group and the Backend choice inherit it,
- * demonstrating the layout cascade.
+ * mixed scalar fields, a required leaf-list (`tags`) and an optional
+ * (presence) leaf-list (`aliases`) — each takes its own full-width row once it
+ * holds several entries, its entries flowing across the grid's column tracks
+ * and wrapping to the next line — a nested group, and a choice. The
+ * `appearance` sits on the **root only** — the nested TLS group and the
+ * Backend choice inherit it, demonstrating the layout cascade.
  */
 export function layoutSchema(appearance?: Appearance): NodeGroup {
   return {
@@ -29,7 +31,21 @@ export function layoutSchema(appearance?: Appearance): NodeGroup {
       logRequests: { kind: 'leaf', type: 'boolean', name: 'logRequests', label: 'Log requests' },
       description: { kind: 'leaf', type: 'string', name: 'description', label: 'Description' },
       timeoutMs: { kind: 'leaf', type: 'number', name: 'timeoutMs', label: 'Timeout (ms)', integer: true, default: 3000 },
-      tags: { kind: 'leafList', name: 'tags', label: 'Tags', type: 'string', default: ['edge', 'prod'] },
+      // Required leaf-list, several entries: a stacked list takes its own
+      // full-width row and wraps its entries across the layout's column tracks
+      // instead of squeezing beside a scalar field.
+      tags: {
+        kind: 'leafList',
+        name: 'tags',
+        label: 'Tags',
+        type: 'string',
+        default: ['edge', 'prod', 'eu-west-1', 'canary', 'blue-green'],
+      },
+      // Optional (presence) leaf-list: absent until you click "Add Alias".
+      // Once materialized it lays out exactly like `tags` — its own full-width
+      // row, entries wrapping across the tracks — the presence-list case of the
+      // stacked-list layout.
+      aliases: { kind: 'leafList', name: 'aliases', label: 'Alias', type: 'string', presence: true },
       tls: {
         kind: 'nodeGroup',
         name: 'tls',

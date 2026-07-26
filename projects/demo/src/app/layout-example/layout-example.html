@@ -9,6 +9,13 @@
   the nested <em>TLS</em> group and the <em>Backend</em> choice inherit it (a child setting
   its own layout would override).
 </p>
+<p>
+  Lists share the same flow: a single-entry leaf-list sits inline like a scalar field, but a
+  <strong>multi-entry</strong> list — <code>tags</code>, or the optional <code>aliases</code>
+  once you click <em>Add Alias</em> — takes its <strong>own full-width row</strong> and flows
+  its entries across the same column tracks, <strong>wrapping</strong> to the next line, so it
+  never stretches a field beside it. Try each mode to see it.
+</p>
 
 <div class="controls">
   <mat-button-toggle-group [value]="view()" (change)="view.set($event.value)" aria-label="View">
