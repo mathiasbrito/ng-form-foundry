@@ -34,8 +34,10 @@
            removing the last entry de-materializes it. -->
       <button
         matButton="outlined"
-        class="empty-add-button"
+        class="empty-add-button nff-clip-label"
         [attr.aria-label]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'"
+        [nffOverflowTooltip]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'"
+        nffOverflowTooltipFor=".mdc-button__label"
         (click)="addItem()"
       >
         <mat-icon>add</mat-icon> Add {{ leaf_.label ?? leaf_.name }} item

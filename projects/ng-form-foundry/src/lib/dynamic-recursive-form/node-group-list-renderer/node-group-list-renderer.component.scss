@@ -1,3 +1,5 @@
+@use '../../styles/ellipsis-label' as ellipsis;
+
 :host {
   position: relative;
   width: 100%;
@@ -52,3 +54,5 @@ nff-dynamic-recursive-form {
 .empty-add-button {
   width: 100%;
 }
+
+@include ellipsis.clip-label;

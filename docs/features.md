@@ -441,7 +441,8 @@ stay in sync — as do external mutations to the bound form from a sibling view
 (see [`refresh()`](api.md#nff-config-editor)). It supports the full node
 model — groups, lists, maps, and choices — plus a "+ Optional field" menu for
 absent presence children (each added one carries a delete button that returns
-it to the menu), and the `expandOnClick` / `showBreadcrumb` inputs tune its
-navigation. It draws no container of its own, only a divider between the
+it to the menu), and the `expandOnClick` / `showBreadcrumb` /
+`initiallyExpanded` inputs tune its navigation (the last starts the tree fully
+unfolded). It draws no container of its own, only a divider between the
 panes, so the embedding page owns the
 chrome.

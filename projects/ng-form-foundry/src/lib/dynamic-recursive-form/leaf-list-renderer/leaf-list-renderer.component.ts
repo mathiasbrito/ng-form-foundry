@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPrefix } from '@angular/material/input';
 import { MatTooltip } from '@angular/material/tooltip';
+import { OverflowTooltipDirective } from '../../directives/overflow-tooltip.directive';
 
 @Component({
   selector: 'nff-leaf-list-renderer',
@@ -18,6 +19,7 @@ import { MatTooltip } from '@angular/material/tooltip';
     MatButtonModule,
     MatPrefix,
     MatTooltip,
+    OverflowTooltipDirective,
   ],
   templateUrl: './leaf-list-renderer.component.html',
   styleUrl: './leaf-list-renderer.component.scss',

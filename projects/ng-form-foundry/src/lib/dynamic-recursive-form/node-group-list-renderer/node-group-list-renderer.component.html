@@ -23,8 +23,9 @@
              creates the first item (mirrors the config editor's "Add … #1"). -->
         <button
           matButton="outlined"
-          class="empty-add-button"
-          [matTooltip]="'Add ' + (nodeGroupList.type.label ?? nodeGroupList.type.name)"
+          class="empty-add-button nff-clip-label"
+          [nffOverflowTooltip]="'Add ' + (nodeGroupList.type.label ?? nodeGroupList.type.name) + ' #1'"
+          nffOverflowTooltipFor=".mdc-button__label"
           (click)="addItem()"
         >
           <mat-icon>add</mat-icon> Add {{ nodeGroupList.type.label ?? nodeGroupList.type.name }} #1

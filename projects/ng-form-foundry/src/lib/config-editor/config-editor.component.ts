@@ -169,6 +169,16 @@ export class ConfigEditorComponent implements OnDestroy {
    */
   readonly expandOnClick = input<boolean>(false);
   /**
+   * Whether the tree starts **fully expanded** when it (re)binds to a
+   * schema/form pair — every node with children unfolded, as if the user had
+   * hit expand-all. Off by default (only the root row is open). Read at bind
+   * time, so it sets the *initial* state: the user's later collapses/expands
+   * and the root row's expand-all toggle take over from there, and a
+   * structural rebuild preserves whatever is currently expanded rather than
+   * re-expanding.
+   */
+  readonly initiallyExpanded = input<boolean>(false);
+  /**
    * Whether the detail pane shows its top breadcrumb (the selected node's
    * path, with the member remove control beside it). Hosts whose tree
    * already tells the user where they are can turn it off — the section
@@ -214,7 +224,8 @@ export class ConfigEditorComponent implements OnDestroy {
     this.expanded.clear();
     this.root = this.buildTree(schema, group, this.rootLabelOf(schema), '');
     this.shape = this.shapeOf(group);
-    this.expanded.add(this.root.id);
+    if (this.initiallyExpanded()) this.expandAll();
+    else this.expanded.add(this.root.id);
     this.select(this.root);
     // Any change to the bound form — whether from the detail sections or from
     // an external holder of the same FormGroup — must reach the detail pane.
@@ -713,6 +724,16 @@ export class ConfigEditorComponent implements OnDestroy {
       this.expanded.add(this.root.id);
       return;
     }
+    this.expandAll();
+  }
+
+  /**
+   * Mark every expandable node in the current tree as expanded (the root
+   * included). Shared by the expand-all toggle and the `initiallyExpanded`
+   * bind-time seed.
+   */
+  private expandAll(): void {
+    this.expanded.add(this.root.id);
     const walk = (node: TreeNode): void => {
       if (this.hasExpandableContent(node)) this.expanded.add(node.id);
       for (const child of node.children) walk(child);

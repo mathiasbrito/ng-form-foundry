@@ -31,6 +31,17 @@ export function layoutSchema(appearance?: Appearance): NodeGroup {
       logRequests: { kind: 'leaf', type: 'boolean', name: 'logRequests', label: 'Log requests' },
       description: { kind: 'leaf', type: 'string', name: 'description', label: 'Description' },
       timeoutMs: { kind: 'leaf', type: 'number', name: 'timeoutMs', label: 'Timeout (ms)', integer: true, default: 3000 },
+      // A long-labelled optional field: while absent its "Add …" button carries
+      // the full label. In a grid its track can be narrower than the label, so
+      // the button text clips with an ellipsis — hover it for the full string.
+      maxConnections: {
+        kind: 'leaf',
+        type: 'number',
+        name: 'maxConnections',
+        label: 'Maximum Concurrent Upstream Connections',
+        integer: true,
+        presence: true,
+      },
       // Required leaf-list, several entries: a stacked list takes its own
       // full-width row and wraps its entries across the layout's column tracks
       // instead of squeezing beside a scalar field.

@@ -1,0 +1,21 @@
+// Clip a labelled button's text with an ellipsis instead of wrapping it to a
+// second line, so a long "Add <field>" affordance stays one line tall. Pair
+// with the `nffOverflowTooltip` directive (measuring `.mdc-button__label`) to
+// reveal the full text on hover/focus only while it is clipped. Every component
+// that renders an `.nff-clip-label` button includes this mixin, so the library
+// looks right in a consumer app with no global CSS beyond a Material theme.
+//
+// The clipped element is `.mdc-button__label` — the wrapper Material renders
+// around the text alone (the leading icon is its sibling, so it is never
+// clipped). Material creates it at runtime, past the component's style
+// encapsulation, so the selector is pierced with `::ng-deep`; scoping it under
+// `.nff-clip-label` keeps it from reaching any other button.
+@mixin clip-label {
+  .nff-clip-label ::ng-deep .mdc-button__label {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

@@ -10,5 +10,6 @@ export * from './lib/dynamic-recursive-form/leaf-renderer/leaf-renderer.componen
 export * from './lib/dynamic-recursive-form/leaf-list-renderer/leaf-list-renderer.component';
 export * from './lib/dynamic-recursive-form/leaf-enum-renderer/leaf-enum-renderer.component';
 export * from './lib/dynamic-recursive-form/radix-input/radix-input.directive';
+export * from './lib/directives/overflow-tooltip.directive';
 export * from './lib/dynamic-recursive-form/node-group-list-renderer/node-group-list-renderer.component';
 export * from './lib/dynamic-recursive-form/node-map-renderer/node-map-renderer.component';

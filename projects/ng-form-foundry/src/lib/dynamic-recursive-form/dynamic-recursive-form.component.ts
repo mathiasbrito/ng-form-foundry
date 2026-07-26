@@ -15,6 +15,7 @@ import { formatRadix } from './radix-input/radix-input.directive';
 import {
   caseDisplayLabels, buildControl, caseFields, setNodePresence, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
 import { MatTooltip } from '@angular/material/tooltip';
+import { OverflowTooltipDirective } from '../directives/overflow-tooltip.directive';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -46,6 +47,7 @@ function gridTrackCount(count: number | undefined): number {
     MatFormFieldModule,
     MatSelectModule,
     MatTooltip,
+    OverflowTooltipDirective,
   ],
   selector: 'nff-dynamic-recursive-form',
   standalone: true,

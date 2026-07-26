@@ -16,6 +16,12 @@
   its entries across the same column tracks, <strong>wrapping</strong> to the next line, so it
   never stretches a field beside it. Try each mode to see it.
 </p>
+<p>
+  The optional <code>maxConnections</code> field has a long label: while it is absent its
+  <em>Add …</em> button fills its slot, and when the track is narrower than the label (raise
+  <code>cols</code>, or pick <code>minFieldWidth</code>) the button text <strong>clips with an
+  ellipsis</strong> instead of wrapping — <strong>hover it for the full label</strong> in a tooltip.
+</p>
 
 <div class="controls">
   <mat-button-toggle-group [value]="view()" (change)="view.set($event.value)" aria-label="View">

@@ -17,7 +17,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form.component';
 import { buildFormFromSchema } from '../../core/dynamic-recursive-forms-builder';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { OverflowTooltipDirective } from '../../directives/overflow-tooltip.directive';
 
 @Component({
   selector: 'nff-node-group-list-renderer',
@@ -26,7 +26,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     forwardRef(() => DynamicRecursiveFormComponent),
     MatButtonModule,
     MatIconModule,
-    MatTooltipModule,
+    OverflowTooltipDirective,
   ],
   templateUrl: './node-group-list-renderer.component.html',
   styleUrl: './node-group-list-renderer.component.scss',

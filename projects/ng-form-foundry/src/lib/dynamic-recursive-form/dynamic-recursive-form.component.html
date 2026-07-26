@@ -46,7 +46,9 @@
           } @else {
             <button
               matButton="outlined"
-              class="presence-leaf-add"
+              class="presence-leaf-add nff-clip-label"
+              [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+              nffOverflowTooltipFor=".mdc-button__label"
               (click)="toggleLeafPresence(childItem.key, child, true)"
             >
               <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
@@ -106,7 +108,9 @@
         } @else if (editable()) {
           <button
             matButton="outlined"
-            class="presence-list-add"
+            class="presence-list-add nff-clip-label"
+            [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+            nffOverflowTooltipFor=".mdc-button__label"
             (click)="addPresenceList(childItem.key, child)"
           >
             <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
@@ -157,7 +161,9 @@
           } @else {
             <button
               matButton="outlined"
-              class="presence-leaf-add"
+              class="presence-leaf-add nff-clip-label"
+              [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+              nffOverflowTooltipFor=".mdc-button__label"
               (click)="toggleLeafPresence(childItem.key, child, true)"
             >
               <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
@@ -275,7 +281,9 @@
           } @else if (editable()) {
             <button
               matButton="outlined"
-              class="presence-list-add"
+              class="presence-list-add nff-clip-label"
+              [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+              nffOverflowTooltipFor=".mdc-button__label"
               (click)="addPresenceList(childItem.key, child)"
             >
               <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
@@ -473,7 +481,9 @@
         } @else if (editable()) {
           <button
             matButton="outlined"
-            class="presence-list-add"
+            class="presence-list-add nff-clip-label"
+            [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+            nffOverflowTooltipFor=".mdc-button__label"
             (click)="addPresenceList(childItem.key, child)"
           >
             <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
