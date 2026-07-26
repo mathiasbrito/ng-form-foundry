@@ -314,6 +314,10 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.6.1` — version-alignment release with the workspace (the paired
+`ng-form-foundry` 0.6.1 fixes optional-list and add-button layout under a
+columns grid); no transformer changes.
+
 `0.6.0` — optional **array** properties now map to `presence` nodes (leaf-lists
 and node-group lists included), so a zero-edit rebuild never injects a list the
 source lacked; new `schemaOptions: { advisoryRequired: true }` treats a schema's

@@ -4,6 +4,21 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.6.1] — 2026-07-26
+
+### Fixed
+- **Optional (`presence`) lists now span the full row under a columns grid.** A
+  materialized optional `leafList` was confined to a single grid track — its
+  `.presence-list` wrapper missed the full-row span a plain list already had —
+  so its entries wrapped vertically inside one column instead of flowing across
+  the row. It now spans every column, like a required list does.
+- **Presence "Add …" buttons now fill their allocated width under a grid.** The
+  "Add \<field\>" / "Add \<list\>" affordance that stands in for an absent
+  optional field or list shrank to its label width in a grid layout (a leftover
+  `justify-self: start`). It now stretches to fill its track — and an "Add
+  \<list\>" button spans the full row — matching both the flex-flow behavior and
+  the field or list it will become.
+
 ## [0.6.0] — 2026-07-24
 
 ### Fixed
