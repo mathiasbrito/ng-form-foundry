@@ -4,6 +4,21 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.7.0] — 2026-07-26
+
+### Added
+- **`initiallyExpanded` input on `<nff-config-editor>`.** Starts the tree fully
+  unfolded (every node with children open) when it binds to a schema/form pair,
+  as if the expand-all control had been pressed. Off by default; read at bind
+  time, so later collapses/expands and the expand-all toggle take over, and a
+  structural rebuild keeps whatever is currently open.
+- **Long add-button labels clip with an ellipsis instead of wrapping.** A
+  presence "Add \<field\>" / "Add \<list\>" affordance (and an empty list's
+  "Add … #1") whose label is wider than its slot now truncates to one line;
+  hovering or focusing it reveals the full label in a tooltip — shown only while
+  the text is actually clipped. The reusable `OverflowTooltipDirective` powering
+  this is exported.
+
 ## [0.6.1] — 2026-07-26
 
 ### Fixed
