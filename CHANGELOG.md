@@ -4,6 +4,16 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.7.1] — 2026-07-27
+
+### Added
+- **`initiallyExpanded` on `<nff-config-editor>` now accepts a depth
+  (`boolean | number`).** Alongside `true` (all levels) and `false` (root
+  only), a positive number opens that many levels below the always-open root —
+  `1` unfolds the top-level sections, `2` also their children, and so on — so a
+  large tree can start partly open instead of all-or-nothing. `true`/`false`
+  behave exactly as before.
+
 ## [0.7.0] — 2026-07-26
 
 ### Added

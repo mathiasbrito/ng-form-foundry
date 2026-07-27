@@ -5,7 +5,7 @@ author = "Mathias Santos de Brito"
 copyright = "2026, Mathias Santos de Brito"
 
 version = "0.7"
-release = "0.7.0"
+release = "0.7.1"
 
 extensions = [
     "myst_parser",
