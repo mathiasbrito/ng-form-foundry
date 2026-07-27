@@ -169,15 +169,18 @@ export class ConfigEditorComponent implements OnDestroy {
    */
   readonly expandOnClick = input<boolean>(false);
   /**
-   * Whether the tree starts **fully expanded** when it (re)binds to a
-   * schema/form pair — every node with children unfolded, as if the user had
-   * hit expand-all. Off by default (only the root row is open). Read at bind
-   * time, so it sets the *initial* state: the user's later collapses/expands
-   * and the root row's expand-all toggle take over from there, and a
-   * structural rebuild preserves whatever is currently expanded rather than
-   * re-expanding.
+   * How deep the tree starts unfolded when it (re)binds to a schema/form pair.
+   * `false` (default) opens only the root row; `true` unfolds every level, as
+   * if the user had hit expand-all; a positive **number** opens that many
+   * levels **below** the (always-open) root — `1` opens the top-level sections
+   * so their children show (still collapsed), `2` also opens those children,
+   * and so on (`0`/negative behave like `false`). Read at bind time, so it sets
+   * the *initial* state: the user's later
+   * collapses/expands and the root row's expand-all toggle take over from
+   * there, and a structural rebuild preserves whatever is currently expanded
+   * rather than re-expanding.
    */
-  readonly initiallyExpanded = input<boolean>(false);
+  readonly initiallyExpanded = input<boolean | number>(false);
   /**
    * Whether the detail pane shows its top breadcrumb (the selected node's
    * path, with the member remove control beside it). Hosts whose tree
@@ -224,7 +227,9 @@ export class ConfigEditorComponent implements OnDestroy {
     this.expanded.clear();
     this.root = this.buildTree(schema, group, this.rootLabelOf(schema), '');
     this.shape = this.shapeOf(group);
-    if (this.initiallyExpanded()) this.expandAll();
+    const depth = this.initiallyExpanded();
+    if (depth === true) this.expandToDepth(Infinity);
+    else if (typeof depth === 'number' && depth > 0) this.expandToDepth(depth);
     else this.expanded.add(this.root.id);
     this.select(this.root);
     // Any change to the bound form — whether from the detail sections or from
@@ -724,21 +729,24 @@ export class ConfigEditorComponent implements OnDestroy {
       this.expanded.add(this.root.id);
       return;
     }
-    this.expandAll();
+    this.expandToDepth(Infinity);
   }
 
   /**
-   * Mark every expandable node in the current tree as expanded (the root
-   * included). Shared by the expand-all toggle and the `initiallyExpanded`
-   * bind-time seed.
+   * Expand every node within `levels` levels below the root (the root is depth
+   * 0 and always expanded): `levels` = 1 also opens the root's children — the
+   * top-level sections — so their children show (still collapsed), `2` opens
+   * those sections' children too, and `Infinity` the whole tree. Shared by the
+   * expand-all toggle (`Infinity`) and the `initiallyExpanded` bind-time seed.
    */
-  private expandAll(): void {
+  private expandToDepth(levels: number): void {
     this.expanded.add(this.root.id);
-    const walk = (node: TreeNode): void => {
+    const walk = (node: TreeNode, depth: number): void => {
+      if (depth > levels) return;
       if (this.hasExpandableContent(node)) this.expanded.add(node.id);
-      for (const child of node.children) walk(child);
+      for (const child of node.children) walk(child, depth + 1);
     };
-    walk(this.root);
+    walk(this.root, 0);
   }
 
   /** The selected member's container (list / map), for the breadcrumb's remove control. */

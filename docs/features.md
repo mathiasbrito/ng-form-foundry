@@ -442,7 +442,8 @@ stay in sync — as do external mutations to the bound form from a sibling view
 model — groups, lists, maps, and choices — plus a "+ Optional field" menu for
 absent presence children (each added one carries a delete button that returns
 it to the menu), and the `expandOnClick` / `showBreadcrumb` /
-`initiallyExpanded` inputs tune its navigation (the last starts the tree fully
-unfolded). It draws no container of its own, only a divider between the
+`initiallyExpanded` inputs tune its navigation (the last starts the tree
+unfolded — `true` for every level, or a number for that many). It draws no
+container of its own, only a divider between the
 panes, so the embedding page owns the
 chrome.

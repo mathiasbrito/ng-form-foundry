@@ -266,6 +266,57 @@ describe('ConfigEditorComponent', () => {
     expect(component.expanded.has(list.id)).toBe(true);
   });
 
+  it('initiallyExpanded opens only the requested number of levels below the root', () => {
+    // Nested groups give expandable nodes at depth 1 (`a`), 2 (`a/b`), and 3
+    // (`a/b/c`); the leaf-only `d` at depth 4 is not expandable.
+    const deep: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      root: true,
+      children: {
+        a: {
+          kind: 'nodeGroup',
+          name: 'a',
+          children: {
+            b: {
+              kind: 'nodeGroup',
+              name: 'b',
+              children: {
+                c: {
+                  kind: 'nodeGroup',
+                  name: 'c',
+                  children: {
+                    d: { kind: 'nodeGroup', name: 'd', children: { leaf: { kind: 'leaf', type: 'string', name: 'leaf' } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const bind = (levels: boolean | number) => {
+      fixture.componentRef.setInput('initiallyExpanded', levels);
+      fixture.componentRef.setInput('schema', deep);
+      fixture.componentRef.setInput('formGroup', buildFormFromSchema(deep));
+      fixture.detectChanges();
+    };
+
+    bind(1); // one level below the root: `a` opens, `a/b` stays collapsed
+    expect(component.expanded.has('a')).toBe(true);
+    expect(component.expanded.has('a/b')).toBe(false);
+
+    bind(2); // two levels: `a/b` opens too
+    expect(component.expanded.has('a/b')).toBe(true);
+    expect(component.expanded.has('a/b/c')).toBe(false);
+
+    bind(true); // every level
+    expect(component.expanded.has('a/b/c')).toBe(true);
+
+    bind(false); // root only
+    expect(component.expanded.has('a')).toBe(false);
+  });
+
   it('pathTo returns the root-to-node breadcrumb path', () => {
     const item = node('ifaces').children[0];
     expect(component.pathTo(component.root).map((n) => n.label)).toEqual(['device']);
