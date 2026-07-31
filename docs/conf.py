@@ -4,8 +4,8 @@ project = "ng-form-foundry"
 author = "Mathias Santos de Brito"
 copyright = "2026, Mathias Santos de Brito"
 
-version = "0.7"
-release = "0.7.2"
+version = "0.8"
+release = "0.8.0"
 
 extensions = [
     "myst_parser",

@@ -314,6 +314,10 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.8.0` — version-alignment release with the workspace (the paired
+`ng-form-foundry` 0.8.0 adds rich-HTML help popovers to the config editor,
+sourced from schema `description`); no transformer changes.
+
 `0.7.2` — version-alignment release with the workspace (the paired
 `ng-form-foundry` 0.7.2 adds the config editor's `optionalFields` input, naming
 each absent optional on its own add-row by default); no transformer changes.

@@ -4,7 +4,7 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.8.0] — 2026-07-31
 
 ### Added
 - **Rich help popovers in `<nff-config-editor>`.** When schema nodes or fields
