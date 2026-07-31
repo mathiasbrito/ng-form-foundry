@@ -239,6 +239,7 @@ function objectToNodeGroup(schema: JsonSchema, name: string, resolver: RefResolv
   }
   const group: NodeGroup = { kind: 'nodeGroup', name, children };
   if (label) group.label = label;
+  if (schema.description) group.description = schema.description;
   // On a closed object these bound the count of *present* keys — meaningful
   // because non-required properties are presence nodes (optionalPresence).
   if (typeof schema.minProperties === 'number') group.minPresent = schema.minProperties;
@@ -266,6 +267,7 @@ function objectToMap(name: string, schema: JsonSchema, resolver: RefResolver, ct
   }
   const node: NodeMap = { kind: 'map', name, value: schemaToNode('value', valueSchema, false, resolver, ctx) };
   if (schema.title) node.label = schema.title;
+  if (schema.description) node.description = schema.description;
   if (keyPattern) node.keyPattern = keyPattern;
   if (typeof schema.minProperties === 'number') node.minEntries = schema.minProperties;
   if (typeof schema.maxProperties === 'number') node.maxEntries = schema.maxProperties;
@@ -295,6 +297,7 @@ function branchesToNode(name: string, schema: JsonSchema, rawBranches: JsonSchem
   const choice: Choice = { kind: 'choice', name, cases };
   if (required) choice.mandatory = true;
   if (schema.title) choice.label = schema.title;
+  if (schema.description) choice.description = schema.description;
   if (Object.keys(caseLabels).length) choice.caseLabels = caseLabels;
   return choice;
 }
@@ -339,12 +342,14 @@ function schemaToNode(name: string, rawSchema: JsonSchema, required: boolean, re
         type: objectToNodeGroup(items, name, itemScope, ctx, items.title),
       };
       if (schema.title) node.label = schema.title;
+      if (schema.description) node.description = schema.description;
       if (typeof schema.minItems === 'number') node.minItems = schema.minItems;
       if (typeof schema.maxItems === 'number') node.maxItems = schema.maxItems;
       return node;
     }
     const list: LeafList = { kind: 'leafList', name, type: scalarType(items) };
     if (schema.title) list.label = schema.title;
+    if (schema.description) list.description = schema.description;
     if (typeof schema.minItems === 'number') list.minItems = schema.minItems;
     if (typeof schema.maxItems === 'number') list.maxItems = schema.maxItems;
     return list;

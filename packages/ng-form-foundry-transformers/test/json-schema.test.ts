@@ -427,3 +427,44 @@ test('minProperties/maxProperties on a closed object map to minPresent/maxPresen
   assert.equal(labels.minEntries, 1);
   assert.equal(labels.minPresent, undefined);
 });
+
+test('maps description onto every node kind, not only leaves', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    description: 'Root help.',
+    properties: {
+      section: {
+        type: 'object',
+        description: 'Section help.',
+        properties: { field: { type: 'string', description: 'Leaf help.' } },
+      },
+      servers: {
+        type: 'array',
+        description: 'Group-list help.',
+        items: { type: 'object', properties: { host: { type: 'string' } } },
+      },
+      tags: { type: 'array', description: 'Leaf-list help.', items: { type: 'string' } },
+      labels: {
+        type: 'object',
+        description: 'Map help.',
+        additionalProperties: { type: 'string' },
+      },
+      mode: {
+        description: 'Choice help.',
+        oneOf: [
+          { type: 'object', title: 'A', properties: { a: { type: 'string' } } },
+          { type: 'object', title: 'B', properties: { b: { type: 'string' } } },
+        ],
+      },
+    },
+  };
+  const g = jsonSchemaToNodeGroup(schema);
+  assert.equal(g.description, 'Root help.');
+  const section = g.children['section'] as any;
+  assert.equal(section.description, 'Section help.');
+  assert.equal(section.children['field'].description, 'Leaf help.');
+  assert.equal((g.children['servers'] as any).description, 'Group-list help.');
+  assert.equal((g.children['tags'] as any).description, 'Leaf-list help.');
+  assert.equal((g.children['labels'] as any).description, 'Map help.');
+  assert.equal((g.children['mode'] as any).description, 'Choice help.');
+});
