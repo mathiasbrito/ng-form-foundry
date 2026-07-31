@@ -314,6 +314,10 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.8.1` — the **thesaurus** now fills `description` on lists, leaf-lists, and
+choices too, not only leaves/groups/maps, so their config-editor help text can
+come from the thesaurus. Paired with `ng-form-foundry` 0.8.1.
+
 `0.8.0` — version-alignment release with the workspace (the paired
 `ng-form-foundry` 0.8.0 adds rich-HTML help popovers to the config editor,
 sourced from schema `description`); no transformer changes.

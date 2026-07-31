@@ -4,7 +4,7 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.8.1] — 2026-07-31
 
 ### Changed
 - **The thesaurus now fills `description` on lists, leaf-lists, and choices**
