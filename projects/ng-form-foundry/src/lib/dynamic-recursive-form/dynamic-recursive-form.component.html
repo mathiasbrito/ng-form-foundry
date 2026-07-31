@@ -12,6 +12,9 @@
             [control]=asFormControl(formGroup().get(childItem.key))
             [removable]=false
             [editable]="editable()"
+            [showHelp]="showHelp()"
+            [helpContext]="helpContext()"
+            [helpAnchor]="fieldHelpAnchor()"
           />
         } @else if (formGroup().get(childItem.key)) {
           <nff-leaf-renderer
@@ -19,6 +22,9 @@
             [control]=asFormControl(formGroup().get(childItem.key))
             [removable]=true
             [editable]="editable()"
+            [showHelp]="showHelp()"
+            [helpContext]="helpContext()"
+            [helpAnchor]="fieldHelpAnchor()"
             [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
             (remove)="toggleLeafPresence(childItem.key, child, false)"
           />
@@ -75,6 +81,9 @@
           [control]=asFormControl(formGroup().get(childItem.key))
           [removable]=false
           [editable]="editable()"
+          [showHelp]="showHelp()"
+          [helpContext]="helpContext()"
+          [helpAnchor]="fieldHelpAnchor()"
         />
       }
     }
@@ -129,6 +138,9 @@
             [control]=asFormControl(formGroup().get(childItem.key))
             [removable]=true
             [editable]="editable()"
+            [showHelp]="showHelp()"
+            [helpContext]="helpContext()"
+            [helpAnchor]="fieldHelpAnchor()"
             [autofocus]="presenceFocusKey === childItem.key || focusLeaf() === childItem.key"
             (remove)="toggleLeafPresence(childItem.key, child, false)"
           />

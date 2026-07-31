@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
 import { LeafEnumRendererComponent } from '../leaf-enum-renderer/leaf-enum-renderer.component';
 import { RadixInputDirective } from '../radix-input/radix-input.directive';
+import { RichTooltipDirective } from '../../directives/rich-tooltip.directive';
 
 @Component({
   selector: 'nff-leaf-renderer',
@@ -25,6 +26,7 @@ import { RadixInputDirective } from '../radix-input/radix-input.directive';
     MatTooltip,
     LeafEnumRendererComponent,
     RadixInputDirective,
+    RichTooltipDirective,
   ],
   templateUrl: './leaf-renderer.component.html',
   styleUrl: './leaf-renderer.component.scss',
@@ -42,6 +44,12 @@ export class LeafRendererComponent implements AfterViewInit {
   @Input() autofocus = false;
   /** Placeholder for the empty field — e.g. a ghost preview showing the schema default. */
   @Input() placeholder = '';
+  /** Whether hovering the field shows its `description` as a rich help popover. */
+  @Input() showHelp = false;
+  /** Breadcrumb shown as the help popover's subtitle — the field's location. */
+  @Input() helpContext = '';
+  /** Where the field's help popover anchors: to the field (`'element'`) or the pointer (`'cursor'`). */
+  @Input() helpAnchor: 'element' | 'cursor' = 'element';
   /** Emitted when the user removes this field (e.g. an optional presence leaf). */
   readonly remove = output<void>();
 
@@ -58,6 +66,16 @@ export class LeafRendererComponent implements AfterViewInit {
   /** Whether this field accepts input: the form is editable and the leaf is not `readOnly`. */
   get fieldEditable(): boolean {
     return this.editable && !('name' in this.leaf_ && this.leaf_.readOnly);
+  }
+
+  /** The field's label, for the help popover title. */
+  get fieldLabel(): string {
+    return 'name' in this.leaf_ ? this.leaf_.label ?? this.leaf_.name : '';
+  }
+
+  /** The leaf's `description` while help mode is on, else null — drives the field's hover popover. */
+  get helpText(): string | null {
+    return this.showHelp && 'name' in this.leaf_ && this.leaf_.description ? this.leaf_.description : null;
   }
 
   /**

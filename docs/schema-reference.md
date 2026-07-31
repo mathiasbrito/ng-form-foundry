@@ -308,8 +308,10 @@ model but not yet fully wired:
   `nodeGroupList`, but are not yet enforced as `FormArray` validators, and are not
   yet applied to `leafList`. Treat them as UI hints for now, and validate
   cardinality yourself if it must be enforced.
-- **`description`** and **`subType`** exist on the types but are not rendered.
-  Avoid relying on them.
+- **`description`** renders as rich help text in
+  [`<nff-config-editor>`](api.md#nff-config-editor): every node and field type
+  carries it, and with the editor's help mode on it shows as a hover popover.
+  **`subType`** exists on the types but is not rendered — avoid relying on it.
 
 These are tracked for a future release; the [source repository](https://github.com/mathiasbrito/ng-form-foundry)
 is the place to follow progress.

@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, model, OnDestroy, untracked } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, model, OnDestroy, signal, untracked } from '@angular/core';
 import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { Subscription } from 'rxjs';
@@ -24,6 +24,7 @@ import {
 } from '../core/dynamic-recursive-forms-builder';
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form/dynamic-recursive-form.component';
 import { NodeMapRendererComponent } from '../dynamic-recursive-form/node-map-renderer/node-map-renderer.component';
+import { RichTooltipDirective } from '../directives/rich-tooltip.directive';
 
 /**
  * The transformers package names a root nobody named `__root__` — a sentinel,
@@ -81,6 +82,12 @@ interface TreeNode {
   id: string;
   label: string;
   children: TreeNode[];
+  /** The node's schema `description`, shown as a rich-HTML help popover on the row. */
+  help?: string;
+  /** The ancestor path (`Device / System`), shown as the help popover's breadcrumb subtitle. */
+  crumb?: string;
+  /** The help popover's title: the node label, prefixed with the container for a list item (`Interfaces #1`). */
+  helpTitle?: string;
   /** The node's own FormGroup, or null for a list-container or map node. */
   group: FormGroup | null;
   /** The node's own schema, set on group-backed nodes (groups, list items, group-valued map entries). */
@@ -139,6 +146,7 @@ interface TreeNode {
     MatTooltip,
     DynamicRecursiveFormComponent,
     NodeMapRendererComponent,
+    RichTooltipDirective,
   ],
   templateUrl: './config-editor.component.html',
   styleUrl: './config-editor.component.scss',
@@ -199,6 +207,14 @@ export class ConfigEditorComponent implements OnDestroy {
    * path; only the affordance differs.
    */
   readonly optionalFields = input<'named' | 'menu'>('named');
+  /**
+   * Where a field's help popover anchors while help mode is on: `'cursor'`
+   * (default) places it to the right of the pointer — steady regardless of
+   * field width — while `'element'` anchors it to the field's box, which can
+   * drop the popover below a full-width field. Tree-row and breadcrumb help
+   * always anchor to their element.
+   */
+  readonly fieldHelpAnchor = input<'element' | 'cursor'>('cursor');
 
   root!: TreeNode;
   selected: TreeNode | null = null;
@@ -207,6 +223,15 @@ export class ConfigEditorComponent implements OnDestroy {
   /** Root-to-selection trail for the detail-pane breadcrumb, computed once per selection. */
   breadcrumb: TreeNode[] = [];
   readonly expanded = new Set<string>();
+  /**
+   * Whether rich help is active. Off by default (no popovers, no clutter); a
+   * root-row toggle flips it, and while on, hovering or focusing any row with a
+   * `description` shows its help popover — the row itself is the trigger, so no
+   * per-row help icon is needed.
+   */
+  protected readonly showHelp = signal(false);
+  /** Whether any node in the current tree carries help — gates the root-row help toggle. */
+  protected anyHelp = false;
 
   private shape = '';
   private changes?: Subscription;
@@ -236,6 +261,7 @@ export class ConfigEditorComponent implements OnDestroy {
     this.changes?.unsubscribe();
     this.expanded.clear();
     this.root = this.buildTree(schema, group, this.rootLabelOf(schema), '');
+    this.anyHelp = this.prepareHelp(this.root, []);
     this.shape = this.shapeOf(group);
     const depth = this.initiallyExpanded();
     if (depth === true) this.expandToDepth(Infinity);
@@ -352,6 +378,40 @@ export class ConfigEditorComponent implements OnDestroy {
   /** Whether the row shows an expand twisty: it has child rows to reveal (children or an optionals menu row). */
   protected hasExpandableContent(node: TreeNode): boolean {
     return node.children.length > 0 || (this.editable() && !!node.optionals?.length);
+  }
+
+  /**
+   * One post-build pass over the tree: stamp each node's breadcrumb `crumb`
+   * (its ancestor label path, the help popover's subtitle) and report whether
+   * any node carries help — which gates the root-row help toggle.
+   */
+  private prepareHelp(node: TreeNode, trail: string[]): boolean {
+    node.crumb = trail.join(' / ');
+    // A list item reads as a bare "#n" in the tree (repeating the container
+    // there only echoes the parent row); the popover title restores the
+    // container name — "Interfaces #1" — so it stands alone.
+    const parent = trail[trail.length - 1];
+    node.helpTitle = node.removable && parent ? `${parent} ${node.label}` : node.label;
+    const childTrail = [...trail, node.label];
+    let any = !!node.help;
+    for (const child of node.children) {
+      if (this.prepareHelp(child, childTrail)) any = true;
+    }
+    return any;
+  }
+
+  /**
+   * A row's help HTML while help mode is on, else null — bound to the row's
+   * (and the breadcrumb's) {@link RichTooltipDirective} so a hover shows the
+   * popover only when help is enabled and the node actually has help.
+   */
+  protected rowHelp(node: TreeNode | null): string | null {
+    return node && this.showHelp() && node.help ? node.help : null;
+  }
+
+  /** A section's field-help breadcrumb: the node's full path, so its fields' popovers show where they live. */
+  protected fieldContext(node: TreeNode): string {
+    return node.crumb ? `${node.crumb} / ${node.helpTitle ?? node.label}` : node.helpTitle ?? node.label;
   }
 
   /**
@@ -646,6 +706,7 @@ export class ConfigEditorComponent implements OnDestroy {
   private rebuild(): void {
     const schema = this.schema();
     this.root = this.buildTree(schema, this.formGroup(), this.rootLabelOf(schema), '');
+    this.anyHelp = this.prepareHelp(this.root, []);
     this.shape = this.shapeOf(this.formGroup());
   }
 
@@ -859,6 +920,7 @@ export class ConfigEditorComponent implements OnDestroy {
 
     const node: TreeNode = { id: path, label, children, group, schema, inherited };
     if (optionals.length) node.optionals = optionals;
+    if (schema.description) node.help = schema.description;
     return node;
   }
 
@@ -888,7 +950,7 @@ export class ConfigEditorComponent implements OnDestroy {
                 return node;
               })
           : [];
-      return {
+      const node: TreeNode = {
         id: path,
         label,
         children: items,
@@ -898,6 +960,8 @@ export class ConfigEditorComponent implements OnDestroy {
             ? { array, itemSchema: schema.type, itemLabel, minItems: schema.minItems ?? 0, maxItems: schema.maxItems }
             : undefined,
       };
+      if (schema.description) node.help = schema.description;
+      return node;
     }
     if (schema.kind === 'choice') {
       if (!(control instanceof FormGroup)) return null;
@@ -908,6 +972,7 @@ export class ConfigEditorComponent implements OnDestroy {
           : ({ id: path, label, children: [], group: control, inherited } as TreeNode);
       node.schema = undefined;
       node.choice = { schema, group: control };
+      if (schema.description) node.help = schema.description;
       return node;
     }
     if (schema.kind === 'map') {
@@ -937,13 +1002,15 @@ export class ConfigEditorComponent implements OnDestroy {
             })
             .filter((n): n is TreeNode => n !== null)
         : [];
-      return {
+      const node: TreeNode = {
         id: path,
         label,
         children: entries,
         group: null,
         map: { schema, group: control, complex },
       };
+      if (schema.description) node.help = schema.description;
+      return node;
     }
     return null;
   }

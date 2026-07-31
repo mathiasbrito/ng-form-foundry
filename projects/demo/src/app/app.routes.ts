@@ -13,6 +13,7 @@ import { LayoutExample } from './layout-example/layout-example';
 import { RootTitleExample } from './root-title-example/root-title-example';
 import { UnknownKeysExample } from './unknown-keys-example/unknown-keys-example';
 import { PresenceListsExample } from './presence-lists-example/presence-lists-example';
+import { RichHelpExample } from './rich-help-example/rich-help-example';
 
 export const routes: Routes = [
   {
@@ -75,5 +76,9 @@ export const routes: Routes = [
   {
     path: 'presence-lists',
     component: PresenceListsExample
+  },
+  {
+    path: 'rich-help',
+    component: RichHelpExample
   }
 ];

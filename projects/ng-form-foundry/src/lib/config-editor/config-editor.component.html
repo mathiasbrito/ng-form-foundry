@@ -11,6 +11,9 @@
         [attr.aria-expanded]="hasExpandableContent(node) ? expanded.has(node.id) : null"
         [attr.aria-level]="depth + 1"
         [style.padding-left.px]="8 + depth * 16"
+        [nffRichTooltip]="rowHelp(node)"
+        [nffRichTooltipTitle]="node.helpTitle"
+        [nffRichTooltipSubtitle]="node.crumb"
         (click)="select(node)"
         (keydown)="onRowKeydown($event, node)"
       >
@@ -28,11 +31,26 @@
           <span class="twisty-spacer"></span>
         }
 
-        <span class="tree-label" [matTooltip]="node.label">{{ node.label }}</span>
+        <span class="tree-label" [matTooltip]="node.label" [matTooltipDisabled]="!!rowHelp(node)">{{ node.label }}</span>
         @if (node.choice && activeCaseLabel(node)) {
-          <span class="tree-sublabel" [matTooltip]="activeCaseLabel(node)">{{ activeCaseLabel(node) }}</span>
+          <span class="tree-sublabel" [matTooltip]="activeCaseLabel(node)" [matTooltipDisabled]="!!rowHelp(node)">{{
+            activeCaseLabel(node)
+          }}</span>
         }
         @if (node === root) {
+          @if (anyHelp) {
+            <button
+              matIconButton
+              class="row-btn root-toggle help-toggle"
+              [class.active]="showHelp()"
+              [matTooltip]="showHelp() ? 'Hide help' : 'Show help'"
+              [attr.aria-label]="showHelp() ? 'Hide help' : 'Show help'"
+              [attr.aria-pressed]="showHelp()"
+              (click)="showHelp.set(!showHelp()); $event.stopPropagation()"
+            >
+              <mat-icon>{{ showHelp() ? 'help' : 'help_outline' }}</mat-icon>
+            </button>
+          }
           <button
             matIconButton
             class="row-btn root-toggle"
@@ -172,7 +190,16 @@
       <nav class="breadcrumb" aria-label="Breadcrumb">
         @for (crumb of breadcrumb; track crumb.id; let last = $last) {
           @if (last) {
-            <span class="crumb-current" aria-current="page">{{ crumb.label }}</span>
+            <!-- Help shows only on the current (exact) node, not the ancestor
+                 crumbs — hovering a parent link never pops the child's help. -->
+            <span
+              class="crumb-current"
+              aria-current="page"
+              [nffRichTooltip]="rowHelp(selected)"
+              [nffRichTooltipTitle]="selected.helpTitle"
+              [nffRichTooltipSubtitle]="selected.crumb"
+              >{{ crumb.label }}</span
+            >
           } @else {
             <button type="button" class="item-link crumb-link" (click)="select(crumb)">{{ crumb.label }}</button>
             <span class="crumb-sep" aria-hidden="true">/</span>
@@ -221,7 +248,15 @@
           <div class="section-heading" [class.continuation]="s.continuation" role="heading" aria-level="3">
             @for (crumb of s.trail; track crumb.id; let last = $last) {
               @if (last) {
-                <span class="crumb-current">{{ crumb.label }}</span>
+                <!-- The section's own node — like the top breadcrumb, only this
+                     exact crumb shows help, not the ancestor links. -->
+                <span
+                  class="crumb-current"
+                  [nffRichTooltip]="rowHelp(s.node)"
+                  [nffRichTooltipTitle]="s.node.helpTitle"
+                  [nffRichTooltipSubtitle]="s.node.crumb"
+                  >{{ crumb.label }}</span
+                >
               } @else {
                 <button type="button" class="item-link crumb-link" (click)="select(crumb)">{{ crumb.label }}</button>
                 <span class="crumb-sep" aria-hidden="true">/</span>
@@ -293,6 +328,9 @@
             [schema]="s.schema"
             [formGroup]="s.group"
             [editable]="editable()"
+            [showHelp]="showHelp()"
+            [helpContext]="fieldContext(s.node)"
+            [fieldHelpAnchor]="fieldHelpAnchor()"
             [focusLeaf]="s.node.id === focusSectionId ? focusLeafKey : null"
           />
         }

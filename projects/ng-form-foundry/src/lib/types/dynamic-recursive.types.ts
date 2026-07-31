@@ -231,6 +231,7 @@ export type NodeChoice = {
   kind: 'choice';
   name: string;
   label?: string;
+  description?: string;
   cases: Record<string, ChoiceCase>;
   /**
    * Display labels for cases, keyed by case name — for anonymous/auto-named

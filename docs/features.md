@@ -450,3 +450,13 @@ number for that many). It draws no
 container of its own, only a divider between the
 panes, so the embedding page owns the
 chrome.
+
+When schema nodes or fields carry a `description`, the editor grows a **help
+mode**: a toggle on the root row (off by default, so nothing distracts) that,
+once on, reveals a rich-HTML help popover on hover — over a tree row, a
+breadcrumb, or a field. Each popover shows the item's name, a breadcrumb of
+where it lives, and the `description` body (lists, links, and `code` render;
+scripts are stripped). Field popovers follow the pointer by default so a
+full-width field doesn't push them below (`fieldHelpAnchor`). The popover
+component is powered by the exported
+[`RichTooltipDirective`](api.md#nffrichtooltip), reusable on any element.

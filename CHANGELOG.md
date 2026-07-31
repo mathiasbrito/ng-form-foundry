@@ -4,6 +4,23 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **Rich help popovers in `<nff-config-editor>`.** When schema nodes or fields
+  carry a `description`, the root row gains a help toggle (off by default);
+  turning it on shows a rich-HTML popover on hover over any tree row, breadcrumb
+  crumb, section heading, or field — with the item's name as the title, its
+  path as a breadcrumb subtitle, and the `description` as a sanitized HTML body
+  (lists, links, and `code` render; scripts are stripped). Field popovers anchor
+  to the pointer by default; `fieldHelpAnchor` switches them to the field's box.
+  `NodeChoice` now accepts a `description` like the other node types.
+- **`RichTooltipDirective` (`[nffRichTooltip]`) exported.** A general-purpose,
+  HTML-capable help popover on the CDK overlay — the primitive behind the config
+  editor's help mode — with `nffRichTooltipTitle` / `nffRichTooltipSubtitle` /
+  `nffRichTooltipAnchor` inputs. `<nff-dynamic-recursive-form>` gains
+  `showHelp` / `helpContext` / `fieldHelpAnchor` inputs to opt fields into it.
+
 ## [0.7.2] — 2026-07-31
 
 ### Added

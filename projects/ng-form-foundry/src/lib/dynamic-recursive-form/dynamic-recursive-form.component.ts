@@ -102,6 +102,16 @@ export class DynamicRecursiveFormComponent implements OnInit {
    * own `appearance` wins per property — see {@link mergeAppearance}.
    */
   readonly inheritedAppearance = input<Appearance | null>(null);
+  /**
+   * Whether hovering a field shows its schema `description` as a rich help
+   * popover. Off by default; the config editor drives it from its help-mode
+   * toggle so tree rows and fields reveal help together.
+   */
+  readonly showHelp = input<boolean>(false);
+  /** Breadcrumb passed to each field's help popover as its subtitle — the containing node's path. */
+  readonly helpContext = input<string>('');
+  /** Where a field's help popover anchors: to the field (`'element'`) or the pointer (`'cursor'`). */
+  readonly fieldHelpAnchor = input<'element' | 'cursor'>('element');
 
   /** True when the schema is a root group (rendered flat, without a wrapping card). */
   readonly root = computed(() => this.schema().root ?? false);

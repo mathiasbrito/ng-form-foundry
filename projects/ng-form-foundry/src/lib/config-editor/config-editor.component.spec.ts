@@ -211,6 +211,14 @@ describe('ConfigEditorComponent', () => {
     expect(list.children.map((c) => c.label)).toEqual(['#1', '#2']);
   });
 
+  it('gives a list item a container-prefixed help title while its tree label stays bare', () => {
+    const list = node('ifaces');
+    expect(list.children.map((c) => c.label)).toEqual(['#1', '#2']); // tree row: bare
+    expect(list.children.map((c) => c.helpTitle)).toEqual(['ifaces #1', 'ifaces #2']); // popover: qualified
+    // A non-item node's help title is just its label.
+    expect(node('system').helpTitle).toBe('system');
+  });
+
   it('selecting a node flattens its subtree into breadcrumb-separated sections, pre-order', () => {
     // Root selection, pre-order. A non-empty list's / complex map's own section
     // would hold only its heading, so it is dropped; its add control trails the
@@ -1306,5 +1314,105 @@ describe('ConfigEditorComponent under zoneless change detection', () => {
     switchChoiceCase(form.get('scope') as FormGroup, schema.children['scope'] as NodeChoice, 'byZone');
     await fixture.whenStable();
     expect(caseText()).toContain('By zone');
+  });
+});
+
+describe('ConfigEditorComponent help popovers', () => {
+  // A node's schema `description` becomes its tree-row help; nodes without one
+  // get no help icon. Every non-leaf kind carries the field.
+  const schema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    root: true,
+    description: '<p>Root <strong>help</strong>.</p>',
+    children: {
+      documented: {
+        kind: 'nodeGroup',
+        name: 'documented',
+        label: 'Documented',
+        description: '<p>A group with <em>rich</em> help.</p>',
+        children: { a: { kind: 'leaf', type: 'string', name: 'a' } },
+      },
+      plain: {
+        kind: 'nodeGroup',
+        name: 'plain',
+        label: 'Plain',
+        children: { b: { kind: 'leaf', type: 'string', name: 'b' } },
+      },
+    },
+  };
+
+  let component: ConfigEditorComponent;
+  let fixture: ComponentFixture<ConfigEditorComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ConfigEditorComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', buildFormFromSchema(schema));
+    fixture.detectChanges();
+  });
+
+  it('carries a node&apos;s description as its help, on the root and documented children', () => {
+    expect(component.root.help).toBe('<p>Root <strong>help</strong>.</p>');
+    const documented = component.root.children.find((c) => c.id === 'documented')!;
+    const plain = component.root.children.find((c) => c.id === 'plain')!;
+    expect(documented.help).toBe('<p>A group with <em>rich</em> help.</p>');
+    expect(plain.help).toBeUndefined();
+  });
+
+  it('stamps each node with its ancestor breadcrumb for the popover subtitle', () => {
+    // Root has no ancestors; a child's crumb is the root's label.
+    expect(component.root.crumb).toBe('');
+    expect(component.root.children.find((c) => c.id === 'documented')!.crumb).toBe('root');
+  });
+
+  it('shows a help-mode toggle on the root row, off by default', () => {
+    const toggle: HTMLButtonElement = fixture.nativeElement.querySelector('.tree .help-toggle');
+    expect(toggle).toBeTruthy();
+    expect(component['showHelp']()).toBe(false);
+    expect(toggle.getAttribute('aria-label')).toBe('Show help');
+    expect(toggle.querySelector('mat-icon')!.textContent!.trim()).toBe('help_outline');
+  });
+
+  it('exposes a row&apos;s help only while help mode is on; undocumented rows stay null', () => {
+    const documented = component.root.children.find((c) => c.id === 'documented')!;
+    const plain = component.root.children.find((c) => c.id === 'plain')!;
+
+    // Off: no row is a help trigger.
+    expect(component['rowHelp'](documented)).toBeNull();
+    expect(component['rowHelp'](component.root)).toBeNull();
+
+    component['showHelp'].set(true);
+    expect(component['rowHelp'](component.root)).toBe('<p>Root <strong>help</strong>.</p>');
+    expect(component['rowHelp'](documented)).toBe('<p>A group with <em>rich</em> help.</p>');
+    expect(component['rowHelp'](plain)).toBeNull(); // no description
+  });
+
+  it('clicking the toggle flips help mode and its icon/label', () => {
+    const toggle: HTMLButtonElement = fixture.nativeElement.querySelector('.tree .help-toggle');
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(component['showHelp']()).toBe(true);
+    expect(toggle.getAttribute('aria-label')).toBe('Hide help');
+    expect(toggle.querySelector('mat-icon')!.textContent!.trim()).toBe('help');
+    expect(toggle.classList).toContain('active');
+  });
+
+  it('omits the help toggle entirely when no node has a description', () => {
+    const bare: NodeGroup = {
+      kind: 'nodeGroup',
+      name: 'root',
+      root: true,
+      children: { a: { kind: 'leaf', type: 'string', name: 'a' } },
+    };
+    fixture.componentRef.setInput('schema', bare);
+    fixture.componentRef.setInput('formGroup', buildFormFromSchema(bare));
+    fixture.detectChanges();
+
+    expect(component['anyHelp']).toBe(false);
+    expect(fixture.nativeElement.querySelector('.tree .help-toggle')).toBeNull();
   });
 });

@@ -1,6 +1,12 @@
 @if ('name' in leaf_) {
   @if (leaf_.type === 'string') {
-    <mat-form-field [appearance]="fieldEditable ? 'fill' : 'outline'">
+    <mat-form-field
+      [appearance]="fieldEditable ? 'fill' : 'outline'"
+      [nffRichTooltip]="helpText"
+      [nffRichTooltipTitle]="fieldLabel"
+      [nffRichTooltipSubtitle]="helpContext"
+      [nffRichTooltipAnchor]="helpAnchor"
+    >
       <mat-label>{{ leaf_.label ?? leaf_.name }}</mat-label>
       @if (leaf_.radix) {
         <!-- The bigint decimal-string carry, presented in its source base. -->
@@ -11,7 +17,13 @@
       <mat-error>{{ errorText }}</mat-error>
     </mat-form-field>
   } @else if (leaf_.type === 'number') {
-    <mat-form-field [appearance]="fieldEditable ? 'fill' : 'outline'">
+    <mat-form-field
+      [appearance]="fieldEditable ? 'fill' : 'outline'"
+      [nffRichTooltip]="helpText"
+      [nffRichTooltipTitle]="fieldLabel"
+      [nffRichTooltipSubtitle]="helpContext"
+      [nffRichTooltipAnchor]="helpAnchor"
+    >
       <mat-label>{{ leaf_.label ?? leaf_.name  }}</mat-label>
       @if (leaf_.radix) {
         <input [readonly]="!fieldEditable" matInput type="text" [nffRadixInput]="leaf_.radix" [placeholder]="placeholder" [formControl]="control">
@@ -22,15 +34,39 @@
     </mat-form-field>
   } @else if (leaf_.type === 'boolean') {
     @if (fieldEditable) {
-      <mat-checkbox [formControl]="control">{{ leaf_.label ?? leaf_.name }}</mat-checkbox>
+      <mat-checkbox
+        [formControl]="control"
+        [nffRichTooltip]="helpText"
+        [nffRichTooltipTitle]="fieldLabel"
+        [nffRichTooltipSubtitle]="helpContext"
+        [nffRichTooltipAnchor]="helpAnchor"
+        >{{ leaf_.label ?? leaf_.name }}</mat-checkbox
+      >
     } @else {
       <!-- Display-only: no formControl binding, so the wire value cannot change.
            The control itself is never disable()d — a disabled control would
            still appear in the form value with different semantics. -->
-      <mat-checkbox [checked]="control.value === true" disabled>{{ leaf_.label ?? leaf_.name }}</mat-checkbox>
+      <mat-checkbox
+        [checked]="control.value === true"
+        disabled
+        [nffRichTooltip]="helpText"
+        [nffRichTooltipTitle]="fieldLabel"
+        [nffRichTooltipSubtitle]="helpContext"
+        [nffRichTooltipAnchor]="helpAnchor"
+        >{{ leaf_.label ?? leaf_.name }}</mat-checkbox
+      >
     }
   } @else if (leaf_.type === 'enum') {
-    <nff-leaf-enum-renderer [editable]="fieldEditable" [leafEnum]="leaf_" [control]="control" [placeholder]="placeholder"></nff-leaf-enum-renderer>
+    <nff-leaf-enum-renderer
+      [editable]="fieldEditable"
+      [leafEnum]="leaf_"
+      [control]="control"
+      [placeholder]="placeholder"
+      [nffRichTooltip]="helpText"
+      [nffRichTooltipTitle]="fieldLabel"
+      [nffRichTooltipSubtitle]="helpContext"
+      [nffRichTooltipAnchor]="helpAnchor"
+    ></nff-leaf-enum-renderer>
   }
   @if (removable && editable) {
     <button matIconButton class="remove-button small-icon-button" [matTooltip]="'Remove ' + ('label' in leaf_ && leaf_.label ? leaf_.label : 'name' in leaf_ ? leaf_.name : 'field')" [attr.aria-label]="'Remove ' + ('label' in leaf_ && leaf_.label ? leaf_.label : 'name' in leaf_ ? leaf_.name : 'field')" (click)="remove.emit()">

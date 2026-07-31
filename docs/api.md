@@ -145,6 +145,9 @@ into your standalone component's `imports`.
 | `initialValue` | object | — | Optional seed value applied on init. Prefer seeding via `buildFormFromSchema(schema, initial)`. |
 | `editable` | `boolean` | `false` | Whether fields start editable. **Two-way** (`model`) — bind `[(editable)]` to track it; each group also has an edit toggle. |
 | `title` | `string` | — | Overrides the header title of the rendered group. |
+| `showHelp` | `boolean` | `false` | Whether hovering a field shows its schema `description` as a rich help popover (via [`RichTooltipDirective`](#richtooltip)). Off by default; the config editor drives this from its own help toggle. |
+| `helpContext` | `string` | `''` | Breadcrumb passed to each field's help popover as its subtitle — the containing node's path. |
+| `fieldHelpAnchor` | `'element' \| 'cursor'` | `'element'` | Where a field's help popover anchors: to the field's box or to the pointer. See the config editor's [`fieldHelpAnchor`](#nff-config-editor). |
 
 The inputs are Angular signal inputs, so template binding is unchanged
 (`[schema]="…"`); reading them off a component instance is a signal call
@@ -210,9 +213,26 @@ tree and the detail pane. Wrap it in your own card or border:
 | `initiallyExpanded` | `boolean \| number` | `false` | How deep the tree starts unfolded when it binds to a schema/form pair: `false` opens only the root, `true` unfolds every level (like pressing expand-all), and a positive number opens that many levels below the always-open root (`1` = the top-level sections opened so their children show, still collapsed; `2` also opens those children). Read at bind time — it sets the initial state; later collapses/expands and the expand-all toggle take over, and a structural rebuild keeps whatever is currently open. |
 | `showBreadcrumb` | `boolean` | `true` | Whether the detail pane shows its top breadcrumb (the selected node's path with the member remove beside it). Turn off when the tree already gives the user their bearings; the section trail headings inside the detail stay, and member removal remains on tree rows and section headings. |
 | `optionalFields` | `'named' \| 'menu'` | `'named'` | How a node's absent optional (presence) children are offered under its row. `'named'` lists each as its own `+ <Field name>` row, so the operator sees at a glance what can be added and adds it in one click. `'menu'` is the compact form — a single `+ Optional field` row whose menu holds the same entries — for nodes with many optionals, where per-field rows would crowd the tree. |
+| `fieldHelpAnchor` | `'element' \| 'cursor'` | `'cursor'` | Where a **field's** help popover anchors while help mode is on (see [Rich help](#rich-help) below). `'cursor'` places it right of the pointer — steady regardless of field width — while `'element'` anchors it to the field's box, which can drop the popover below a full-width field. Tree-row and breadcrumb help always anchor to their element. |
 
 The root tree row also carries an expand-all control that flips to collapse-all
 once every node is open (collapsing keeps the root's first level visible).
+
+(rich-help)=
+
+**Rich help.** When any node or field in the schema carries a
+[`description`](schema-reference.md), the root row shows a **help toggle**
+beside the edit pencil (dimmed while off). Turn it on and hovering — or
+keyboard-focusing — a tree row, the exact current breadcrumb crumb, a section
+heading, or a field opens a **rich-HTML help popover**: its title is the
+node/field name (a list item reads as `Interfaces #1`), a breadcrumb subtitle
+shows where it lives, and the body is the `description`, rendered through
+Angular's sanitizer so lists, links, and `code` survive while scripts are
+stripped. Help is **off by default**, so the tree stays uncluttered; while a
+rich popover applies to a row, its plain label tooltip is suppressed. The
+popover prefers the roomy right side; field popovers instead follow the pointer
+(see `fieldHelpAnchor`). The underlying [`RichTooltipDirective`](#richtooltip)
+is exported for reuse.
 
 The tree pane is **sticky**: when a long detail pane scrolls with the page, the
 tree stays visible and scrolls internally. A host with a fixed header sets the
@@ -232,6 +252,39 @@ changes. For the cases the editor's own value-change subscription can't observe
 editor's change detector was detached — call the public **`refresh()`** method
 (e.g. `@ViewChild(ConfigEditorComponent)` → `editor.refresh()`); it re-syncs
 the tree and re-reads the detail pane.
+
+## Directives
+
+(richtooltip)=
+
+### `[nffRichTooltip]`
+
+`RichTooltipDirective` — a rich, HTML-capable help popover built on the CDK
+overlay, an alternative to a plain-text `matTooltip` for content that needs
+formatting (lists, links, `code`). The config editor uses it for its help mode,
+but it stands alone: bind any host element to an HTML string.
+
+```html
+<button matIconButton [nffRichTooltip]="node.help"
+        nffRichTooltipTitle="NTP" nffRichTooltipSubtitle="Device / System"
+        aria-label="Help">
+  <mat-icon>help_outline</mat-icon>
+</button>
+```
+
+Hovering or focusing the host opens the popover after a short delay; it stays
+open while the pointer moves into the panel (so links and scrollable content
+are reachable) and closes on leave, blur, or Escape. The body renders through
+Angular's sanitizer. An empty or whitespace-only body keeps the popover
+suppressed, so a host can bind an always-present trigger and let the text
+decide.
+
+| Input | Type | Default | Description |
+| --- | --- | --- | --- |
+| `nffRichTooltip` | `string \| null` | `null` | The HTML body; the popover stays hidden while it is empty. |
+| `nffRichTooltipTitle` | `string \| null` | `null` | Optional title shown above the body. |
+| `nffRichTooltipSubtitle` | `string \| null` | `null` | Optional breadcrumb subtitle shown under the title. |
+| `nffRichTooltipAnchor` | `'element' \| 'cursor'` | `'element'` | Anchor the popover to the host's box (`'element'`) or to the pointer, right of it (`'cursor'`) — so a wide host keeps the popover by the cursor rather than dropping below. |
 
 ## Types
 

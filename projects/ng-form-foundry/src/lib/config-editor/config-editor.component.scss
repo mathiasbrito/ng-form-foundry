@@ -154,9 +154,25 @@
   }
 }
 
-// The root row's editor-wide toggles (edit on/off, expand/collapse all).
+// The root row's editor-wide toggles (edit on/off, help on/off, expand/collapse all).
 .root-toggle {
   color: var(--mat-sys-on-surface-variant);
+}
+
+// The help toggle sits dimmed while help mode is off — brightening on hover or
+// keyboard focus — and lights up primary at full strength while on.
+.root-toggle.help-toggle {
+  opacity: 0.5;
+}
+
+.root-toggle.help-toggle:hover,
+.root-toggle.help-toggle:focus-visible {
+  opacity: 1;
+}
+
+.root-toggle.help-toggle.active {
+  opacity: 1;
+  color: var(--mat-sys-primary);
 }
 
 // The add (+) on a list or map row stays visible for discoverability; remove
