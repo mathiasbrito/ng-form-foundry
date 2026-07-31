@@ -314,6 +314,10 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.7.2` — version-alignment release with the workspace (the paired
+`ng-form-foundry` 0.7.2 adds the config editor's `optionalFields` input, naming
+each absent optional on its own add-row by default); no transformer changes.
+
 `0.7.1` — version-alignment release with the workspace (the paired
 `ng-form-foundry` 0.7.1 adds a depth option to the config editor's
 `initiallyExpanded` input); no transformer changes.

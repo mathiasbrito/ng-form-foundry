@@ -4,6 +4,16 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.7.2] — 2026-07-31
+
+### Added
+- **`optionalFields` input on `<nff-config-editor>`.** Absent optional
+  (`presence`) children are now offered as named `+ <Field name>` rows — one per
+  optional, added in a single click — so an operator sees at a glance what can be
+  added. This is the new default; set `optionalFields` to `'menu'` for the
+  previous compact single `+ Optional field` menu row, better when a node has
+  many optionals.
+
 ## [0.7.1] — 2026-07-27
 
 ### Added
