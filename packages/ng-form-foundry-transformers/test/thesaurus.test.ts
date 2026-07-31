@@ -32,6 +32,31 @@ test('fills label and description by record key, case-insensitively, without ove
   assert.equal((g.children['qosId'] as any).label, 'Authored title'); // schema title wins
 });
 
+test('fills description on lists, leaf-lists, and choices, not only leaves/groups/maps', () => {
+  // Every node kind carries `description` (the config editor renders it as
+  // help), so the thesaurus fills it wherever the schema left a gap.
+  const schema: JsonSchema = {
+    type: 'object',
+    required: ['cells', 'tags', 'scope'],
+    properties: {
+      cells: { type: 'array', items: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } } },
+      tags: { type: 'array', items: { type: 'string' } },
+      scope: {
+        anyOf: [{ type: 'object', required: ['ueId'], properties: { ueId: { type: 'string' } } }],
+      },
+    },
+  };
+  const thesaurus: Thesaurus = {
+    cells: { label: 'Cells', description: 'The cell list.' },
+    tags: { description: 'Free-form tags.' },
+    scope: { label: 'Scope', description: 'How the policy is scoped.' },
+  };
+  const g = jsonSchemaToNodeGroup(schema, 'body', { thesaurus });
+  assert.equal((g.children['cells'] as any).description, 'The cell list.'); // nodeGroupList
+  assert.equal((g.children['tags'] as any).description, 'Free-form tags.'); // leafList
+  assert.equal((g.children['scope'] as any).description, 'How the policy is scoped.'); // choice
+});
+
 test('keys containing dots are literal names, not paths', () => {
   const schema: JsonSchema = {
     type: 'object',

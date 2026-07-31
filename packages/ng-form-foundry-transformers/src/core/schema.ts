@@ -67,6 +67,7 @@ export interface LeafList {
    * a present-but-empty list. Mirrors {@link NodeGroup.presence}.
    */
   presence?: boolean;
+  description?: string;
 }
 
 export interface NodeGroup {
@@ -100,6 +101,7 @@ export interface NodeGroupList {
   maxItems?: number;
   /** Optional list whose presence is itself data — see {@link LeafList.presence}. */
   presence?: boolean;
+  description?: string;
 }
 
 /** One case body: a record of named fields, or a single node (a leaf-bodied case). */
@@ -116,6 +118,7 @@ export interface Choice {
   kind: 'choice';
   name: string;
   label?: string;
+  description?: string;
   cases: Record<string, ChoiceCase>;
   /** Display labels for cases, keyed by case name. */
   caseLabels?: Record<string, string>;

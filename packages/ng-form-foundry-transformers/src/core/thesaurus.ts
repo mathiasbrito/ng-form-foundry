@@ -101,11 +101,9 @@ function decorate(
   const entry = resolve(key, chains, lookup) ?? (key === node.name ? undefined : resolve(node.name, chains, lookup));
   if (entry) {
     if (entry.label !== undefined && node.label === undefined) node.label = entry.label;
-    if (
-      entry.description !== undefined &&
-      (node.kind === 'leaf' || node.kind === 'nodeGroup' || node.kind === 'map') &&
-      node.description === undefined
-    ) {
+    // Every node kind carries `description` (the config editor renders it as
+    // help), so fill it wherever the schema left a gap.
+    if (entry.description !== undefined && node.description === undefined) {
       node.description = entry.description;
     }
   }

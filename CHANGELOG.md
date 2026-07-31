@@ -4,6 +4,16 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+- **The thesaurus now fills `description` on lists, leaf-lists, and choices**
+  too (`ng-form-foundry-transformers`), not only leaves, groups, and maps — so
+  a machine schema's list and choice tree rows can take their config-editor
+  help text from the thesaurus when the source schema carries none. The
+  `LeafList` / `NodeGroupList` / `Choice` schema DTOs gain a `description` field
+  to match the other node types.
+
 ## [0.8.0] — 2026-07-31
 
 ### Added
