@@ -189,6 +189,16 @@ export class ConfigEditorComponent implements OnDestroy {
    * available on the tree rows and section headings.
    */
   readonly showBreadcrumb = input<boolean>(true);
+  /**
+   * How a node's absent optional (presence) children are offered under its row.
+   * `'named'` (default) lists each one as its own `+ <Field name>` row, so an
+   * operator sees at a glance what can be added and adds it in a single click.
+   * `'menu'` is the compact form — a single `+ Optional field` row whose menu
+   * holds the same entries — for nodes with many optionals, where per-field
+   * rows would crowd the tree. Both add through the same {@link addOptional}
+   * path; only the affordance differs.
+   */
+  readonly optionalFields = input<'named' | 'menu'>('named');
 
   root!: TreeNode;
   selected: TreeNode | null = null;

@@ -124,22 +124,41 @@
           />
         }
         @if (editable() && node.optionals?.length) {
-          <button
-            type="button"
-            class="tree-row optional-row"
-            [style.padding-left.px]="8 + (depth + 1) * 16"
-            [matMenuTriggerFor]="treeOptionalsMenu"
-            (click)="$event.stopPropagation()"
-          >
-            <span class="twisty-spacer"></span>
-            <mat-icon class="optional-icon">add</mat-icon>
-            <span class="optional-label">Optional field</span>
-          </button>
-          <mat-menu #treeOptionalsMenu="matMenu">
+          @if (optionalFields() === 'menu') {
+            <!-- Compact form: one row for every optional, opening a menu. -->
+            <button
+              type="button"
+              class="tree-row optional-row"
+              [style.padding-left.px]="8 + (depth + 1) * 16"
+              [matMenuTriggerFor]="treeOptionalsMenu"
+              (click)="$event.stopPropagation()"
+            >
+              <span class="twisty-spacer"></span>
+              <mat-icon class="optional-icon">add</mat-icon>
+              <span class="optional-label">Optional field</span>
+            </button>
+            <mat-menu #treeOptionalsMenu="matMenu">
+              @for (opt of node.optionals; track opt.key) {
+                <button mat-menu-item (click)="addOptional(node, opt)">{{ opt.label }}</button>
+              }
+            </mat-menu>
+          } @else {
+            <!-- Named form (default): each optional named on its own row, added
+                 in one click — the operator sees what is available at a glance. -->
             @for (opt of node.optionals; track opt.key) {
-              <button mat-menu-item (click)="addOptional(node, opt)">{{ opt.label }}</button>
+              <button
+                type="button"
+                class="tree-row optional-row"
+                [style.padding-left.px]="8 + (depth + 1) * 16"
+                [matTooltip]="opt.label"
+                (click)="addOptional(node, opt); $event.stopPropagation()"
+              >
+                <span class="twisty-spacer"></span>
+                <mat-icon class="optional-icon">add</mat-icon>
+                <span class="optional-label">{{ opt.label }}</span>
+              </button>
             }
-          </mat-menu>
+          }
         }
       }
     </ng-template>

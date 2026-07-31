@@ -114,8 +114,10 @@
   }
 }
 
-// The "+ Optional field" menu row rendered after a node's children: a plain
-// button styled as a muted tree row.
+// An add-optional row rendered after a node's children: a plain button styled
+// as a muted tree row. Either a named "+ <Field name>" row (one per optional,
+// the default) or the compact "+ Optional field" menu trigger — both share
+// this style.
 .optional-row {
   width: 100%;
   border: 0;

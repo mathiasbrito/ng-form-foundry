@@ -764,14 +764,43 @@ describe('ConfigEditorComponent', () => {
     expect(caseDisplay.value).toBe('By node');
   });
 
-  it('renders the "+ Optional field" row after the children, and hides it when not editable', () => {
+  it('names each absent optional on its own row by default, and hides them when not editable', () => {
     fixture.detectChanges();
-    const rows: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.tree .tree-row');
-    expect(rows[rows.length - 1].classList).toContain('optional-row');
+    // Default 'named' mode: one row per optional, labeled with its field name.
+    const rows: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.tree .optional-row')];
+    expect(rows.map((r) => r.querySelector('.optional-label')!.textContent!.trim())).toEqual(
+      component.root.optionals!.map((o) => o.label),
+    );
+    // No menu trigger: a named row adds its field directly.
+    expect(fixture.nativeElement.querySelector('.tree [aria-haspopup]')).toBeNull();
 
     fixture.componentRef.setInput('editable', false);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.optional-row')).toBeNull();
+  });
+
+  it('clicking a named optional row adds that field directly', () => {
+    fixture.detectChanges();
+    const noteLabel = component.root.optionals!.find((o) => o.key === 'note')!.label;
+    const row = [...fixture.nativeElement.querySelectorAll('.tree .optional-row')].find(
+      (r: HTMLElement) => r.querySelector('.optional-label')!.textContent!.trim() === noteLabel,
+    ) as HTMLButtonElement;
+
+    row.click();
+    fixture.detectChanges();
+
+    expect(form.get('note')).toBeTruthy();
+    expect(component.root.optionals!.some((o) => o.key === 'note')).toBe(false);
+  });
+
+  it("optionalFields='menu' collapses the optionals into a single menu row", () => {
+    fixture.componentRef.setInput('optionalFields', 'menu');
+    fixture.detectChanges();
+    const rows: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.tree .optional-row')];
+    expect(rows.length).toBe(1);
+    expect(rows[0].querySelector('.optional-label')!.textContent!.trim()).toBe('Optional field');
+    // The single row opens a menu holding every optional.
+    expect(rows[0].getAttribute('aria-haspopup')).toBe('menu');
   });
 
   // --- accessibility ---------------------------------------------------------

@@ -439,11 +439,14 @@ breadcrumb heading that marks the boundary and links back up, with no nested
 panels. The tree scopes the view, and structural edits made in either pane
 stay in sync — as do external mutations to the bound form from a sibling view
 (see [`refresh()`](api.md#nff-config-editor)). It supports the full node
-model — groups, lists, maps, and choices — plus a "+ Optional field" menu for
-absent presence children (each added one carries a delete button that returns
-it to the menu), and the `expandOnClick` / `showBreadcrumb` /
-`initiallyExpanded` inputs tune its navigation (the last starts the tree
-unfolded — `true` for every level, or a number for that many). It draws no
+model — groups, lists, maps, and choices — plus named `+ <Field name>` rows for
+absent presence children, one per optional so the operator sees at a glance what
+can be added (each added one carries a delete button that restores its row).
+Setting `optionalFields` to `'menu'` collapses them into the compact single
+`+ Optional field` menu instead, for nodes with many optionals. The
+`expandOnClick` / `showBreadcrumb` / `initiallyExpanded` inputs tune its
+navigation (the last starts the tree unfolded — `true` for every level, or a
+number for that many). It draws no
 container of its own, only a divider between the
 panes, so the embedding page owns the
 chrome.
