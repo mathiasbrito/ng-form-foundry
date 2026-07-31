@@ -381,6 +381,31 @@ describe('ConfigEditorComponent', () => {
     expect(component.selected!.id).toBe('ifaces/2');
   });
 
+  it('a tree-row add focuses the first field of the new item', fakeAsync(() => {
+    fixture.detectChanges();
+    component.addItem(node('ifaces')); // tree-row add: selects the new item
+    fixture.detectChanges();
+    tick(); // the focus defers until the re-render settles
+
+    const active = document.activeElement as HTMLElement;
+    expect(active.tagName).toBe('INPUT');
+    // The new interface's first field is `nm`, in the detail pane.
+    expect(active.closest('.detail')).toBeTruthy();
+    expect(active.closest('mat-form-field')?.querySelector('mat-label')?.textContent).toContain('nm');
+  }));
+
+  it('adding a complex optional focuses its first detail field, not the tree row', fakeAsync(() => {
+    fixture.detectChanges();
+    const entry = component.root.optionals!.find((o) => o.key === 'optional')!; // a presence group
+    component.addOptional(component.root, entry);
+    fixture.detectChanges();
+    tick();
+
+    const active = document.activeElement as HTMLElement;
+    expect(active.closest('.detail')).toBeTruthy(); // a field in the group's section
+    expect(active.closest('.tree')).toBeNull(); // not the tree row
+  }));
+
   it('removeItem removes from the FormArray and renumbers the remaining items', () => {
     const array = form.get('ifaces') as FormArray;
     const list = node('ifaces');

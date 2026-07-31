@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, model, OnDestroy, signal, untracked } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, model, OnDestroy, untracked } from '@angular/core';
 import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { Subscription } from 'rxjs';
@@ -224,12 +224,14 @@ export class ConfigEditorComponent implements OnDestroy {
   breadcrumb: TreeNode[] = [];
   readonly expanded = new Set<string>();
   /**
-   * Whether rich help is active. Off by default (no popovers, no clutter); a
-   * root-row toggle flips it, and while on, hovering or focusing any row with a
-   * `description` shows its help popover — the row itself is the trigger, so no
-   * per-row help icon is needed.
+   * Whether rich help is active. Off by default (no popovers, no clutter);
+   * while on, hovering or focusing any row with a `description` shows its help
+   * popover — the row itself is the trigger, so no per-row help icon is needed.
+   * Two-way bindable like {@link editable}: the root tree row carries a
+   * toggle, so the editor can flip it itself and the host observes the change,
+   * and a host that wants help on from the start binds `[showHelp]="true"`.
    */
-  protected readonly showHelp = signal(false);
+  readonly showHelp = model<boolean>(false);
   /** Whether any node in the current tree carries help — gates the root-row help toggle. */
   protected anyHelp = false;
 
@@ -434,8 +436,12 @@ export class ConfigEditorComponent implements OnDestroy {
     if (!list) return;
     if (list.maxItems != null && list.array.length >= list.maxItems) return;
     list.array.push(buildFormFromSchema(list.itemSchema));
-    if (keepSelection) this.selectByPath(this.selected?.id ?? '', false);
-    else this.selectByPath(this.join(listNode.id, String(list.array.length - 1)));
+    if (keepSelection) {
+      this.selectByPath(this.selected?.id ?? '', false);
+    } else {
+      this.selectByPath(this.join(listNode.id, String(list.array.length - 1)));
+      this.focusFirstField();
+    }
   }
 
   /**
@@ -470,8 +476,10 @@ export class ConfigEditorComponent implements OnDestroy {
     if (!node.group || !setNodePresence(node.group, entry.schema, entry.key, true)) return;
     // A leaf renders in the parent's detail pane; complex kinds become tree nodes.
     this.selectByPath(entry.schema.kind === 'leaf' ? node.id : this.join(node.id, entry.key));
-    // Adding the last optional removes the menu row that held focus.
-    if (entry.schema.kind !== 'leaf') this.focusSelectedRow();
+    // A complex optional becomes its own selected node — move focus into its
+    // first detail field, like a list/map add (the option row that held focus
+    // is gone once the optional is present).
+    if (entry.schema.kind !== 'leaf') this.focusFirstField();
     if (entry.schema.kind === 'leaf') {
       // Set after selection (select() retires any pending request): the new
       // field should grab focus, like the form's own add button. Retired after
@@ -545,8 +553,12 @@ export class ConfigEditorComponent implements OnDestroy {
     if (!m) return;
     const key = addMapEntry(m.group, m.schema);
     if (key == null) return;
-    if (keepSelection) this.selectByPath(this.selected?.id ?? '', false);
-    else this.selectByPath(this.join(mapNode.id, key));
+    if (keepSelection) {
+      this.selectByPath(this.selected?.id ?? '', false);
+    } else {
+      this.selectByPath(this.join(mapNode.id, key));
+      this.focusFirstField();
+    }
   }
 
   /** Remove a complex map entry (down to `minEntries`). */
@@ -601,6 +613,20 @@ export class ConfigEditorComponent implements OnDestroy {
   /** Move keyboard focus to the selected tree row once the action's re-render settles. */
   private focusSelectedRow(): void {
     setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.tree-row.selected')?.focus());
+  }
+
+  /**
+   * Move keyboard focus into the detail pane's first editable field once a
+   * tree-panel add settles, so a newly added item, map entry, or complex
+   * optional is ready to type into (a map entry's key field renders first, so
+   * it is named before its fields). Counterpart of {@link focusSelectedRow},
+   * which a removal uses to return focus to the tree. An added optional *leaf*
+   * focuses its own specific field instead — see {@link addOptional}.
+   */
+  private focusFirstField(): void {
+    setTimeout(() =>
+      this.host.nativeElement.querySelector<HTMLElement>('.detail input:not([readonly]), .detail mat-select')?.focus(),
+    );
   }
 
   /** A muted hint for a section whose node currently renders no content of its own. */

@@ -53,8 +53,12 @@
             <button
               matButton="outlined"
               class="presence-leaf-add nff-clip-label"
-              [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+              [nffOverflowTooltip]="showHelp() && child.description ? '' : 'Add ' + (child.label ?? child.name)"
               nffOverflowTooltipFor=".mdc-button__label"
+              [nffRichTooltip]="showHelp() && child.description ? child.description : null"
+              [nffRichTooltipTitle]="child.label ?? child.name"
+              [nffRichTooltipSubtitle]="helpContext()"
+              [nffRichTooltipAnchor]="fieldHelpAnchor()"
               (click)="toggleLeafPresence(childItem.key, child, true)"
             >
               <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
@@ -118,8 +122,12 @@
           <button
             matButton="outlined"
             class="presence-list-add nff-clip-label"
-            [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+            [nffOverflowTooltip]="showHelp() && child.description ? '' : 'Add ' + (child.label ?? child.name)"
             nffOverflowTooltipFor=".mdc-button__label"
+            [nffRichTooltip]="showHelp() && child.description ? child.description : null"
+            [nffRichTooltipTitle]="child.label ?? child.name"
+            [nffRichTooltipSubtitle]="helpContext()"
+            [nffRichTooltipAnchor]="fieldHelpAnchor()"
             (click)="addPresenceList(childItem.key, child)"
           >
             <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
@@ -174,8 +182,12 @@
             <button
               matButton="outlined"
               class="presence-leaf-add nff-clip-label"
-              [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+              [nffOverflowTooltip]="showHelp() && child.description ? '' : 'Add ' + (child.label ?? child.name)"
               nffOverflowTooltipFor=".mdc-button__label"
+              [nffRichTooltip]="showHelp() && child.description ? child.description : null"
+              [nffRichTooltipTitle]="child.label ?? child.name"
+              [nffRichTooltipSubtitle]="helpContext()"
+              [nffRichTooltipAnchor]="fieldHelpAnchor()"
               (click)="toggleLeafPresence(childItem.key, child, true)"
             >
               <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
@@ -294,8 +306,12 @@
             <button
               matButton="outlined"
               class="presence-list-add nff-clip-label"
-              [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+              [nffOverflowTooltip]="showHelp() && child.description ? '' : 'Add ' + (child.label ?? child.name)"
               nffOverflowTooltipFor=".mdc-button__label"
+              [nffRichTooltip]="showHelp() && child.description ? child.description : null"
+              [nffRichTooltipTitle]="child.label ?? child.name"
+              [nffRichTooltipSubtitle]="helpContext()"
+              [nffRichTooltipAnchor]="fieldHelpAnchor()"
               (click)="addPresenceList(childItem.key, child)"
             >
               <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}
@@ -494,8 +510,12 @@
           <button
             matButton="outlined"
             class="presence-list-add nff-clip-label"
-            [nffOverflowTooltip]="'Add ' + (child.label ?? child.name)"
+            [nffOverflowTooltip]="showHelp() && child.description ? '' : 'Add ' + (child.label ?? child.name)"
             nffOverflowTooltipFor=".mdc-button__label"
+            [nffRichTooltip]="showHelp() && child.description ? child.description : null"
+            [nffRichTooltipTitle]="child.label ?? child.name"
+            [nffRichTooltipSubtitle]="helpContext()"
+            [nffRichTooltipAnchor]="fieldHelpAnchor()"
             (click)="addPresenceList(childItem.key, child)"
           >
             <mat-icon>add</mat-icon> Add {{ child.label ?? child.name }}

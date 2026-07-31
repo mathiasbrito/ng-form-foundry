@@ -16,6 +16,7 @@ import {
   caseDisplayLabels, buildControl, caseFields, setNodePresence, switchChoiceCase } from '../core/dynamic-recursive-forms-builder';
 import { MatTooltip } from '@angular/material/tooltip';
 import { OverflowTooltipDirective } from '../directives/overflow-tooltip.directive';
+import { RichTooltipDirective } from '../directives/rich-tooltip.directive';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -48,6 +49,7 @@ function gridTrackCount(count: number | undefined): number {
     MatSelectModule,
     MatTooltip,
     OverflowTooltipDirective,
+    RichTooltipDirective,
   ],
   selector: 'nff-dynamic-recursive-form',
   standalone: true,

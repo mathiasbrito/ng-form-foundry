@@ -4,6 +4,31 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.2] — 2026-07-31
+
+### Changed
+- **`showHelp` on `<nff-config-editor>` is now a public `model` input.** A host
+  can start help mode on (`[showHelp]="true"`) or two-way bind it, the same way
+  `editable` works; the root-row help toggle keeps flipping it and the host
+  observes the change. Previously the flag was internal and help always started
+  off.
+- **A JSON Schema's `description` now maps onto every node kind**
+  (`ng-form-foundry-transformers`): groups, maps, group-lists, leaf-lists, and
+  choices take their `description` from the source schema like leaves already
+  did — so a machine schema's section and list tree rows carry help popovers
+  without a thesaurus. Schema-authored text still wins over thesaurus fills.
+
+### Fixed
+- **A tree-panel add now focuses the new node's first field.** Adding a list
+  item, a map entry, or a complex optional from the config-editor tree left
+  focus on the add control or the tree row; it now moves into the new node's
+  first editable field in the detail pane (a map entry's key field first), so
+  it is ready to type — matching how an added optional leaf already behaved.
+- **Help popovers now also show on the form panel's "Add \<field>" buttons.**
+  With help mode on, hovering an absent optional's add button in the detail
+  pane opens its `description` popover (the plain overflow tooltip steps
+  aside), so a field's help is reachable before it is added.
+
 ## [0.8.1] — 2026-07-31
 
 ### Changed

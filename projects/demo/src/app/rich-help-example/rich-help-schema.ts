@@ -21,6 +21,14 @@ export const richHelpSchema = defineSchema({
       label: 'Hostname',
       description: "The device's <strong>hostname</strong> — a valid DNS label (letters, digits, hyphens).",
     },
+    contact: {
+      kind: 'leaf',
+      type: 'string',
+      name: 'contact',
+      label: 'Contact',
+      presence: true,
+      description: '<p>Optional administrative contact (email or name).</p><p>Hover <strong>Add Contact</strong> to see this before adding it.</p>',
+    },
     system: {
       kind: 'nodeGroup',
       name: 'system',
