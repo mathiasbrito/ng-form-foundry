@@ -14,6 +14,7 @@ import { RootTitleExample } from './root-title-example/root-title-example';
 import { UnknownKeysExample } from './unknown-keys-example/unknown-keys-example';
 import { PresenceListsExample } from './presence-lists-example/presence-lists-example';
 import { RichHelpExample } from './rich-help-example/rich-help-example';
+import { ValidationErrorsExample } from './validation-errors-example/validation-errors-example';
 
 export const routes: Routes = [
   {
@@ -80,5 +81,9 @@ export const routes: Routes = [
   {
     path: 'rich-help',
     component: RichHelpExample
+  },
+  {
+    path: 'validation-errors',
+    component: ValidationErrorsExample
   }
 ];

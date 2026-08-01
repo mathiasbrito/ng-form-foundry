@@ -4,6 +4,32 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.3] — 2026-08-01
+
+### Added
+- **Validation-error tooltips on the config-editor tree.** A row's error icon is
+  now a focusable button: hovering or keyboard-focusing it lists every
+  validation error under that node — each entry naming the field and its message
+  as a single link that navigates to and focuses the offending field. Clicking
+  the icon jumps straight to the first error. The error icon is now always the
+  row's right-most control, so markers line up vertically across rows and nesting
+  levels.
+- **Help mode now reaches the remaining add affordances.** With help on, the
+  tree's named `+ <Field>` optional rows, and a leaf-list's entries and its add
+  buttons (both the empty-list and the per-row add), show their `description`
+  popover — so a field's help is reachable before it is added, on every surface.
+
+### Changed
+- **`RichTooltipDirective` can render an `ng-template` body**
+  (`nffRichTooltipTemplate` / `nffRichTooltipContext`) for interactive popover
+  content, not only a sanitized HTML string. The panel stays open while the
+  pointer is inside it and dismisses when a link or button inside it is clicked —
+  what makes the error tooltip's go-to-field links usable.
+- **The leaf validation-error wording is now shared.** The inline field
+  `mat-error` and the tree error tooltip phrase an error through one
+  `describeControlError` helper, so the same violation reads identically in both
+  places.
+
 ## [0.8.2] — 2026-07-31
 
 ### Changed

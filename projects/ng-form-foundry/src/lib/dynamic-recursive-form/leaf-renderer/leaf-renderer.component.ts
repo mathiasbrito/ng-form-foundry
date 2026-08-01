@@ -11,6 +11,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { LeafEnumRendererComponent } from '../leaf-enum-renderer/leaf-enum-renderer.component';
 import { RadixInputDirective } from '../radix-input/radix-input.directive';
 import { RichTooltipDirective } from '../../directives/rich-tooltip.directive';
+import { describeControlError } from '../../core/error-message';
 
 @Component({
   selector: 'nff-leaf-renderer',
@@ -81,27 +82,11 @@ export class LeafRendererComponent implements AfterViewInit {
   /**
    * A human-readable message for the control's active validation error, or `''`
    * when valid. `mat-form-field` only shows it once the field is in an error
-   * state (invalid and touched), so it can be bound unconditionally.
+   * state (invalid and touched), so it can be bound unconditionally. Delegates
+   * to {@link describeControlError}, shared with the config editor's error tooltip.
    */
   get errorText(): string {
-    const e = this.control.errors;
-    if (!e) return '';
     const label = 'name' in this.leaf_ ? this.leaf_.label ?? this.leaf_.name : 'Value';
-    if (e['required']) return `${label} is required`;
-    if (e['radixFormat']) {
-      const names: Record<number, string> = { 16: 'hexadecimal (0x…)', 8: 'octal (0o…)', 2: 'binary (0b…)' };
-      return `Must be a ${names[e['radixFormat'].radix] ?? 'based'} number`;
-    }
-    if (e['radixRange']) return 'Too large to edit exactly (beyond ±2^53)';
-    if (e['minlength']) return `Must be at least ${e['minlength'].requiredLength} characters`;
-    if (e['maxlength']) return `Must be at most ${e['maxlength'].requiredLength} characters`;
-    if (e['pattern']) return `Must match ${e['pattern'].requiredPattern ?? 'the required pattern'}`;
-    if (e['email']) return 'Must be a valid email address';
-    if (e['uri']) return 'Must be a valid URI';
-    if (e['min']) return `Must be ≥ ${e['min'].min}`;
-    if (e['max']) return `Must be ≤ ${e['max'].max}`;
-    if (e['multipleOf']) return `Must be a multiple of ${e['multipleOf'].multipleOf}`;
-    if (e['enum']) return 'Not an allowed value';
-    return 'Invalid value';
+    return describeControlError(this.control.errors, label);
   }
 }

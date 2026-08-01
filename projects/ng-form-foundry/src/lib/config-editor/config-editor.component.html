@@ -1,3 +1,22 @@
+<!-- The row error tooltip's body: one go-to-field link per error under the node. -->
+<ng-template #errorTmpl let-errors>
+  <ul class="error-list">
+    @for (e of errors; track $index) {
+      <li>
+        <button type="button" class="error-link" (click)="gotoError(e)">
+          <span class="error-text">
+            @if (e.field) {
+              <span class="error-field">{{ e.field }}</span>
+            }
+            {{ e.message }}
+          </span>
+          <mat-icon class="error-goto" aria-hidden="true">arrow_forward</mat-icon>
+        </button>
+      </li>
+    }
+  </ul>
+</ng-template>
+
 <div class="editor">
   <nav class="tree" role="tree" aria-label="Configuration structure">
     <ng-template #treeNode let-node let-depth="depth" let-parent="parent">
@@ -71,13 +90,6 @@
             <mat-icon>{{ allExpanded() ? 'unfold_less' : 'unfold_more' }}</mat-icon>
           </button>
         }
-        @if (hasError(node)) {
-          <!-- A non-color error signal beside the red row text. -->
-          <mat-icon class="row-error-icon" aria-hidden="false" role="img" aria-label="Has validation errors"
-            >error_outline</mat-icon
-          >
-        }
-
         @if (editable() && node.list && !listAtMax(node)) {
           <button
             matIconButton
@@ -133,6 +145,25 @@
             <mat-icon>delete</mat-icon>
           </button>
         }
+
+        @if (hasError(node)) {
+          <!-- Always the row's right-most control, so error markers line up
+               vertically across rows regardless of the other buttons. Hover or
+               focus lists the errors (with go-to-field links); clicking the
+               icon jumps to the first. -->
+          <button
+            matIconButton
+            class="row-btn row-error"
+            aria-label="Validation errors — hover or focus to list them"
+            nffRichTooltipTitle="Validation errors"
+            [nffRichTooltipSubtitle]="node.crumb ? node.crumb + ' / ' + (node.helpTitle ?? node.label) : (node.helpTitle ?? node.label)"
+            [nffRichTooltipTemplate]="errorTmpl"
+            [nffRichTooltipContext]="{ $implicit: nodeErrors(node) }"
+            (click)="gotoFirstError(node); $event.stopPropagation()"
+          >
+            <mat-icon>error_outline</mat-icon>
+          </button>
+        }
       </div>
 
       @if (expanded.has(node.id)) {
@@ -169,6 +200,10 @@
                 class="tree-row optional-row"
                 [style.padding-left.px]="8 + (depth + 1) * 16"
                 [matTooltip]="opt.label"
+                [matTooltipDisabled]="showHelp() && !!opt.schema.description"
+                [nffRichTooltip]="showHelp() && opt.schema.description ? opt.schema.description : null"
+                [nffRichTooltipTitle]="opt.label"
+                [nffRichTooltipSubtitle]="fieldContext(node)"
                 (click)="addOptional(node, opt); $event.stopPropagation()"
               >
                 <span class="twisty-spacer"></span>
@@ -345,7 +380,15 @@
 
         @if (s.footer && editable() && s.node.map?.complex && !mapAtMax(s.node)) {
           <div class="section-actions">
-            <button matButton [matTooltip]="'Add ' + s.node.label + ' entry'" (click)="addTreeMapEntry(s.node, true)"><mat-icon>add</mat-icon> Add entry</button>
+            <button
+              matButton
+              [matTooltip]="'Add ' + s.node.label + ' entry'"
+              [matTooltipDisabled]="!!rowHelp(s.node)"
+              [nffRichTooltip]="rowHelp(s.node)"
+              [nffRichTooltipTitle]="s.node.helpTitle"
+              [nffRichTooltipSubtitle]="s.node.crumb"
+              (click)="addTreeMapEntry(s.node, true)"
+            ><mat-icon>add</mat-icon> Add entry</button>
           </div>
         }
         @if (s.footer && editable() && s.node.list; as list) {
@@ -353,7 +396,13 @@
             <div class="section-actions">
               <!-- The next entry's number in the label, so the button reads as
                    what it does: "Add Cell #3" appends the third entry. -->
-              <button matButton (click)="addItem(s.node, true)">
+              <button
+                matButton
+                [nffRichTooltip]="rowHelp(s.node)"
+                [nffRichTooltipTitle]="s.node.helpTitle"
+                [nffRichTooltipSubtitle]="s.node.crumb"
+                (click)="addItem(s.node, true)"
+              >
                 <mat-icon>add</mat-icon> Add {{ list.itemLabel }} #{{ list.array.length + 1 }}
               </button>
             </div>

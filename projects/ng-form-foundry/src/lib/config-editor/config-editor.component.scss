@@ -57,12 +57,77 @@
   color: var(--mat-sys-error);
 }
 
-.row-error-icon {
-  flex: 0 0 auto;
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
+// The error signal is a focusable button: hovering / focusing lists the errors,
+// clicking jumps to the first. Sized like the other row buttons, tinted error.
+.row-btn.row-error {
   color: var(--mat-sys-error);
+}
+
+// The error tooltip's body: one go-to-field link per error (rendered inside the
+// rich-tooltip panel via the config editor's #errorTmpl, so these styles reach
+// it even though the panel lives in an overlay).
+.error-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// The whole error line — "<field> <message>" — is the link: error colour,
+// underlined on hover, with a trailing arrow. Clicking it jumps to the field.
+.error-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 5px 6px;
+  border-radius: 4px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--mat-sys-error);
+
+  &:hover,
+  &:focus-visible {
+    background: var(--mat-sys-surface-container-highest);
+  }
+
+  .error-text {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &:hover .error-text,
+  &:focus-visible .error-text {
+    text-decoration: underline;
+  }
+
+  // The field name leads the line in bold; it inherits the link colour.
+  .error-field {
+    font-weight: 600;
+  }
+
+  // The "go to field" cue: a faint arrow that brightens and nudges on hover.
+  .error-goto {
+    flex: 0 0 auto;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    opacity: 0.45;
+    transition:
+      opacity 0.1s ease,
+      transform 0.1s ease;
+  }
+
+  &:hover .error-goto,
+  &:focus-visible .error-goto {
+    opacity: 1;
+    transform: translateX(2px);
+  }
 }
 
 // Keyboard support: rows are focusable tree items; the reveal-on-hover remove

@@ -9,6 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatPrefix } from '@angular/material/input';
 import { MatTooltip } from '@angular/material/tooltip';
 import { OverflowTooltipDirective } from '../../directives/overflow-tooltip.directive';
+import { RichTooltipDirective } from '../../directives/rich-tooltip.directive';
 
 @Component({
   selector: 'nff-leaf-list-renderer',
@@ -20,6 +21,7 @@ import { OverflowTooltipDirective } from '../../directives/overflow-tooltip.dire
     MatPrefix,
     MatTooltip,
     OverflowTooltipDirective,
+    RichTooltipDirective,
   ],
   templateUrl: './leaf-list-renderer.component.html',
   styleUrl: './leaf-list-renderer.component.scss',
@@ -41,6 +43,12 @@ export class LeafListRendererComponent implements OnInit {
    * one track and ignores it.
    */
   @Input() layout: LayoutStyles | null = null;
+  /** Whether hovering the list (its entries and add buttons) shows the list's `description` as a rich help popover. */
+  @Input() showHelp = false;
+  /** Breadcrumb shown as the help popover's subtitle — the list's location. */
+  @Input() helpContext = '';
+  /** Where the list's help popover anchors: to the element or the pointer. */
+  @Input() helpAnchor: 'element' | 'cursor' = 'element';
   @Output() message = new EventEmitter();
   /**
    * Emitted from the empty-list remove button when the list is a presence list —
@@ -93,6 +101,11 @@ export class LeafListRendererComponent implements OnInit {
   /** Whether another item may be appended (below the effective maximum). */
   get canAdd(): boolean {
     return (this.formArray?.length ?? 0) < this.effectiveMax;
+  }
+
+  /** The list's `description` while help mode is on, else null — drives the rich help popover. */
+  get helpText(): string | null {
+    return this.showHelp && this.leaf_?.description ? this.leaf_.description : null;
   }
 
   removeItem($index: number) {

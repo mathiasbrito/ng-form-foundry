@@ -100,6 +100,9 @@
           [editable]="editable()"
           [formArray]="asFormArray(formGroup().get(childItem.key))"
           [initialValue]="formGroup().get(childItem.key)?.value"
+          [showHelp]="showHelp()"
+          [helpContext]="helpContext()"
+          [helpAnchor]="fieldHelpAnchor()"
         />
       }
       @else if (child.kind == 'leafList' && child.presence) {
@@ -115,6 +118,9 @@
               [leaf_]="child"
               [editable]="editable()"
               [formArray]="leafListArray"
+              [showHelp]="showHelp()"
+              [helpContext]="helpContext()"
+              [helpAnchor]="fieldHelpAnchor()"
               (removeList)="toggleNodePresence(childItem.key, child, false)"
             />
           </div>

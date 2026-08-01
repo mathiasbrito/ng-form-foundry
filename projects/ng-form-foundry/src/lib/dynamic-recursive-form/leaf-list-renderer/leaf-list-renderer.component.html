@@ -7,6 +7,10 @@
           [index]="$index"
           [editable]="editable"
           [label]="leaf_.label ?? leaf_.name"
+          [nffRichTooltip]="helpText"
+          [nffRichTooltipTitle]="leaf_.label ?? leaf_.name"
+          [nffRichTooltipSubtitle]="helpContext"
+          [nffRichTooltipAnchor]="helpAnchor"
           (remove)="removeItem($index)"
         />
         @if (editable) {
@@ -17,7 +21,7 @@
               </button>
             }
             @if ($last && canAdd) {
-              <button class="add-button small-icon-button" matIconButton [matTooltip]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" [attr.aria-label]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" (click)="addItem()">
+              <button class="add-button small-icon-button" matIconButton [matTooltip]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" [matTooltipDisabled]="!!helpText" [attr.aria-label]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'" [nffRichTooltip]="helpText" [nffRichTooltipTitle]="leaf_.label ?? leaf_.name" [nffRichTooltipSubtitle]="helpContext" [nffRichTooltipAnchor]="helpAnchor" (click)="addItem()">
                 <mat-icon matPrefix>add</mat-icon>
               </button>
             }
@@ -36,8 +40,12 @@
         matButton="outlined"
         class="empty-add-button nff-clip-label"
         [attr.aria-label]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'"
-        [nffOverflowTooltip]="'Add ' + (leaf_.label ?? leaf_.name) + ' item'"
+        [nffOverflowTooltip]="helpText ? '' : 'Add ' + (leaf_.label ?? leaf_.name) + ' item'"
         nffOverflowTooltipFor=".mdc-button__label"
+        [nffRichTooltip]="helpText"
+        [nffRichTooltipTitle]="leaf_.label ?? leaf_.name"
+        [nffRichTooltipSubtitle]="helpContext"
+        [nffRichTooltipAnchor]="helpAnchor"
         (click)="addItem()"
       >
         <mat-icon>add</mat-icon> Add {{ leaf_.label ?? leaf_.name }} item

@@ -29,6 +29,14 @@ export const richHelpSchema = defineSchema({
       presence: true,
       description: '<p>Optional administrative contact (email or name).</p><p>Hover <strong>Add Contact</strong> to see this before adding it.</p>',
     },
+    tags: {
+      kind: 'leafList',
+      type: 'string',
+      name: 'tags',
+      label: 'Tags',
+      presence: true,
+      description: '<p>Free-form <strong>tags</strong> for this device, e.g. <code>edge</code>, <code>prod</code>, <code>eu-west-1</code>.</p>',
+    },
     system: {
       kind: 'nodeGroup',
       name: 'system',

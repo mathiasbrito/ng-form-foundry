@@ -1,4 +1,4 @@
-import { ComponentRef, Directive, ElementRef, effect, inject, input, NgZone, OnDestroy } from '@angular/core';
+import { ComponentRef, Directive, ElementRef, effect, inject, input, NgZone, OnDestroy, TemplateRef } from '@angular/core';
 import { ConnectedPosition, FlexibleConnectedPositionStrategy, Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { RichTooltipPanelComponent } from './rich-tooltip-panel.component';
@@ -50,7 +50,7 @@ const CLOSE_DELAY = 150;
  * always-present trigger and let the text decide.
  */
 @Directive({
-  selector: '[nffRichTooltip]',
+  selector: '[nffRichTooltip], [nffRichTooltipTemplate]',
   standalone: true,
   host: {
     '(mouseenter)': 'onEnter($event)',
@@ -74,6 +74,10 @@ export class RichTooltipDirective implements OnDestroy {
    * the cursor rather than dropping below.
    */
   readonly anchor = input<'element' | 'cursor'>('element', { alias: 'nffRichTooltipAnchor' });
+  /** An `ng-template` rendered as the body (for interactive content like clickable links); wins over the HTML string. */
+  readonly template = input<TemplateRef<unknown> | null>(null, { alias: 'nffRichTooltipTemplate' });
+  /** Context object passed to {@link template}. */
+  readonly templateContext = input<Record<string, unknown> | null>(null, { alias: 'nffRichTooltipContext' });
 
   private readonly overlay = inject(Overlay);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -93,11 +97,13 @@ export class RichTooltipDirective implements OnDestroy {
     // close it outright when the body clears (e.g. help mode switched off while
     // the popover was showing).
     effect(() => {
-      const body = this.content();
-      const title = this.title();
-      const subtitle = this.subtitle();
+      const hasBody = !!this.content() || !!this.template();
+      // Read the rest so the open popover re-renders when any of them change.
+      this.title();
+      this.subtitle();
+      this.templateContext();
       if (!this.panelRef) return;
-      if (body) this.write(title, subtitle, body);
+      if (hasBody) this.write();
       else this.close();
     });
 
@@ -147,25 +153,26 @@ export class RichTooltipDirective implements OnDestroy {
     this.pointerY = event.clientY;
   };
 
-  /** Show the popover now; a no-op when there is no body content to show. */
+  /** Show the popover now; a no-op when there is no body (HTML or template) to show. */
   open(): void {
     clearTimeout(this.closeTimer);
-    const body = this.content();
-    if (!body) return;
+    if (!this.content() && !this.template()) return;
     const ref = this.ensureOverlay();
     // Cursor mode re-aims at the current pointer each time it opens.
     if (this.anchor() === 'cursor') this.positionStrategy?.setOrigin({ x: this.pointerX, y: this.pointerY });
     this.panelRef ??= ref.attach(new ComponentPortal(RichTooltipPanelComponent));
-    this.write(this.title(), this.subtitle(), body);
+    this.write();
     ref.updatePosition();
   }
 
-  /** Push the current title / subtitle / body onto the open panel. */
-  private write(title: string | null | undefined, subtitle: string | null | undefined, body: string): void {
+  /** Push the current title / subtitle / body (HTML or template) onto the open panel. */
+  private write(): void {
     if (!this.panelRef) return;
-    this.panelRef.setInput('title', (title ?? '').trim());
-    this.panelRef.setInput('subtitle', (subtitle ?? '').trim());
-    this.panelRef.setInput('body', body);
+    this.panelRef.setInput('title', (this.title() ?? '').trim());
+    this.panelRef.setInput('subtitle', (this.subtitle() ?? '').trim());
+    this.panelRef.setInput('body', this.content());
+    this.panelRef.setInput('bodyTemplate', this.template());
+    this.panelRef.setInput('bodyContext', this.templateContext());
   }
 
   /** Hide the popover. */
@@ -210,9 +217,19 @@ export class RichTooltipDirective implements OnDestroy {
     const el = this.overlayRef.overlayElement;
     el.addEventListener('mouseenter', this.onPanelEnter);
     el.addEventListener('mouseleave', this.onPanelLeave);
+    el.addEventListener('click', this.onPanelClick);
     return this.overlayRef;
   }
 
   private readonly onPanelEnter = (): void => clearTimeout(this.closeTimer);
   private readonly onPanelLeave = (): void => this.scheduleClose();
+  /**
+   * A click on an actionable element inside the popover (a link, or an error
+   * "go to field" button) dismisses it — the user has acted and is heading back
+   * to the keyboard, so the popover should not cover the field. Plain clicks
+   * (selecting text) leave it open.
+   */
+  private readonly onPanelClick = (event: MouseEvent): void => {
+    if ((event.target as Element | null)?.closest('a, button')) this.close();
+  };
 }

@@ -1269,7 +1269,7 @@ describe('ConfigEditorComponent with a present-children range (minPresent)', () 
   it('marks the tree row red while too few optional children are enabled', () => {
     const qos = component.root.children.find((c) => c.id === 'qosObjectives')!;
     expect(component['hasError'](qos)).toBe(true);
-    expect(fixture.nativeElement.querySelector('.row-error-icon')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.row-btn.row-error')).toBeTruthy();
 
     (form.get('qosObjectives') as FormGroup).addControl('gfbr', new FormControl(1000));
     fixture.detectChanges();
@@ -1439,5 +1439,68 @@ describe('ConfigEditorComponent help popovers', () => {
 
     expect(component['anyHelp']).toBe(false);
     expect(fixture.nativeElement.querySelector('.tree .help-toggle')).toBeNull();
+  });
+});
+
+describe('ConfigEditorComponent error tooltip', () => {
+  const schema: NodeGroup = {
+    kind: 'nodeGroup',
+    name: 'root',
+    root: true,
+    children: {
+      host: { kind: 'leaf', type: 'string', name: 'host', label: 'Host', required: true },
+      sys: {
+        kind: 'nodeGroup',
+        name: 'sys',
+        label: 'System',
+        children: { port: { kind: 'leaf', type: 'number', name: 'port', label: 'Port', min: 1, max: 65535 } },
+      },
+    },
+  };
+
+  let component: ConfigEditorComponent;
+  let fixture: ComponentFixture<ConfigEditorComponent>;
+  let form: FormGroup;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ConfigEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ConfigEditorComponent);
+    component = fixture.componentInstance;
+    form = buildFormFromSchema(schema, { host: '', sys: { port: 99999 } }); // both invalid
+    fixture.componentRef.setInput('schema', schema);
+    fixture.componentRef.setInput('formGroup', form);
+    fixture.detectChanges();
+  });
+
+  it('enumerates every error under a node with its field, message, and target node', () => {
+    const errors = component['nodeErrors'](component.root);
+    // Own field first (host), then the child node's field (sys/port).
+    expect(errors.map((e) => e.field)).toEqual(['Host', 'Port']);
+    expect(errors.find((e) => e.field === 'Host')!.message).toContain('required');
+    expect(errors.find((e) => e.field === 'Host')!.nodeId).toBe(''); // the root
+    expect(errors.find((e) => e.field === 'Port')!.message).toContain('65535');
+    expect(errors.find((e) => e.field === 'Port')!.nodeId).toBe('sys'); // the child node
+  });
+
+  it('gotoError selects the errored field&apos;s node', () => {
+    const portError = component['nodeErrors'](component.root).find((e) => e.field === 'Port')!;
+    component['gotoError'](portError);
+    expect(component.selected!.id).toBe('sys');
+  });
+
+  it('shows an error button only on rows with an error below, aligned as the row&apos;s last control', () => {
+    fixture.detectChanges();
+    // Root + sys both invalid → both rows carry the error button, rendered last.
+    const rows = [...fixture.nativeElement.querySelectorAll('.tree .tree-row')] as HTMLElement[];
+    const rootRow = rows.find((r) => r.querySelector('.tree-label')?.textContent?.trim() === 'root')!;
+    expect(rootRow.querySelector('.row-btn.row-error')).toBeTruthy();
+    expect(rootRow.querySelector('.row-btn:last-of-type')?.classList.contains('row-error')).toBe(true);
+  });
+
+  it('clears the markers once every field is valid', () => {
+    form.get('host')!.setValue('ok');
+    (form.get('sys') as FormGroup).get('port')!.setValue(80);
+    expect(component['nodeErrors'](component.root)).toEqual([]);
+    expect(component['hasError'](component.root)).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, effect, ElementRef, inject, input, model, OnDestroy, untracked } from '@angular/core';
-import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
+import { AbstractControl, FormArray, FormGroup, ValidationErrors } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,6 +25,7 @@ import {
 import { DynamicRecursiveFormComponent } from '../dynamic-recursive-form/dynamic-recursive-form.component';
 import { NodeMapRendererComponent } from '../dynamic-recursive-form/node-map-renderer/node-map-renderer.component';
 import { RichTooltipDirective } from '../directives/rich-tooltip.directive';
+import { describeControlError } from '../core/error-message';
 
 /**
  * The transformers package names a root nobody named `__root__` — a sentinel,
@@ -49,6 +50,16 @@ interface OptionalEntry {
   key: string;
   schema: NodeType;
   label: string;
+}
+
+/** One validation error under a tree node — drives the row's error tooltip and its go-to-field link. */
+interface TreeError {
+  /** Tree node the errored field lives in — the target of the go-to-field link. */
+  nodeId: string;
+  /** The field's display label; empty for a node-level present-count range error. */
+  field: string;
+  /** The human-readable error message. */
+  message: string;
 }
 
 /**
@@ -423,6 +434,72 @@ export class ConfigEditorComponent implements OnDestroy {
    */
   protected hasError(node: TreeNode): boolean {
     return !!(node.group?.invalid || node.list?.array.invalid || node.map?.group.invalid);
+  }
+
+  /**
+   * Every validation error under `node`, in tree order — the content of the row
+   * error tooltip. Each entry names the field, its location, and the message,
+   * and carries the node id its {@link gotoError} link navigates to.
+   */
+  protected nodeErrors(node: TreeNode): TreeError[] {
+    const acc: TreeError[] = [];
+    this.collectErrors(node, acc);
+    return acc;
+  }
+
+  private collectErrors(node: TreeNode, acc: TreeError[]): void {
+    // A group/choice node's own present-count (minPresent/maxPresent) violation.
+    const range = this.rangeMessage(node.group?.errors);
+    if (range) acc.push({ nodeId: node.id, field: '', message: range });
+    // The node's own leaf / leaf-list fields.
+    if (node.schema && node.group) this.collectFieldErrors(node.schema, node.group, node.id, acc);
+    // A choice node's active-case fields.
+    if (node.choice) {
+      const active = this.activeCase(node);
+      const body = active && node.choice.schema.cases[active] ? this.caseAsGroup(node.choice.schema, active) : null;
+      if (body) this.collectFieldErrors(body, node.choice.group, node.id, acc);
+    }
+    for (const child of node.children) this.collectErrors(child, acc);
+  }
+
+  /** Push a {@link TreeError} for each invalid leaf / leaf-list control of `group`. */
+  private collectFieldErrors(schema: NodeGroup, group: FormGroup, nodeId: string, acc: TreeError[]): void {
+    for (const key of Object.keys(schema.children)) {
+      const child = schema.children[key];
+      if (child.kind !== 'leaf' && child.kind !== 'leafList') continue;
+      const control = group.get(key);
+      if (!control || control.valid) continue;
+      const label = this.labelOf(child, key);
+      acc.push({ nodeId, field: label, message: describeControlError(control.errors, label) });
+    }
+  }
+
+  /** A group's `minPresent`/`maxPresent` violation as a message, or null. */
+  private rangeMessage(errors: ValidationErrors | null | undefined): string | null {
+    const min = errors?.['minPresent'];
+    if (min) return `At least ${min.required} ${min.required === 1 ? 'field' : 'fields'} must be set (${min.actual} set).`;
+    const max = errors?.['maxPresent'];
+    if (max) return `At most ${max.allowed} of these fields may be set (${max.actual} set).`;
+    return null;
+  }
+
+  /** Navigate to an error's field: select its node, then focus the field (matched by label, else the first invalid one). */
+  protected gotoError(e: TreeError): void {
+    this.selectByPath(e.nodeId);
+    setTimeout(() => {
+      const fields = [...this.host.nativeElement.querySelectorAll<HTMLElement>('.detail mat-form-field')];
+      const match = e.field ? fields.find((f) => f.querySelector('mat-label')?.textContent?.trim() === e.field) : undefined;
+      const target =
+        match?.querySelector<HTMLElement>('input, mat-select') ??
+        this.host.nativeElement.querySelector<HTMLElement>('.detail input.ng-invalid, .detail mat-select.ng-invalid');
+      target?.focus();
+    });
+  }
+
+  /** Clicking the row error icon jumps to the first error under the node. */
+  protected gotoFirstError(node: TreeNode): void {
+    const errors = this.nodeErrors(node);
+    if (errors.length) this.gotoError(errors[0]);
   }
 
   /**
