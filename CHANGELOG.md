@@ -4,6 +4,22 @@ Notable changes to `ng-form-foundry` (the Angular library) and
 `ng-form-foundry-transformers`. Both packages release together at the same
 version. The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.8.4] — 2026-08-01
+
+### Added
+- **`showAbsentOptionals` on `<nff-config-editor>`.** The tree editor now
+  exposes the form's ghost-preview flag and forwards it to each detail
+  section's embedded form (and inline map renderer), so absent presence leaves
+  render as ghost fields — default as placeholder, (+) to incorporate —
+  instead of per-leaf "Add *field*" buttons.
+- **Absent optional sections are addable from the detail pane.** A node's
+  absent optional groups, maps, choices, and leaf-lists now render as
+  "Add *field*" buttons below the node's own fields in the detail — e.g. an
+  absent TLS block is addable right under its sibling endpoint field, not only
+  from the tree's optional-field rows/menu. A detail-pane add keeps the
+  current selection (like list and map adds), so the new section appears in
+  place; `addOptional` gained the corresponding `keepSelection` parameter.
+
 ## [0.8.3] — 2026-08-01
 
 ### Added

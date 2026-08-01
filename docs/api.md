@@ -189,7 +189,13 @@ The tree adds row conveniences of its own:
 - **Choices** show the active case next to the tree label.
 - **Optional (presence) children** that are absent are offered by a
   "+ Optional field" menu row at the end of their parent's children; present ones
-  carry a delete button that returns them to the menu.
+  carry a delete button that returns them to the menu. Absent optional
+  **sections** (groups, maps, choices, leaf-lists) are additionally offered as
+  "Add *field*" buttons below their parent's fields in the detail pane — a
+  detail-pane add keeps the selection, so the new section appears in place.
+  Absent optional *leaves* render inline in the detail form instead (as an add
+  button, or a ghost field under
+  [`showAbsentOptionals`](features.md#ghost-preview-of-absent-optionals)).
 - A **validation error** anywhere in a node's subtree colors its tree row with
   the theme's error color, so invalid sections are findable without expanding
   everything. Truncated labels carry tooltips with the full text.
@@ -213,6 +219,7 @@ tree and the detail pane. Wrap it in your own card or border:
 | `initiallyExpanded` | `boolean \| number` | `false` | How deep the tree starts unfolded when it binds to a schema/form pair: `false` opens only the root, `true` unfolds every level (like pressing expand-all), and a positive number opens that many levels below the always-open root (`1` = the top-level sections opened so their children show, still collapsed; `2` also opens those children). Read at bind time — it sets the initial state; later collapses/expands and the expand-all toggle take over, and a structural rebuild keeps whatever is currently open. |
 | `showBreadcrumb` | `boolean` | `true` | Whether the detail pane shows its top breadcrumb (the selected node's path with the member remove beside it). Turn off when the tree already gives the user their bearings; the section trail headings inside the detail stay, and member removal remains on tree rows and section headings. |
 | `optionalFields` | `'named' \| 'menu'` | `'named'` | How a node's absent optional (presence) children are offered under its row. `'named'` lists each as its own `+ <Field name>` row, so the operator sees at a glance what can be added and adds it in one click. `'menu'` is the compact form — a single `+ Optional field` row whose menu holds the same entries — for nodes with many optionals, where per-field rows would crowd the tree. |
+| `showAbsentOptionals` | `boolean` | `false` | Preview absent presence **leaves** in the detail sections as [ghost fields](features.md#ghost-preview-of-absent-optionals) instead of per-leaf "Add *field*" buttons; forwarded to every section's embedded form. Absent optional *sections* (groups, maps, choices) are untouched — the tree's `optionalFields` rows/menu remain their affordance. Ignored while the editor is not editable. |
 | `fieldHelpAnchor` | `'element' \| 'cursor'` | `'cursor'` | Where a **field's** help popover anchors while help mode is on (see [Rich help](#rich-help) below). `'cursor'` places it right of the pointer — steady regardless of field width — while `'element'` anchors it to the field's box, which can drop the popover below a full-width field. Tree-row and breadcrumb help always anchor to their element. |
 
 The root tree row also carries an expand-all control that flips to collapse-all

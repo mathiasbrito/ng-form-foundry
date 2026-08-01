@@ -350,6 +350,13 @@
   margin-bottom: 8px;
 }
 
+// One "Add <field>" button per absent optional section — a wrapping row, so
+// a node with several stays readable.
+.optional-actions {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .empty {
   color: var(--mat-sys-on-surface-variant);
   font-style: italic;

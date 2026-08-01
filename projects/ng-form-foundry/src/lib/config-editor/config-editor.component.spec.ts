@@ -493,6 +493,41 @@ describe('ConfigEditorComponent', () => {
     expect(document.activeElement).toBe(noteField.querySelector('input'));
   }));
 
+  it('showAbsentOptionals forwards to the detail forms: an absent presence leaf ghosts, still with no control', () => {
+    fixture.componentRef.setInput('showAbsentOptionals', true);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.detail .ghost-field')).toBeTruthy();
+    expect(form.get('note')).toBeNull();
+  });
+
+  it('without showAbsentOptionals the detail renders no ghosts', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.detail .ghost-field')).toBeNull();
+  });
+
+  it('the detail offers absent complex optionals as Add buttons below the fields, leaves excluded', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const labels = [...el.querySelectorAll('.detail .optional-actions button')].map((b) => b.textContent ?? '');
+    expect(labels.some((l) => l.includes('Add optional'))).toBe(true);
+    expect(labels.some((l) => l.includes('Add tags'))).toBe(true);
+    expect(labels.some((l) => l.includes('Add mode'))).toBe(true);
+    // The absent leaf is the embedded form's affordance (add button / ghost), not a section action.
+    expect(labels.some((l) => l.includes('Add note'))).toBe(false);
+  });
+
+  it('a detail-pane addOptional keeps the selection and shows the optional as a new section in place', () => {
+    const entry = component.root.optionals!.find((o) => o.key === 'optional')!;
+
+    component.addOptional(component.root, entry, true);
+    fixture.detectChanges();
+
+    expect(form.get('optional')).toBeInstanceOf(FormGroup);
+    expect(component.selected).toBe(component.root);
+    expect(component.sections.some((s) => s.node.id === 'optional')).toBe(true);
+  });
+
   it('addOptional on a map and a choice builds their nodes', () => {
     component.addOptional(component.root, component.root.optionals!.find((o) => o.key === 'tags')!);
     expect(node('tags').map!.complex).toBe(false);

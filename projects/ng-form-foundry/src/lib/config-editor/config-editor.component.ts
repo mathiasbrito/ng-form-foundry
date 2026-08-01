@@ -128,8 +128,9 @@ interface TreeNode {
  * node's own fields first, then every descendant's fields, each separated by a
  * breadcrumb heading (`Service / Deploy scope / …`) instead of nested panels.
  * Leaf fields render through {@link DynamicRecursiveFormComponent} with a
- * leaf-only schema slice; choice selectors, map rows, and add controls render
- * inline in their section. The tree adds row conveniences of its own: `+` on
+ * leaf-only schema slice; choice selectors, map rows, add controls, and
+ * "Add *field*" buttons for a node's absent optional sections render inline
+ * in their section. The tree adds row conveniences of its own: `+` on
  * list and map rows, a delete control on removable rows, and a
  * "+ Optional field" menu for absent presence children.
  *
@@ -218,6 +219,17 @@ export class ConfigEditorComponent implements OnDestroy {
    * path; only the affordance differs.
    */
   readonly optionalFields = input<'named' | 'menu'>('named');
+  /**
+   * Preview absent optional (presence) **leaves** in the detail sections as
+   * ghost fields — read-only, empty, the schema `default` as placeholder, with
+   * a (+) that incorporates them — instead of per-leaf "Add *field*" buttons.
+   * Forwarded to every section's embedded form; see
+   * {@link DynamicRecursiveFormComponent.showAbsentOptionals} for the exact
+   * ghost semantics. Absent optional *sections* (groups, maps, choices) are
+   * untouched: the tree's {@link optionalFields} rows/menu remain their
+   * affordance. Ignored while the editor is not editable.
+   */
+  readonly showAbsentOptionals = input<boolean>(false);
   /**
    * Where a field's help popover anchors while help mode is on: `'cursor'`
    * (default) places it to the right of the pointer — steady regardless of
@@ -548,9 +560,19 @@ export class ConfigEditorComponent implements OnDestroy {
   protected focusSectionId: string | null = null;
   protected focusLeafKey: string | null = null;
 
-  /** Add an absent optional child from the menu: build its control and select the node it lands on. */
-  addOptional(node: TreeNode, entry: OptionalEntry) {
+  /**
+   * Add an absent optional child: build its control and select the node it
+   * lands on. A tree add (menu or named row) moves the selection there; a
+   * detail-pane add passes `keepSelection` so the current (possibly ancestor)
+   * view stays put and the optional appears in it as a new section — see
+   * {@link addItem} for the same split on list adds.
+   */
+  addOptional(node: TreeNode, entry: OptionalEntry, keepSelection = false) {
     if (!node.group || !setNodePresence(node.group, entry.schema, entry.key, true)) return;
+    if (keepSelection) {
+      this.selectByPath(this.selected?.id ?? '', false);
+      return;
+    }
     // A leaf renders in the parent's detail pane; complex kinds become tree nodes.
     this.selectByPath(entry.schema.kind === 'leaf' ? node.id : this.join(node.id, entry.key));
     // A complex optional becomes its own selected node — move focus into its
@@ -570,6 +592,18 @@ export class ConfigEditorComponent implements OnDestroy {
         }
       });
     }
+  }
+
+  /**
+   * The absent optional children a section offers as "Add *field*" buttons
+   * under its own fields: every kind **except** plain leaves, which the
+   * embedded form already offers inline (as an add button or a ghost). This
+   * is the detail-pane counterpart of the tree's {@link optionalFields} rows,
+   * so an absent section (e.g. a TLS block) is addable where its sibling
+   * fields render, not only from the tree.
+   */
+  protected sectionOptionals(node: TreeNode): OptionalEntry[] {
+    return (node.optionals ?? []).filter((o) => o.schema.kind !== 'leaf');
   }
 
   /** Remove a present optional child node, returning its entry to the parent's menu. */
@@ -861,9 +895,11 @@ export class ConfigEditorComponent implements OnDestroy {
 
   /**
    * Whether a section renders anything beyond its heading: a leaf slice, the
-   * chrome of its node kind (case selector, key field, add controls), or a
-   * present-children error that needs explaining. Heading-only sections are
-   * dropped from the flat list — a divider with nothing under it is clutter.
+   * chrome of its node kind (case selector, key field, add controls), the
+   * "Add *field*" buttons for its absent optional sections (while editable),
+   * or a present-children error that needs explaining. Heading-only sections
+   * are dropped from the flat list — a divider with nothing under it is
+   * clutter.
    */
   private sectionHasContent(s: DetailSection): boolean {
     if (s.footer) return true;
@@ -876,6 +912,7 @@ export class ConfigEditorComponent implements OnDestroy {
       n.choice ||
       n.mapEntry ||
       (n.map && !n.map.complex) ||
+      (this.editable() && this.sectionOptionals(n).length) ||
       this.emptySectionHint(s) ||
       this.presentRangeHint(s)
     );

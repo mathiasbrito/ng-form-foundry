@@ -363,6 +363,7 @@
             [schema]="s.schema"
             [formGroup]="s.group"
             [editable]="editable()"
+            [showAbsentOptionals]="showAbsentOptionals()"
             [showHelp]="showHelp()"
             [helpContext]="fieldContext(s.node)"
             [fieldHelpAnchor]="fieldHelpAnchor()"
@@ -375,7 +376,27 @@
             [nodeMap]="s.node.map.schema"
             [formGroup]="s.node.map.group"
             [editable]="editable()"
+            [showAbsentOptionals]="showAbsentOptionals()"
           />
+        }
+
+        <!-- Absent optional sections (groups, maps, choices, leaf-lists) are
+             addable where their sibling fields render, not only from the
+             tree's optional rows — a detail-pane add keeps the selection so
+             the new section appears in place. Absent leaves are not repeated
+             here: the embedded form offers them inline. -->
+        @if (!s.footer && editable() && sectionOptionals(s.node).length) {
+          <div class="section-actions optional-actions">
+            @for (opt of sectionOptionals(s.node); track opt.key) {
+              <button
+                matButton
+                [nffRichTooltip]="showHelp() && opt.schema.description ? opt.schema.description : null"
+                [nffRichTooltipTitle]="opt.label"
+                [nffRichTooltipSubtitle]="fieldContext(s.node)"
+                (click)="addOptional(s.node, opt, true)"
+              ><mat-icon>add</mat-icon> Add {{ opt.label }}</button>
+            }
+          </div>
         }
 
         @if (s.footer && editable() && s.node.map?.complex && !mapAtMax(s.node)) {

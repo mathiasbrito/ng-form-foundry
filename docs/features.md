@@ -183,6 +183,13 @@ the Add button always has). The flag cascades into nested groups, list
 entries, and map entries; it changes nothing while the form is read-only,
 where structural affordances stay hidden.
 
+`<nff-config-editor>` exposes the same input and forwards it to each detail
+section's embedded form, so the sections ghost their absent presence leaves
+too. Absent optional *sections* (groups, maps, choices, leaf-lists) are not
+ghosted — they are offered as "Add *field*" buttons below their parent's
+fields in the detail pane (and on the tree's optional-field rows/menu); a
+detail-pane add keeps the selection, so the new section appears in place.
+
 ## Constants and read-only fields
 
 `readOnly: true` renders a field read-only even when the form is editable; combine
