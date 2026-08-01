@@ -13,8 +13,8 @@ a version already on npm is skipped, so re-running a tag is safe.
    version):
 
    ```bash
-   git tag v0.8.3
-   git push origin v0.8.3
+   git tag v0.8.4
+   git push origin v0.8.4
    ```
 
 Continuous integration (build, test, pack, docs build) runs on every push and
