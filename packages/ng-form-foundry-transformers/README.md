@@ -314,6 +314,17 @@ npm test        # node:test on the compiled output (no Python needed)
 
 ## Status
 
+`0.8.3` — version-alignment release with the workspace (the paired
+`ng-form-foundry` 0.8.3 adds validation-error tooltips with go-to-field links to
+the config editor and extends help mode to the optional add-rows and leaf-list
+add buttons); no transformer changes.
+
+`0.8.2` — a JSON Schema's `description` now maps onto **every** node kind
+(groups, maps, group-lists, leaf-lists, and choices), not only leaves, so a
+machine schema's section and list rows carry config-editor help without a
+thesaurus. Schema-authored text still wins over thesaurus fills. Paired with
+`ng-form-foundry` 0.8.2.
+
 `0.8.1` — the **thesaurus** now fills `description` on lists, leaf-lists, and
 choices too, not only leaves/groups/maps, so their config-editor help text can
 come from the thesaurus. Paired with `ng-form-foundry` 0.8.1.
